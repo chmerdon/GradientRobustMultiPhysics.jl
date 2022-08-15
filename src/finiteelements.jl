@@ -75,7 +75,7 @@ function FESpace{FEType,AT}(
     broken::Bool = false) where {Tv, Ti, FEType <:AbstractFiniteElement, AT<:AssemblyType}
 
     # piecewise constants are always broken
-    if FEType <: L2P0
+    if FEType <: L2P0 || FEType <: L2P1
         broken = true
     end
 

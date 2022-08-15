@@ -398,7 +398,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
             eq = subiterations[s][j]
             for k = 1 : size(SC.LHS_AssemblyTimes,2)
                 for o = 1 : size(SC.LHS_AssemblyTimes[eq,k],1)
-                    info_msg *= "\n\tLHS[$eq,$k][$o] \t| $(@sprintf("%.4e", SC.LHS_AssemblyTimes[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_LastLoopAllocations[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_TotalLoopAllocations[eq,k][o])) \t| $(PDE.LHSOperators[eq,k][o].name)"
+                    info_msg *= "\n\tLHS[$eq,$k][$o] \t| $(@sprintf("%.4e", SC.LHS_AssemblyTimes[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_LastLoopAllocations[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_TotalLoopAllocations[eq,k][o])) \t| $(parse_unknowns(PDE.LHSOperators[eq,k][o].name, PDE, (eq,k), PDE.LHSOperators[eq,k][o].fixed_arguments_ids))"
                 end
             end
         end
@@ -408,7 +408,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
         for j = 1 : length(subiterations[s])
             eq = subiterations[s][j]
             for o = 1 : size(SC.RHS_AssemblyTimes[eq],1)
-                info_msg *= "\n\tRHS[$eq,][$o] \t| $(@sprintf("%.4e", SC.RHS_AssemblyTimes[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_LastLoopAllocations[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_TotalLoopAllocations[eq][o])) \t| $(PDE.RHSOperators[eq][o].name)"
+                info_msg *= "\n\tRHS[$eq,][$o] \t| $(@sprintf("%.4e", SC.RHS_AssemblyTimes[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_LastLoopAllocations[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_TotalLoopAllocations[eq][o])) \t| $(parse_unknowns(PDE.RHSOperators[eq][o].name, PDE, (eq), PDE.RHSOperators[eq][o].fixed_arguments_ids))"
             end
         end
     end
@@ -688,7 +688,7 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
         mul!(residual.entries, A.entries, Target.entries)
         residual.entries .-= b.entries
         residual.entries[fixed_dofs] .= 0
-        residuals = norm(residual)
+        residuals = norms(residual)
 
         # REALIZE GLOBAL GLOBALCONSTRAINTS 
         # (possibly changes some entries of Target)
@@ -939,7 +939,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
             mul!(residual.entries, A.entries, Target.entries)
             residual.entries .-= b.entries
             residual.entries[fixed_dofs] .= 0
-            linresnorm = norm(norm(residual))
+            linresnorm = norm(residual)
         end
 
         # POSTPROCESS : ANDERSON ITERATE
@@ -984,7 +984,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         mul!(residual.entries, A.entries, Target.entries)
         residual.entries .-= b.entries
         residual.entries[fixed_dofs] .= 0
-        resnorm = norm(norm(residual))
+        resnorm = norm(residual)
 
         end #elapsed
         
@@ -1198,7 +1198,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
                         end
                     end
                 end
-                linresnorm[s] = norm(norm(residual[s]))
+                linresnorm[s] = norm(residual[s])
             end
 
             # WRITE INTO Target
@@ -1257,7 +1257,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
                     end
                 end
             end
-            resnorm[s] = norm(norm(residual[s]))
+            resnorm[s] = norm(residual[s])
         end
 
         overall_time += time_total
@@ -1381,7 +1381,7 @@ abstract type AbstractTimeIntegrationRule end
 abstract type BackwardEuler <: AbstractTimeIntegrationRule end
 abstract type CrankNicolson <: AbstractTimeIntegrationRule end
 
-mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule}
+mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule,MassMatrixFType}
     PDE::PDEDescription                     # PDE description (operators, data etc.)
     SC::SolverConfig{T,Tv,Ti}               # solver configurations (subiterations, penalties etc.)
     LS::Array{AbstractLinearSystem{T,TiM},1}  # array for linear solvers of all subiterations
@@ -1390,6 +1390,7 @@ mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule
     last_timestep::Tt                       # last timestep
     AM::Array{FEMatrix{T,TiM,Tv,Ti},1}          # heap for mass matrices for each equation package
     which::Array{Int,1}                     # which equations shall have a time derivative?
+    massmatrix_assembler::MassMatrixFType # function that assembles the massmatrix for each subiteration
     dt_is_nonlinear::Array{Bool,1}             # if true mass matrix is recomputed in each iteration
     dt_operator::Array{DataType,1}         # operators associated with the time derivative
     dt_actions::Array{<:AbstractAction,1}   # actions associated with the time derivative
@@ -1477,6 +1478,7 @@ function TimeControlSolver(
     dt_action = [],
     dt_is_nonlinear = [],
     dt_lump = [],
+    massmatrix_assembler = assemble_massmatrix4subiteration!,
     T_time = Float64,
     kwargs...) where {T,Tv,Ti}
 
@@ -1616,11 +1618,11 @@ function TimeControlSolver(
 
     # generate TimeControlSolver
     statistics = zeros(Float64,length(InitialValues),4)
-    TCS = TimeControlSolver{T,T_time,Int64,Tv,Ti,TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,dt_is_nonlinear,dt_operator,dt_action,dt_lump,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{T,Int64},1}(undef,length(subiterations)), statistics)
+    TCS = TimeControlSolver{T,T_time,Int64,Tv,Ti,TIR,typeof(massmatrix_assembler)}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,massmatrix_assembler,dt_is_nonlinear,dt_operator,dt_action,dt_lump,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{T,Int64},1}(undef,length(subiterations)), statistics)
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations
-        assemble_massmatrix4subiteration!(TCS, i; force = true)
+        massmatrix_assembler(TCS, i; force = true)
     end
 
 
@@ -1696,22 +1698,16 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
 
                 ## update mass matrix and add time derivative
-                assemble_massmatrix4subiteration!(TCS, s; force = false)
-                for k = 1 : nsubitblocks
-                    d = subiterations[s][k]
-                    addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
-                    addblock_matmul!(b[s][k],AM[s][k,k],LastIterate[d]; factor = 1.0/timestep)
-                end
+                TCS.massmatrix_assembler(TCS, s; force = false)
+                add!(A[s], AM[s]; factor = 1.0/timestep)
+                b[s].entries .+= (1.0/timestep) * AM[s].entries * LastIterate.entries
                 flush!(A[s].entries)
             else # only update rhs
                 fill!(b[s].entries,0)
                 assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
 
                 ## add time derivative
-                for k = 1 : nsubitblocks
-                    d = subiterations[s][k]
-                    addblock_matmul!(b[s][k],AM[s][k,k],LastIterate[d]; factor = 1.0/timestep)
-                end
+                b[s].entries .+= (1.0/timestep) * AM[s].entries * LastIterate.entries
             end
         elseif TIR == CrankNicolson # S and A are separate, A[s] contains spacial discretisation of last timestep
 
@@ -1746,12 +1742,10 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 add!(S[s],A[s])
                 
                 ## update and add time derivative to system matrix and right-hand side
-                assemble_massmatrix4subiteration!(TCS, s; force = false)
-                for k = 1 : nsubitblocks
-                    d = subiterations[s][k]
-                    addblock!(S[s][k,k],AM[s][k,k]; factor = 2.0/timestep)
-                    addblock_matmul!(rhs[s][k],AM[s][k,k],LastIterate[d]; factor = 2.0/timestep)
-                end
+                TCS.massmatrix_assembler(TCS, s; force = false)
+                add!(S[s], AM[s]; factor = 2.0/timestep)
+                rhs[s].entries .+= (2.0/timestep) * AM[s].entries * LastIterate.entries
+
                 flush!(S[s].entries)
             else # S[s] stays the same, only update rhs[s]
 
@@ -1761,11 +1755,8 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 rhs[s].entries .+= b[s].entries
                 
                 ## update and add time derivative to system matrix and right-hand side
-                assemble_massmatrix4subiteration!(TCS, s; force = false)
-                for k = 1 : nsubitblocks
-                    d = subiterations[s][k]
-                    addblock_matmul!(rhs[s][k],AM[s][k,k],LastIterate[d]; factor = 2.0/timestep)
-                end
+                TCS.massmatrix_assembler(TCS, s; force = false)
+                rhs[s].entries .+= (2.0/timestep) * AM[s].entries * LastIterate.entries
             end
 
         end
@@ -1843,15 +1834,17 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 if TIR == BackwardEuler
                     # update matrix A
                     lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], min_trigger = AssemblyAlways, time = TCS.ctime)
-
+                    
                     ## S = A, so we need to readd the time-derivative for reassembled blocks
                     for k = 1 : nsubitblocks
-                        d = subiterations[s][k]
-                        if lhs_erased[k,k]
-                            addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
-                        end
-                        if rhs_erased[k]
-                            addblock_matmul!(b[s][k],AM[s][k,k],LastIterate[d]; factor = 1.0/timestep)
+                        for j = 1 : nsubitblocks
+                            if lhs_erased[j,k]
+                                addblock!(A[s][j,k], AM[s][j,k]; factor = 1.0/timestep)
+                            end
+                            if rhs_erased[j]
+                                d = subiterations[s][k]
+                                addblock_matmul!(b[s][j], AM[s][j,k],LastIterate[d]; factor = 1.0/timestep)
+                            end
                         end
                     end
                 elseif TIR == CrankNicolson

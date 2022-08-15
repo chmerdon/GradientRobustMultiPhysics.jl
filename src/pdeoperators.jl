@@ -152,7 +152,7 @@ constructor for a bilinearform that describes a(u,v) = κ (∇u,∇v) where kapp
 """
 function LaplaceOperator(κ = 1.0; name = "auto", AT::Type{<:AssemblyType} = ON_CELLS, ∇ = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
     if name == "auto"
-        name = "(∇u,∇v)"
+        name = "(∇#A,∇#T)"
         if typeof(κ) <: Real
             if κ != 1
                 name = "$κ " * name
@@ -174,13 +174,13 @@ constructor for a bilinearform a(u,v) = (αu,v) or (u,αv) with some coefficient
 """
 function ReactionOperator(α = 1.0, ncomponents = 1; name = "auto", AT::Type{<:AssemblyType} = ON_CELLS, id = Identity, regions::Array{Int,1} = [0], store::Bool = false)
     if name == "auto"
-        name = "(u,v)"
+        name = "(#A,#T)"
         if typeof(α) <: Real
             if α != 1.0
                 name = "$α " * name
             end
         elseif typeof(α) <: AbstractUserDataType
-            name = "(αu,v)"
+            name = "(α #A,#T)"
         end
     end
     if typeof(α) <: Real
@@ -212,7 +212,7 @@ Example: LagrangeMultiplier(Divergence) is used to render the pressure the Lagra
 """
 function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; name = "auto", AT::Type{<:AssemblyType} = ON_CELLS, action::AbstractAction = NoAction(), regions::Array{Int,1} = [0], store::Bool = false, factor = -1)
     if name == "auto"
-        name = "($operator(v),q)"
+        name = "(#A, $operator(#T))"
     end
     O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[operator, Identity], action, [1], factor, regions, store, AssemblyInitial)
     O.transposed_copy = true
@@ -226,7 +226,7 @@ $(TYPEDSIGNATURES)
 constructor for a bilinearform a(u,v) = (μ ∇u,∇v) where C is the 1D stiffness tensor for given μ.
     
 """
-function HookStiffnessOperator1D(μ; name = "(μ ∇u,∇v)", regions::Array{Int,1} = [0], ∇ = TangentialGradient, store::Bool = false)
+function HookStiffnessOperator1D(μ; name = "(μ ∇#A,∇#T)", regions::Array{Int,1} = [0], ∇ = TangentialGradient, store::Bool = false)
     return PDEOperator{Float64, APT_BilinearForm, ON_CELLS}(name,[∇, ∇], NoAction(), [1], μ, regions, store, AssemblyInitial)
 end
 
@@ -248,7 +248,7 @@ Note: ϵ is the symmetric part of the gradient (in Voigt notation)
     
 """
 function HookStiffnessOperator2D(μ, λ; 
-    name = "(C(μ,λ) ϵ(u),ϵ(v))", 
+    name = "(C(μ,λ) ϵ(#A),ϵ(#T))", 
     AT::Type{<:AssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0], 
     ϵ = SymmetricGradient{1}, 
@@ -287,7 +287,7 @@ Note: ϵ is the symmetric part of the gradient (in Voigt notation)
     
 """
 function HookStiffnessOperator3D(μ, λ;
-    name = "(C(μ,λ) ϵ(u),ϵ(v))", 
+    name = "(C(μ,λ) ϵ(#A),ϵ(#T))", 
     AT::Type{<:AssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0],
     ϵ = SymmetricGradient{1},
@@ -363,7 +363,7 @@ function BilinearForm(
 
     # construct PDEoperator
     if name == "auto"
-        name = apply_action_to == 1 ? "A(...,$(operators_linear[1])(u)):$(operators_linear[2])(v)" : "$(operators_linear[1])(u):A(...,$(operators_linear[2])(v))"
+        name = apply_action_to == 1 ? "A(...,$(operators_linear[1])(#A)):$(operators_linear[2])(#T)" : "$(operators_linear[1])(#A):A(...,$(operators_linear[2])(#T))"
     end
     
     append!(operators_current, operators_linear)
@@ -467,16 +467,16 @@ function ConvectionOperator(
         end    
         ## generates a nonlinear form with automatic Newton operators by AD
         if name == "auto"
-            name = "(($a_operator(u) ⋅ $ansatz_operator) u, $(test_operator)(v))"
+            name = "(($a_operator(#1) ⋅ $ansatz_operator) #1, $(test_operator)(#T))"
         end
         return NonlinearForm(test_operator, [a_operator, ansatz_operator], [a_from,a_from], convection_function_fe_1,argsizes; name = name, jacobian = convection_jacobian, bonus_quadorder = bonus_quadorder, store = store)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
         if name == "auto"
             if a_to == 1
-                name = "(($a_operator(a) ⋅ $ansatz_operator) u, $(test_operator)(v))"
+                name = "(($a_operator(#1) ⋅ $ansatz_operator) #A, $(test_operator)(#T))"
             elseif a_to == 2
-                name = "(($a_operator(u) ⋅ $ansatz_operator) a, $(test_operator)(v))"
+                name = "(($a_operator(#A) ⋅ $ansatz_operator) #1, $(test_operator)(#T))"
             end
         end
         
@@ -519,7 +519,7 @@ function ConvectionRotationFormOperator(
         action_kernel = ActionKernel(rotationform_2d(),[2, 3]; dependencies = "", bonus_quadorder = 0)
         convection_action = Action{Float64}( action_kernel)
         if name == "auto"
-            name = "((β × ∇) u, v)"
+            name = "((β × ∇) #A, #T)"
         end
         O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[beta_operator,ansatz_operator,test_operator], convection_action, [1,2], factor, regions)
         O.fixed_arguments = [1]
@@ -645,7 +645,7 @@ function LinearForm(
     store::Bool = false)
 
     if name == "auto"
-        name = "(A($operator(v)), 1)"
+        name = "(A($operator(#T)), 1)"
     end
     O = PDEOperator{Float64, APT_LinearForm, AT}(name, [operator], action, [1], 1, regions, store, AssemblyAuto)
     O.factor = factor
@@ -677,7 +677,7 @@ function LinearForm(
     kwargs...)
 
     if name == "auto"
-        name = "($(f.name), $operator(v))"
+        name = "($(f.name), $operator(#T))"
     end
 
     return LinearForm(operator, fdot_action(f); name = name, kwargs...)
@@ -722,7 +722,7 @@ function LinearForm(
     store::Bool = false)
 
     if name == "auto"
-        name = "($(action.name), $operator_test(v))"
+        name = "($(action.name), $operator_test(#T))"
     end
 
     push!(operators_current, operator_test)
@@ -772,7 +772,7 @@ function ConvectionOperator(
     action = Action(convection_kernel, [ncomponents, ncomponents*xdim]; dependencies = dependencies(β), bonus_quadorder = β.bonus_quadorder)
     
     if name == "auto"
-        name = "((β ⋅ $(ansatz_operator)) u, $test_operator(v))"
+        name = "((β ⋅ $(ansatz_operator)) #A, $test_operator(#T))"
     end
 
     O = PDEOperator{T, APT_BilinearForm, AT}(name, [ansatz_operator, test_operator], action, [1], 1, regions, store, AssemblyAuto)
@@ -930,7 +930,7 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,
         FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
     end
     push!(FES, b.FES)
-    if (fixed == 2 && O.apply_action_to == [1]) || (fixed == 1 && O.apply_action_to == [2])
+    if fixed == 2 # (fixed == 2 && O.apply_action_to == [1]) || (fixed == 1 && O.apply_action_to == [2])   
         # switch last two operators
         nops = length(O.operators4arguments)
         O.operators4arguments[[nops,nops-1]] = O.operators4arguments[[nops-1,nops]]

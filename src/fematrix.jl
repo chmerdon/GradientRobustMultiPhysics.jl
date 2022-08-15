@@ -66,9 +66,9 @@ Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = setindex!(FEB.entries,v,
 """
 $(TYPEDSIGNATURES)
 
-Custom `size` function for `FEMatrix` that gives the number of rows and columns of the FEBlock overlay
+Custom `size` function for `FEMatrix` that gives a tuple with the number of rows and columns of the FEBlock overlay
 """
-Base.size(::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) where {TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal} = [nbrow,nbcol]
+Base.size(::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) where {TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal} = (nbrow,nbcol)
 
 
 """
@@ -81,9 +81,9 @@ Base.length(::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) where {TvM,TiM,TvG,
 """
 $(TYPEDSIGNATURES)
 
-Custom `size` function for `FEMatrixBlock` that gives the size of the block (that coressponds to the number of degrees of freedoms in X and Y)
+Custom `size` function for `FEMatrixBlock` that gives a tuple with the size of the block (that coressponds to the number of degrees of freedoms in X and Y)
 """
-Base.size(FEB::FEMatrixBlock)=[FEB.last_indexX-FEB.offsetX,FEB.last_indexY-FEB.offsetY]
+Base.size(FEB::FEMatrixBlock) = (FEB.last_indexX-FEB.offsetX,FEB.last_indexY-FEB.offsetY)
 
 """
 $(TYPEDSIGNATURES)
@@ -91,16 +91,16 @@ $(TYPEDSIGNATURES)
 Custom `show` function for `FEMatrix` that prints some information on its blocks.
 """
 function Base.show(io::IO, FEM::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) where {TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}
-	println("\nFEMatrix information")
-    println("====================")
-    println("  block |  ndofsX |  ndofsY | name (FETypeX, FETypeY) ")
+	println(io, "\nFEMatrix information")
+    println(io, "====================")
+    println(io, "  block |  ndofsX |  ndofsY | name (FETypeX, FETypeY) ")
     for j=1:length(FEM)
         n = mod(j-1,nbrow)+1
         m = Int(ceil(j/nbrow))
-        @printf("  [%d,%d] |",m,n);
-        @printf("  %6d |",FEM[j].FESX.ndofs);
-        @printf("  %6d |",FEM[j].FESY.ndofs);
-        @printf(" %s (%s,%s)\n",FEM[j].name,FEM[j].FESX.name,FEM[j].FESY.name);
+        @printf(io, "  [%d,%d] |",m,n);
+        @printf(io, "  %6d |",FEM[j].FESX.ndofs);
+        @printf(io, "  %6d |",FEM[j].FESY.ndofs);
+        @printf(io, " %s (%s,%s)\n",FEM[j].name,FEM[j].FESX.name,FEM[j].FESY.name);
     end    
 end
 
@@ -111,7 +111,10 @@ FEMatrix{TvM,TiM}(name::String, FES::FESpace{TvG,TiG,FETypeX,APTX}) where {TvG,T
 
 Creates FEMatrix with one square block (FES,FES).
 """
-function FEMatrix{TvM}(name::String, FES::FESpace{TvG,TiG,FETypeX,APTX}) where {TvM,TvG,TiG,FETypeX,APTX}
+function FEMatrix(name::String, FES::FESpace)
+    return FEMatrix{Float64,Int64}(name::String, FES)
+end
+function FEMatrix{TvM}(name::String, FES::FESpace) where {TvM}
     return FEMatrix{TvM,Int64}(name::String, FES)
 end
 function FEMatrix{TvM,TiM}(name::String, FES::FESpace{TvG,TiG,FETypeX,APTX}) where {TvM,TiM,TvG,TiG,FETypeX,APTX}
@@ -127,8 +130,11 @@ FEMatrix{TvM,TiM}(name::String, FESX::FESpace{TvG,TiG,FETypeX,APTX}, FESY::FESpa
 
 Creates FEMatrix with one rectangular block (FESX,FESY).
 """
-function FEMatrix{TvM}(name::String, FESX::FESpace{TvG,TiG,FETypeX,APTX}, FESY::FESpace{TvG,TiG,FETypeY,APTY}) where {TvM,TvG,TiG,FETypeX,FETypeY,APTX,APTY}
-    return FEMatrix{TvM,Int64}(name::String, FESX, FESY)
+function FEMatrix(name::String, FESX::FESpace, FESY::FESpace)
+    return FEMatrix{Float64,Int64}(name, FESX, FESY)
+end
+function FEMatrix{TvM}(name::String, FESX::FESpace, FESY::FESpace) where {TvM}
+    return FEMatrix{TvM,Int64}(name, FESX, FESY)
 end
 function FEMatrix{TvM,TiM}(name::String, FESX::FESpace{TvG,TiG,FETypeX,APTX}, FESY::FESpace{TvG,TiG,FETypeY,APTY}) where {TvM,TiM,TvG,TiG,FETypeX,FETypeY,APTX,APTY}
     entries = ExtendableSparseMatrix{TvM,TiM}(FESX.ndofs,FESY.ndofs)
@@ -143,8 +149,11 @@ FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 
 Creates FEMatrix with blocks (FESX[i],FESY[j]) (enumerated row-wise).
 """
+function FEMatrix(name::String, FES::Array{<:FESpace{TvG,TiG},1}) where {TvG,TiG}
+    return FEMatrix{Float64,Int64}(name, FES)
+end
 function FEMatrix{TvM}(name::String, FES::Array{<:FESpace{TvG,TiG},1}) where {TvM,TvG,TiG}
-    return FEMatrix{TvM,Int64}(name::String, FES)
+    return FEMatrix{TvM,Int64}(name, FES)
 end
 function FEMatrix{TvM,TiM}(name::String, FES::Array{<:FESpace{TvG,TiG},1}) where {TvM,TiM,TvG,TiG}
     ndofs = 0

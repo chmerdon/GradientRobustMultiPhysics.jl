@@ -38,16 +38,20 @@ Base.setindex!(FEB::FEVectorBlock, v, ::Colon) = (FEB.entries[FEB.offset+1:FEB.l
 Base.setindex!(FEB::FEVectorBlock, v, i::AbstractArray) = (FEB.entries[FEB.offset.+i] = v)
 Base.size(FEF::FEVector)=size(FEF.FEVectorBlocks)
 Base.size(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
+Base.view(FEB::FEVectorBlock)=view(FEB.entries,FEB.offset+1:FEB.last_index)
 
-function LinearAlgebra.norm(FEV::FEVector{T}, p::Real = 2) where {T}
-    norms = zeros(T,length(FEV))
+function LinearAlgebra.norm(FEV::FEVector, p::Real = 2)
+    return norm(FEV.entries)
+end
+
+function LinearAlgebra.norm(FEV::FEVectorBlock, p::Real = 2)
+    return norm(view(FEV))
+end
+
+function norms(FEV::FEVector{T}, p::Real = 2) where {T}
+    norms = zeros(T, length(FEV))
     for j = 1 : length(FEV)
-        norms[j] = 0
-        # norms[j] = norm(FEV[j], p) # does not work, why???
-        for k = 1 : length(FEV[j])
-            norms[j] += FEV.entries[FEV[j].offset + k]^p
-        end
-        norms[j] = norms[j]^(1/p)
+        norms[j] = norm(view(FEV[j]), p)
     end
     return norms
 end
