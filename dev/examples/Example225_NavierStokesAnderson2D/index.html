@@ -54,14 +54,14 @@ PDE-DESCRIPTION
 ===============
   system name = incompressible Navier-Stokes-Problem
 
-     id   | unknown name / equation name
-    [1]   | u / momentum equation 
-    [2]   | p / incompressibility constraint 
+     id   | unknown name / variables / equation name
+    [1]   | u / [&quot;u&quot;, &quot;v&quot;] / momentum equation 
+    [2]   | p / [&quot;p&quot;, &quot;q&quot;] / incompressibility constraint 
 
   LHS block | PDEOperator(s)
     [1,1]   | 0.0005 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-            | ((id(a) ⋅ ∇) u, id(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
-    [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+            | ((id(u) ⋅ ∇) u, id(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (u, div(q)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | none
     [2,2]   | none
 
@@ -82,38 +82,38 @@ PDE-DESCRIPTION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.50e+01/4.50e-06/1.51e+01
-	      1   | 2.196123e-17 | 8.063241e-03 | 3.14e-01/4.15e-01/1.74e+00
-	      2   | 2.462758e-17 | 4.186558e-03 | 3.21e-01/4.34e-01/7.59e-01
-	      3   | 3.185003e-17 | 2.062310e-03 | 3.14e-01/3.50e-01/6.68e-01
-	      4   | 2.847269e-17 | 6.651686e-04 | 3.14e-01/3.73e-01/6.91e-01
-	      5   | 3.011599e-17 | 5.562696e-04 | 3.14e-01/3.52e-01/6.71e-01
-	      6   | 2.842556e-17 | 3.504737e-04 | 3.16e-01/3.61e-01/6.83e-01
-	      7   | 2.831342e-17 | 3.225783e-04 | 3.14e-01/4.21e-01/7.42e-01
-	      8   | 2.891827e-17 | 1.990759e-04 | 3.14e-01/3.59e-01/6.80e-01
-	      9   | 2.923117e-17 | 8.282842e-05 | 3.13e-01/3.54e-01/6.76e-01
-	    total |                             | 1.79e+01/3.42e+00/2.34e+01
+	    init  |                             | 1.57e+01/7.60e-06/1.57e+01
+	      1   | 2.267592e-17 | 8.063241e-03 | 3.20e-01/3.79e-01/1.77e+00
+	      2   | 2.489268e-17 | 4.186558e-03 | 3.20e-01/3.88e-01/7.12e-01
+	      3   | 3.229653e-17 | 2.062310e-03 | 3.19e-01/3.71e-01/6.95e-01
+	      4   | 2.603177e-17 | 6.651686e-04 | 3.17e-01/3.29e-01/6.52e-01
+	      5   | 2.962841e-17 | 5.562696e-04 | 3.19e-01/3.05e-01/6.31e-01
+	      6   | 2.887677e-17 | 3.504737e-04 | 3.16e-01/4.15e-01/7.38e-01
+	      7   | 2.986768e-17 | 3.225783e-04 | 3.18e-01/3.06e-01/6.32e-01
+	      8   | 2.835188e-17 | 1.990759e-04 | 3.16e-01/7.06e-01/1.03e+00
+	      9   | 2.948179e-17 | 8.282842e-05 | 3.17e-01/3.08e-01/6.35e-01
+	    total |                             | 1.85e+01/3.51e+00/2.43e+01
 
-[ Info: anderson acceleration took 0.030956370000000004s
+[ Info: anderson acceleration took 0.035337956999999996s
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 4.5186e+00 	| 2.8680e+05 	| 1.4961e+07 	| 0.0005 (∇u,∇v)
-│ 	LHS[1,1][2] 	| 4.3437e+00 	| 4.5888e+05 	| 9.3804e+06 	| ((id(a) ⋅ ∇) u, id(v))
-└ 	LHS[1,2][1] 	| 2.0169e+00 	| 1.2225e+07 	| 1.2225e+07 	| (div(v),q)
+│ 	LHS[1,1][1] 	| 5.1982e+00 	| 2.8680e+05 	| 1.4961e+07 	| 0.0005 (∇u,∇v)
+│ 	LHS[1,1][2] 	| 4.2561e+00 	| 4.5888e+05 	| 9.8311e+06 	| ((id(u) ⋅ ∇) u, id(v))
+└ 	LHS[1,2][1] 	| 1.8683e+00 	| 1.2209e+07 	| 1.2209e+07 	| (u, div(q))
 Problem = 
 PDE-DESCRIPTION
 ===============
   system name = incompressible Navier-Stokes-Problem
 
-     id   | unknown name / equation name
-    [1]   | u / momentum equation 
-    [2]   | p / incompressibility constraint 
+     id   | unknown name / variables / equation name
+    [1]   | u / [&quot;u&quot;, &quot;v&quot;] / momentum equation 
+    [2]   | p / [&quot;p&quot;, &quot;q&quot;] / incompressibility constraint 
 
   LHS block | PDEOperator(s)
     [1,1]   | 0.0005 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
             | ((id(u) ⋅ ∇) u, id(v)) [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-    [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (u, div(q)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | none
     [2,2]   | none
 
@@ -134,16 +134,16 @@ PDE-DESCRIPTION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 3.24e+00/4.00e-06/3.25e+00
-	      1   | 2.947535e-17 | 8.735238e-07 | 2.15e-01/6.94e-01/9.24e-01
-	      2   | 2.924900e-17 | 4.117803e-10 | 2.17e-01/3.42e-01/5.63e-01
-	      3   | 2.872225e-17 | 6.579651e-16 | 2.15e-01/5.77e-01/7.97e-01
-	    total |                             | 3.89e+00/1.61e+00/5.54e+00
+	    init  |                             | 3.64e+00/6.70e-06/3.65e+00
+	      1   | 2.931007e-17 | 8.735238e-07 | 2.19e-01/4.24e-01/6.56e-01
+	      2   | 2.865507e-17 | 4.117803e-10 | 2.19e-01/3.08e-01/5.32e-01
+	      3   | 2.894247e-17 | 6.584039e-16 | 2.20e-01/3.30e-01/5.56e-01
+	    total |                             | 4.30e+00/1.06e+00/5.40e+00
 
-[ Info: anderson acceleration took 0.008858309s
+[ Info: anderson acceleration took 0.009596306000000002s
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 1.4582e+00 	| 3.2504e+06 	| 3.2504e+06 	| 0.0005 (∇u,∇v)
-│ 	LHS[1,1][2] 	| 1.1467e+00 	| 4.5888e+05 	| 1.7402e+07 	| ((id(u) ⋅ ∇) u, id(v)) [Newton] [∂u]
-└ 	LHS[1,2][1] 	| 1.2738e+00 	| 2.8301e+06 	| 2.8301e+06 	| (div(v),q)</code></pre><p><img src="../../images/Example225_NavierStokesAnderson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example224_StokesSVRTEnrichment/">« 224 : Stokes <span>$SV + RT enrichment$</span></a><a class="docs-footer-nextpage" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 8 August 2022 15:37">Monday 8 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 1.5003e+00 	| 3.2504e+06 	| 3.2504e+06 	| 0.0005 (∇u,∇v)
+│ 	LHS[1,1][2] 	| 1.1907e+00 	| 4.5888e+05 	| 1.7402e+07 	| ((id(u) ⋅ ∇) u, id(v)) [Newton] [∂u]
+└ 	LHS[1,2][1] 	| 1.5968e+00 	| 2.8301e+06 	| 2.8301e+06 	| (u, div(q))</code></pre><p><img src="../../images/Example225_NavierStokesAnderson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example224_StokesSVRTEnrichment/">« 224 : Stokes <span>$SV + RT enrichment$</span></a><a class="docs-footer-nextpage" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

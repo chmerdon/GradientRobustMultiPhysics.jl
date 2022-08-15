@@ -149,8 +149,8 @@ PDE-DESCRIPTION
 ===============
   system name = reaction-convection-diffusion problem
 
-     id   | unknown name / equation name
-    [1]   | u / reaction-convection-diffusion equation 
+     id   | unknown name / variables / equation name
+    [1]   | u / [&quot;u&quot;, &quot;v&quot;] / reaction-convection-diffusion equation 
 
   LHS block | PDEOperator(s)
     [1,1]   | ν(∇u,∇v) + (αu + β⋅∇u, v) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
@@ -166,19 +166,19 @@ PDE-DESCRIPTION
 
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
 └ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 41)
-[ Info: overall residual = 2.619765909419638e-15
+[ Info: overall residual = 2.9920034147326648e-15
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
 └ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 145)
-[ Info: overall residual = 1.5468886192034673e-15
+[ Info: overall residual = 2.2420967967263026e-15
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
 └ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 545)
-[ Info: overall residual = 1.2114417587607588e-15
+[ Info: overall residual = 9.673736820647642e-16
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
 └ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 2113)
-[ Info: overall residual = 4.8738286791072755e-16
+[ Info: overall residual = 4.86475422382295e-16
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
 └ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 8321)
-[ Info: overall residual = 2.6693079196760876e-16
+[ Info: overall residual = 2.598909397287274e-16
 
     ndofs   |   || u - u_h ||    order |   || u - Iu ||     order | || ∇(u - u_h) ||   order |  || ∇(u - Iu) ||   order |
 ============|==========================|==========================|==========================|==========================|
@@ -186,4 +186,4 @@ PDE-DESCRIPTION
        145  |     9.634e-05      3.44  |     9.342e-05      3.33  |     3.639e-03      2.29  |     3.575e-03      2.22  |
        545  |     1.403e-05      2.91  |     1.160e-05      3.15  |     1.218e-03      1.65  |     8.906e-04      2.10  |
       2113  |     1.835e-06      3.00  |     1.448e-06      3.07  |     3.433e-04      1.87  |     2.224e-04      2.05  |
-      8321  |     2.008e-07      3.23  |     1.809e-07      3.03  |     6.654e-05      2.39  |     5.560e-05      2.02  |</code></pre><p><img src="../../images/Example204_ReactionConvectionDiffusionSUPG2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example203_ReactionConvectionDiffusion2D/">« 203 : Reaction-Convection-Diffusion-Problem 2D</a><a class="docs-footer-nextpage" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 8 August 2022 15:37">Monday 8 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      8321  |     2.008e-07      3.23  |     1.809e-07      3.03  |     6.654e-05      2.39  |     5.560e-05      2.02  |</code></pre><p><img src="../../images/Example204_ReactionConvectionDiffusionSUPG2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example203_ReactionConvectionDiffusion2D/">« 203 : Reaction-Convection-Diffusion-Problem 2D</a><a class="docs-footer-nextpage" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

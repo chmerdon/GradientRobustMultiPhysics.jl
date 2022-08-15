@@ -156,8 +156,8 @@ PDE-DESCRIPTION
 ===============
   system name = nonlinear Poisson problem
 
-     id   | unknown name / equation name
-    [1]   | u / nonlinear Poisson equation 
+     id   | unknown name / variables / equation name
+    [1]   | u / [&quot;u&quot;, &quot;v&quot;] / nonlinear Poisson equation 
 
   LHS block | PDEOperator(s)
     [1,1]   | (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
@@ -180,18 +180,18 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.35e+01/3.40e-06/1.35e+01
-	      1   | 1.269078e-16 | 1.879348e-01 | 3.55e-04/8.16e-05/4.06e-03
-	      2   | 2.932914e-16 | 2.427676e-03 | 1.90e-04/6.98e-05/2.80e-04
-	      3   | 5.452333e-16 | 3.580510e-07 | 1.76e-04/3.15e-05/2.23e-04
-	      4   | 4.875561e-16 | 8.307288e-15 | 1.85e-04/2.33e-05/2.22e-04
-	    total |                             | 1.35e+01/2.10e-04/1.35e+01
+	    init  |                             | 1.67e+01/6.30e-06/1.67e+01
+	      1   | 1.269078e-16 | 1.879348e-01 | 4.70e-04/1.06e-04/4.39e-03
+	      2   | 3.001623e-16 | 2.427676e-03 | 2.05e-04/7.14e-05/3.06e-04
+	      3   | 5.349815e-16 | 3.580510e-07 | 1.81e-04/3.32e-05/2.33e-04
+	      4   | 4.407290e-16 | 8.309824e-15 | 1.73e-04/2.87e-05/2.17e-04
+	    total |                             | 1.67e+01/2.45e-04/1.67e+01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 3.4382e+00 	| 3.8912e+04 	| 1.1513e+08 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 3.9117e+00 	| 3.6673e+08 	| 3.6673e+08 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 5.8802e+00 	| 3.8912e+04 	| 1.1514e+08 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 4.3899e+00 	| 3.6946e+08 	| 3.6946e+08 	| (f, id(v))
 Solution = 
 FEVector information
 ====================
@@ -203,18 +203,18 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 6.95e-03/2.40e-06/7.05e-03
-	      1   | 4.538003e-16 | 1.552235e-01 | 7.03e-04/1.62e-04/6.35e-03
-	      2   | 1.771399e-15 | 1.898915e-03 | 5.99e-04/1.69e-04/8.01e-04
-	      3   | 9.392505e-16 | 4.461316e-07 | 5.63e-04/7.80e-05/6.68e-04
-	      4   | 1.074983e-15 | 2.566636e-14 | 5.58e-04/6.05e-05/6.41e-04
-	    total |                             | 9.37e-03/4.73e-04/1.55e-02
+	    init  |                             | 7.63e-03/4.70e-06/7.76e-03
+	      1   | 4.537630e-16 | 1.552235e-01 | 7.29e-04/1.90e-04/6.55e-03
+	      2   | 1.758119e-15 | 1.898915e-03 | 5.90e-04/1.50e-04/7.79e-04
+	      3   | 7.085260e-16 | 4.461316e-07 | 6.07e-04/8.95e-05/7.26e-04
+	      4   | 1.089739e-15 | 2.409941e-14 | 5.71e-04/8.60e-05/6.86e-04
+	    total |                             | 1.01e-02/5.20e-04/1.65e-02
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 3.1725e-03 	| 1.5565e+05 	| 8.0698e+05 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 5.0067e-03 	| 1.7142e+06 	| 1.7142e+06 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 3.2581e-03 	| 1.5565e+05 	| 8.0698e+05 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 5.3834e-03 	| 1.7142e+06 	| 1.7142e+06 	| (f, id(v))
 Solution = 
 FEVector information
 ====================
@@ -226,18 +226,18 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 2.17e-02/3.20e-06/2.18e-02
-	      1   | 1.454043e-15 | 9.834582e-02 | 2.21e-03/4.47e-04/2.72e-03
-	      2   | 2.000258e-15 | 1.307935e-03 | 2.17e-03/5.16e-04/2.74e-03
-	      3   | 1.800172e-15 | 4.214647e-07 | 2.12e-03/3.48e-04/2.52e-03
-	      4   | 1.832130e-15 | 2.975164e-14 | 2.17e-03/3.28e-04/2.54e-03
-	    total |                             | 3.04e-02/1.64e-03/3.23e-02
+	    init  |                             | 2.31e-02/4.90e-06/2.33e-02
+	      1   | 1.450778e-15 | 9.834582e-02 | 2.21e-03/4.71e-04/2.76e-03
+	      2   | 1.816377e-15 | 1.307935e-03 | 2.15e-03/5.25e-04/2.74e-03
+	      3   | 2.914907e-15 | 4.214647e-07 | 2.13e-03/3.74e-04/2.55e-03
+	      4   | 2.931889e-15 | 2.923559e-14 | 2.14e-03/3.46e-04/2.54e-03
+	    total |                             | 3.18e-02/1.72e-03/3.39e-02
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 1.0980e-02 	| 6.2259e+05 	| 3.1966e+06 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 1.7982e-02 	| 6.8567e+06 	| 6.8567e+06 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 1.0878e-02 	| 6.2259e+05 	| 3.1966e+06 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 1.9130e-02 	| 6.8567e+06 	| 6.8567e+06 	| (f, id(v))
 Solution = 
 FEVector information
 ====================
@@ -249,18 +249,18 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 8.67e-02/2.30e-06/8.68e-02
-	      1   | 2.385672e-15 | 5.522608e-02 | 9.67e-03/1.53e-03/1.13e-02
-	      2   | 4.012670e-15 | 8.487585e-04 | 9.73e-03/1.81e-03/1.17e-02
-	      3   | 4.418612e-15 | 2.555420e-07 | 9.72e-03/1.39e-03/1.12e-02
-	      4   | 4.874881e-15 | 2.241835e-14 | 9.78e-03/1.41e-03/1.13e-02
-	    total |                             | 1.26e-01/6.14e-03/1.32e-01
+	    init  |                             | 8.52e-02/4.50e-06/8.54e-02
+	      1   | 3.018390e-15 | 5.522608e-02 | 8.24e-03/1.51e-03/9.88e-03
+	      2   | 5.369444e-15 | 8.487585e-04 | 8.06e-03/1.81e-03/1.00e-02
+	      3   | 4.778815e-15 | 2.555420e-07 | 8.07e-03/1.33e-03/9.51e-03
+	      4   | 4.497090e-15 | 2.254005e-14 | 8.02e-03/1.32e-03/9.45e-03
+	    total |                             | 1.18e-01/5.97e-03/1.24e-01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 4.8631e-02 	| 2.5560e+06 	| 1.2980e+07 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 7.4741e-02 	| 2.7525e+07 	| 2.7525e+07 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 4.0724e-02 	| 2.5560e+06 	| 1.2980e+07 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 7.4273e-02 	| 2.7525e+07 	| 2.7525e+07 	| (f, id(v))
 Solution = 
 FEVector information
 ====================
@@ -272,18 +272,18 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 3.83e-01/2.80e-06/3.83e-01
-	      1   | 4.826911e-15 | 2.924738e-02 | 8.04e-02/6.06e-03/8.67e-02
-	      2   | 8.930795e-15 | 4.905172e-04 | 3.44e-02/7.12e-03/4.17e-02
-	      3   | 9.459376e-15 | 1.346748e-07 | 3.53e-02/5.44e-03/4.10e-02
-	      4   | 9.136723e-15 | 1.870131e-14 | 3.91e-02/5.39e-03/4.47e-02
-	    total |                             | 5.72e-01/2.40e-02/5.98e-01
+	    init  |                             | 3.92e-01/5.00e-06/3.92e-01
+	      1   | 4.623383e-15 | 2.924738e-02 | 3.71e-02/6.13e-03/4.35e-02
+	      2   | 8.989919e-15 | 4.905172e-04 | 7.78e-02/6.94e-03/8.51e-02
+	      3   | 8.731147e-15 | 1.346748e-07 | 3.22e-02/5.67e-03/3.84e-02
+	      4   | 9.111585e-15 | 1.909851e-14 | 3.22e-02/5.93e-03/3.83e-02
+	    total |                             | 5.71e-01/2.47e-02/5.98e-01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 2.2731e-01 	| 1.0420e+07 	| 5.2630e+07 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 3.4066e-01 	| 1.1040e+08 	| 1.1040e+08 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 2.1199e-01 	| 1.0420e+07 	| 5.2630e+07 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 3.5433e-01 	| 1.1040e+08 	| 1.1040e+08 	| (f, id(v))
 Solution = 
 FEVector information
 ====================
@@ -295,18 +295,18 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.55e+00/3.20e-06/1.55e+00
-	      1   | 9.825249e-15 | 1.504798e-02 | 1.47e-01/2.45e-02/1.72e-01
-	      2   | 1.870276e-14 | 2.640269e-04 | 1.81e-01/3.37e-02/2.16e-01
-	      3   | 1.891759e-14 | 6.824838e-08 | 1.47e-01/2.56e-02/1.74e-01
-	      4   | 1.899852e-14 | 3.274168e-14 | 1.56e-01/2.57e-02/1.82e-01
-	    total |                             | 2.18e+00/1.09e-01/2.29e+00
+	    init  |                             | 1.54e+00/5.20e-06/1.54e+00
+	      1   | 9.728827e-15 | 1.504798e-02 | 1.38e-01/6.19e-02/2.00e-01
+	      2   | 1.877413e-14 | 2.640269e-04 | 1.52e-01/3.23e-02/1.85e-01
+	      3   | 1.885215e-14 | 6.824838e-08 | 1.62e-01/2.71e-02/1.90e-01
+	      4   | 1.898279e-14 | 3.118345e-14 | 1.47e-01/2.54e-02/1.74e-01
+	    total |                             | 2.14e+00/1.47e-01/2.29e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 7.8586e-01 	| 4.1878e+07 	| 2.1149e+08 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 1.3527e+00 	| 4.4188e+08 	| 4.4188e+08 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 7.3773e-01 	| 4.1878e+07 	| 2.1149e+08 	| (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 1.3845e+00 	| 4.4188e+08 	| 4.4188e+08 	| (f, id(v))
 
     ndofs   |   || u - u_h ||    order | || ∇(u - u_h) ||   order |
 ============|==========================|==========================|
@@ -315,4 +315,4 @@ FEVector information
        145  |     4.147e-04      2.19  |     3.609e-02      1.10  |
        545  |     1.037e-04      2.09  |     1.804e-02      1.05  |
       2113  |     2.592e-05      2.05  |     9.021e-03      1.02  |
-      8321  |     6.481e-06      2.02  |     4.511e-03      1.01  |</code></pre><p><img src="../../images/Example205_NonlinearPoisson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example204_ReactionConvectionDiffusionSUPG2D/">« 204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a class="docs-footer-nextpage" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 8 August 2022 15:37">Monday 8 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      8321  |     6.481e-06      2.02  |     4.511e-03      1.01  |</code></pre><p><img src="../../images/Example205_NonlinearPoisson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example204_ReactionConvectionDiffusionSUPG2D/">« 204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a class="docs-footer-nextpage" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
