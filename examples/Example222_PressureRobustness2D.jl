@@ -63,7 +63,7 @@ function PotentialFlowTestProblem()
 end
 
 
-function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, target_residual = 1e-10, maxiterations = 20, Plotter = nothing)
+function solver(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, target_residual = 1e-10, maxiterations = 20, Plotter = nothing)
 
     ## load problem data and set solver parameters
     ReconstructionOperator = FETypes[3]
@@ -107,12 +107,10 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, target_re
 
         ## get FESpaces
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-        Solution = FEVector(["u_c (classic)", "p_c (classic)"],FES)
-        Solution2 = FEVector(["u_r (p-robust)", "p_r (p-robust)"],FES)
 
         ## solve both problems
-        solve!(Solution, Problem; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
-        solve!(Solution2, Problem2; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
+        Solution = solve(Problem, FES; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
+        Solution2 = solve(Problem2, FES; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
 
         ## solve bestapproximation problems
         BA_L2_u = FEVector("Πu",FES[1])
@@ -180,7 +178,7 @@ function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plott
     #FETypes = [H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
 
     ## run
-    solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, Plotter = Plotter)
+    solver(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, Plotter = Plotter)
 
     return nothing
 end

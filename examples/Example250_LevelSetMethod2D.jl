@@ -43,7 +43,7 @@ function main(; verbosity = 0, Plotter = nothing, timestep = 1//500, T = 3//10, 
     add_boundarydata!(Problem, 1, [1,2,3,4], InterpolateDirichletBoundary; data = ϕ_bnd)
 
     ## generate FESpace and solution vector and interpolate initial state
-    Solution = FEVector("u_h",FESpace{FEType}(xgrid))
+    Solution = FEVector(FESpace{FEType}(xgrid))
     interpolate!(Solution[1], ϕ_0) 
 
     ## generate time-dependent solver
@@ -52,7 +52,7 @@ function main(; verbosity = 0, Plotter = nothing, timestep = 1//500, T = 3//10, 
     ## init plot ans upscaling
     p = GridVisualizer(; Plotter = Plotter, layout = (1,3), clear = true, resolution = (1200,400))
     xgrid_upscale = uniform_refine(xgrid,5-nref)
-    SolutionUpscaled = FEVector{Float16}("u_h (upscaled)",FESpace{H1P1{1}}(xgrid_upscale))
+    SolutionUpscaled = FEVector{Float16}(FESpace{H1P1{1}}(xgrid_upscale))
     nodevals = nodevalues_view(SolutionUpscaled[1])
     gridplot!(p[1,1], xgrid, linewidth = 1, title = "compute grid")
 

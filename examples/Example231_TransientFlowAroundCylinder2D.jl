@@ -65,8 +65,8 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
 
     ## generate FESpaces and Solution vector and UpscaledSolution vector (for plot on finer grid)
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-    Solution = FEVector{Float64}(["u_h","p_h"],FES)
-    UpscaledSolution = FEVector{Float64}(["u_h (fine)", "p_h (fine)"],[FESpace{H1P1{2}}(xgrid_plot),FESpace{H1P1{1}}(xgrid_plot)])
+    Solution = FEVector(FES)
+    UpscaledSolution = FEVector([FESpace{H1P1{2}}(xgrid_plot),FESpace{H1P1{1}}(xgrid_plot)])
 
     ## prepare drag lift calculation by testfunctions
     function circle_bnd_testfunction(component) # mask for drag/lift testfunction
@@ -95,8 +95,8 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
     DLIntegrator = ItemIntegrator([Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     ## prepare drag/lift calculation
-    TestFunctionD = FEVector{Float64}("drag testfunction",Solution[1].FES)
-    TestFunctionL = FEVector{Float64}("lift testfunction",Solution[1].FES)
+    TestFunctionD = FEVector(Solution[1].FES)
+    TestFunctionL = FEVector(Solution[1].FES)
     xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
     dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", bonus_quadorder = 0)
     lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", bonus_quadorder = 0)

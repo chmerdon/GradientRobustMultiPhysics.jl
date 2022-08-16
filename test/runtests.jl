@@ -237,7 +237,7 @@ function run_basic_fe_tests()
         print("FEType = $FEType $(broken ? "broken" : "") $AT | ndofs = $(FES.ndofs) | order = $order")
 
         # interpolate
-        Solution = FEVector{Float64}("Interpolation",FES)
+        Solution = FEVector(FES)
         interpolate!(Solution[1], exact_function)
 
         # check errors
@@ -371,7 +371,7 @@ function run_basic_fe_tests()
         FES = FESpace{FEType}(xgrid; broken = broken)
 
         # solve
-        Solution = FEVector{Float64}("L2-Bestapproximation",FES)
+        Solution = FEVector(FES)
         solve!(Solution, Problem)
 
         # check error
@@ -469,7 +469,7 @@ function run_basic_fe_tests()
         FES = FESpace{FEType}(xgrid)
 
         # solve
-        Solution = FEVector{Float64}("H1-Bestapproximation",FES)
+        Solution = FEVector(FES)
         solve!(Solution, Problem)
 
         # check error
@@ -620,7 +620,7 @@ function run_stokes_tests()
         FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid; broken = broken_p)]
 
         # solve
-        Solution = FEVector{Float64}("Stokes-Solution",FES)
+        Solution = FEVector(FES)
         solve!(Solution, Problem)
 
         # check error
@@ -744,7 +744,7 @@ function run_timeintegration_tests()
         ## discretise in space
         xgrid = testgrid(Edge1D)
         FES = FESpace{H1P2{1,1}}(xgrid)
-        Solution = FEVector{Float64}("u_h",FES)
+        Solution = FEVector(FES)
 
         ## set initial solution
         interpolate!(Solution[1],u)

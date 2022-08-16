@@ -91,7 +91,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     
     ## construct FESpaces and Solution veector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
-    Solution = FEVector(["v_h", "p_h", "T_h"],FES)
+    Solution = FEVector(FES)
 
     ## solve (fixedpoint iteration by solving consecutively equations [3] and [1,2] + Anderson acceleration)
     if anderson

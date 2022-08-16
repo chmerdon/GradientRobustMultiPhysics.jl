@@ -298,7 +298,7 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     if (bestapprox) # interior dofs are set by best-approximation
         FE_onref = FESpace{FEType_ref}(xgrid_ref)
         MOMxBASIS_BLF = DiscreteSymmetricBilinearForm([Identity,Identity],[FE_onref,FE_onref])
-        FEMMOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FE_onref,FE_onref)
+        FEMMOMxBASIS = FEMatrix{Float64}(FE_onref,FE_onref; name = "FExMOMENTS matrix")
         assemble!(FEMMOMxBASIS[1],MOMxBASIS_BLF)
         MOMxBASIS = FEMMOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
 
@@ -315,7 +315,7 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
         FES_moments = FESpace{FEType_moments}(xgrid_ref)
         FE_onref = FESpace{FEType_ref}(xgrid_ref)
         MOMxBASIS_BLF = DiscreteBilinearForm([Identity,Identity],[FES_moments,FE_onref])
-        FEMMOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FES_moments,FE_onref)
+        FEMMOMxBASIS = FEMatrix{Float64}(FES_moments, FE_onref; name = "FExMOMENTS matrix")
         assemble!(FEMMOMxBASIS[1],MOMxBASIS_BLF)
         MOMxBASIS = FEMMOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
 
@@ -419,7 +419,7 @@ function ExtendableGrids.interpolate!(
     FEType = eltype(target.FES)
     if target.FES.broken == true
         FESc = FESpace{FEType}(target.FES.xgrid)
-        Targetc = FEVector{T}("auxiliary data",FESc)
+        Targetc = FEVector{T}(FESc)
         interpolate!(Targetc[1], FESc, AT, source; items = items, time = time)
         xCellDofs = target.FES[CellDofs]
         xCellDofsc = FESc[CellDofs]

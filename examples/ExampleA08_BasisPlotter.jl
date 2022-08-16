@@ -27,8 +27,8 @@ function main(; refgeom = Triangle2D, nrefinements_for_plot = 4, nplots_per_row 
     ndofs = get_ndofs(ON_CELLS, FEType, refgeom)
 
     ## generate FEVector that carry the basis functions
-    FEFunc = FEVector("unit vector",FESpace{FEType}(xgrid))
-    FEFunc_fine = FEVector("representation on fine mesh",FESpace{H1P1{ncomponents}}(xgrid_fine))
+    FEFunc = FEVector(FESpace{FEType}(xgrid))
+    FEFunc_fine = FEVector(FESpace{H1P1{ncomponents}}(xgrid_fine))
 
     ## prepare plot layout
     nrows = Int(ceil(ndofs/nplots_per_row))

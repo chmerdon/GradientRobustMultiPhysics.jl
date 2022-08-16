@@ -40,7 +40,7 @@ function main(; Plotter = nothing, verbosity = 0, order = 3, h = 0.5, h_fine = 1
     FES = FESpace{FEType}(xgrid)
 
     ## generate a solution vector and solve the problem on the coarse grid
-    Solution = FEVector("u_h",FES)
+    Solution = FEVector(FES)
     solve!(Solution, Problem)
     
     ## we want to compare our discrete solution with a finer P1 interpolation of u

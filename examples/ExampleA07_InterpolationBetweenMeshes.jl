@@ -40,8 +40,8 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
     ## generate coressponding finite element spaces and FEVectors
     FES1 = FESpace{FEType1}(xgrid1)
     FES2 = FESpace{FEType2}(xgrid2)
-    FEFunction1 = FEVector("$FEType1 on grid 1",FES1)
-    FEFunction2 = FEVector("$FEType2 on grid 2",FES2)
+    FEFunction1 = FEVector(FES1)
+    FEFunction2 = FEVector(FES2)
 
     ## interpolate function onto first grid
     interpolate!(FEFunction1[1], u)

@@ -1,3 +1,19 @@
+
+
+function center_string(S::String, L::Int = 8)
+    if length(S) > L
+        S = S[1:L]
+    end
+    while length(S) < L-1
+        S = " " * S * " "
+    end
+    if length(S) < L
+        S = " " * S
+    end
+    return S
+end
+
+
 """
 $(TYPEDSIGNATURES)
 Writes the specified FEVectorBlocks into a CSV datafile with the given filename. First d colomuns are the grid coordinates, the remaining columns are filled

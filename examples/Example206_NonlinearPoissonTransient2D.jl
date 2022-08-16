@@ -63,7 +63,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),1)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
-    nonlin_diffusion = NonlinearForm(Gradient, [Identity, Gradient], [1,1], diffusion_kernel!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", bonus_quadorder = 2, newton = true)  
+    nonlin_diffusion = NonlinearForm(Gradient, [Identity, Gradient], [1,1], diffusion_kernel!, [2,3]; name = "((1+#1^2) ∇#2, ∇#T)", bonus_quadorder = 2, newton = true)  
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")
@@ -86,7 +86,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
         ## generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector("u_h",FES)
+        Solution = FEVector(FES)
 
         ## set initial solution
         interpolate!(Solution[1], u) 

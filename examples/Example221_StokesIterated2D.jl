@@ -78,20 +78,20 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
 
     ## velocity update equation
     add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
-    add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity]; name = "(div(v),p)", store = false, factor = -1))
+    add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity]; store = false, factor = -1))
     add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, 2, 2; newton = false))
 
     ## add penalty for discrete divergence
-    add_operator!(Problem, [1,1], BilinearForm([PenaltyDivergence, PenaltyDivergence]; name = "ϵ (div_h(u),div_h(v))", store = true, factor = λ))
+    add_operator!(Problem, [1,1], BilinearForm([PenaltyDivergence, PenaltyDivergence]; store = true, factor = λ))
 
     ## pressure update equation
-    add_operator!(Problem, [2,2], BilinearForm([Identity, Identity]; name = "(p,q)", store = false))
-    rhs_action = Action((result,input) -> (result[1] = input[1] - λ*input[2]), [1, 3]; name = "p_h - λdiv(u)")
-    add_rhsdata!(Problem, 2, LinearForm(Identity, [Identity, Divergence], [2, 1], rhs_action))
+    add_operator!(Problem, [2,2], BilinearForm([Identity, Identity]; store = false))
+    rhs_action = Action((result,input) -> (result[1] = input[1] - λ*input[2]), [1, 3])
+    add_rhsdata!(Problem, 2, LinearForm(Identity, [Identity, Divergence], [2, 1], rhs_action; name = "(#1 - λdiv(#2), #T)"))
 
     ## show and solve problem
     @show Problem
-    Solution = FEVector(["u_h","p_h"],[FES[1],FES[2]])
+    Solution = FEVector([FES[1],FES[2]])
     solve!(Solution, Problem; subiterations = [[1],[2]], maxiterations = 20, show_solver_config = true, show_statistics = true)
 
     ## calculate L2 error

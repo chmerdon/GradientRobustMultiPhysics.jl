@@ -37,10 +37,11 @@ function main(; Plotter = nothing, verbosity = 0)
 
     ## we want to use a broken space and constrain the normal jumps on interior faces
     ## in form of a Lagrange multiplier which needs an additional unknown
-    add_unknown!(Problem; unknown_name = "LM face jumps", equation_name = "face jump constraint")
+    add_unknown!(Problem; unknown_name = "λ", equation_name = "face jump constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(NormalFluxDisc{Jump}; AT = ON_IFACES))
     ## the diagonal operator sets the Lagrange multiplier on all boundary face regions to zero
     add_operator!(Problem, [2,2], DiagonalOperator(1; regions = [1,2,3,4]))
+    @show Problem
 
     ## choose some (inf-sup stable) finite element types
     ## first space is the Hdiv element that lives ON_CELLS
@@ -49,8 +50,7 @@ function main(; Plotter = nothing, verbosity = 0)
     FES = [FESpace{FEType[1], ON_CELLS}(xgrid; broken = true),FESpace{FEType[2], ON_FACES}(xgrid; broken = true)]
 
     ## solve
-    Solution = FEVector(["u_h (Hdiv-broken)", "LM face jumps"],FES)
-    solve!(Solution, Problem)
+    Solution = solve(Problem, FES)
     
     ## solve again with the (unbroken) Hdiv-continuous element to test that we get the same result
     ## note: for an FESpace living ON_CELLS and broken = false is the default
@@ -71,6 +71,5 @@ function main(; Plotter = nothing, verbosity = 0)
     vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false)
     scalarplot!(p[1,2],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7, title = "u_2 (abs + quiver)")
     vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false)
-
 end
 end

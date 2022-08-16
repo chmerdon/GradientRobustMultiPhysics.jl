@@ -48,7 +48,7 @@ function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 5, Plotter = no
     ## discretise = choose FEVector with appropriate FESpaces
     FEType = H1Pk{1,2,order}
     FES = FESpace{FEType}(xgrid)
-    Solution = FEVector("u_h", FES)
+    Solution = FEVector(FES)
 
     ## add periodic boundary
     dofsX, dofsY = get_periodic_coupling_info(FES, xgrid, 2, 4, (f1,f2) -> abs(f1[2] - f2[2]) < 1e-14)

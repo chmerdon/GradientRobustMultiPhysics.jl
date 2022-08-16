@@ -84,7 +84,7 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
 
     ## create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)
-    Solution = FEVector("u_h",FES)
+    Solution = FEVector(FES)
 
     ## solve the problem (here the newly defined linear solver type is used)
     solve!(Solution, Problem; linsolver = MySolver{Float64,Int64}, skip_update = [skip_update])

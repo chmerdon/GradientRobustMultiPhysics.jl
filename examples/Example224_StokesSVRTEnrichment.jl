@@ -101,7 +101,7 @@ function main(; μ = 1e-3, nlevels = 4, Plotter = nothing, order = 2, verbosity 
 
         ## generate FES spaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid; broken = true)]
-        Solution = FEVector(["u_Pk", "u_RT", "p_h"],FES)
+        Solution = FEVector(FES)
 
         ## solve
         solve!(Solution, Problem; time = T)
@@ -175,7 +175,7 @@ end
 
 ## test function that is called by test unit
 ## tests if polynomial solution is computed exactly
-function test(; μ = 1e-3, Plotter = nothing)
+function test(; μ = 1e-3)
     maxerror = 0
     for order = 1 : 4
         ## generate test data
@@ -209,16 +209,16 @@ function test(; μ = 1e-3, Plotter = nothing)
             FETypes = [H1Pk{2,2,order}, HDIVRTkENRICH{2, order-1}, H1Pk{1,2,order-1}]
         end
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid; broken = true)]
-        Solution = FEVector(["u_Pk", "u_RT", "p_h"],FES)
+        Solution = FEVector(FES)
 
         ## solve
         Problem = get_problem(; order = order, μ = μ, rhs = f, boundary_data = u)
         solve!(Solution, Problem)
 
         L2VelocityError = L2ErrorIntegrator(u, [Identity, Identity])
-        L2VeloDivEvaluator = L2NormIntegrator(1 , [Divergence, Divergence])
-        errorL2 = sqrt(evaluate(L2VelocityError,[Solution[1], Solution[2]]))
-        errorL2div = sqrt(evaluate(L2VeloDivEvaluator,[Solution[1], Solution[2]]))
+        L2VeloDivEvaluator = L2NormIntegrator(1, [Divergence, Divergence])
+        errorL2 = sqrt(evaluate(L2VelocityError, [Solution[1], Solution[2]]))
+        errorL2div = sqrt(evaluate(L2VeloDivEvaluator, [Solution[1], Solution[2]]))
 
         @show order, errorL2, errorL2div
         maxerror = max(errorL2 + errorL2div, maxerror)

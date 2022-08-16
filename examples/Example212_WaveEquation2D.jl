@@ -45,7 +45,7 @@ function main(; verbosity = 0, order = 1, reflevel = 2, T = 0.65, timestep = 1//
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("Wave equation")
     add_unknown!(Problem; unknown_name = "u", equation_name = "2nd order to 1st order substitution")
-    add_unknown!(Problem; unknown_name = "v", equation_name = "wave equation")
+    add_unknown!(Problem; unknown_name = "p", equation_name = "wave equation")
     add_operator!(Problem, [1,2], ReactionOperator(-1))
     add_operator!(Problem, [2,1], LaplaceOperator(c))
     add_rhsdata!(Problem, 1, LinearForm(Identity, f))
@@ -55,7 +55,7 @@ function main(; verbosity = 0, order = 1, reflevel = 2, T = 0.65, timestep = 1//
     ## generate FESpace and solution vector
     FEType = H1Pk{1,2,order}
     FES = FESpace{FEType}(xgrid)
-    Solution = FEVector(["u_h","v_h"],[FES, FES])
+    Solution = FEVector([FES, FES])
 
     ## set initial solution
     interpolate!(Solution[1], u0) 

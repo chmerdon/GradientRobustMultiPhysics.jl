@@ -144,7 +144,7 @@ function boundarydata!(
                     # face interpolation expects continuous dofmaps
                     # quick and dirty fix: use face interpolation and remap dofs to broken dofs
                     FESc = FESpace{FEType}(FE.xgrid)
-                    Targetc = FEVector{T}("auxiliary data",FESc)
+                    Targetc = FEVector{T}(FESc)
                     interpolate!(Targetc[1], FESc, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
                     xBFaceDofsc = FESc[BFaceDofs]
                     dof::Int = 0
@@ -217,7 +217,7 @@ function boundarydata!(
         bonus_quadorder::Int = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
         Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
         b::Array{T,1} = zeros(T,FE.ndofs)
-        A = FEMatrix{T}("MassMatrixBnd", FE)
+        A = FEMatrix{T}(FE; name = "mass matrix bnd")
 
         if Dboperator == Identity
             for region in BADirichletBoundaryRegions

@@ -91,7 +91,7 @@ function main(; use_gravity = true, newton = false, nlevels = 4, Plotter = nothi
 
         # generate FESpaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
-        Solution = [FEVector(["u_h (BR)", "ϱ_h (BR)"],FES),FEVector(["u_h (BR+)", "ϱ_h (BR+)"],FES)]
+        Solution = [FEVector(FES),FEVector(FES)]
         NDoFs[lvl] = length(Solution[1].entries)
 
         # solve with and without reconstruction

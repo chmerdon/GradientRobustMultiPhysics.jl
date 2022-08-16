@@ -108,7 +108,7 @@ function main(;
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
 
         ## generate solution fector
-        Solution = FEVector(["u_h", "p_h"],FES)
+        Solution = FEVector(FES)
 
         ## set initial solution ( = bestapproximation at time 0)
         BA_L2_u = FEVector("L2-Bestapproximation velocity",FES[1])

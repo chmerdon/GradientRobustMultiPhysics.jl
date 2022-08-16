@@ -40,8 +40,8 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
 
     ## init FEspace, matrix and right-hand side vector
     FES = FESpace{FEType}(xgrid)
-    A = FEMatrix{Float64}("A", FES, FES)
-    b = FEVector("b", FES)
+    A = FEMatrix(FES, FES)
+    b = FEVector(FES)
 
     ## quadrature formula
     qf = QuadratureRule{Float64,Triangle2D}(2*(get_polynomialorder(FEType, Triangle2D)-1))
@@ -112,7 +112,7 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
 
     ## solve
     ExtendableSparse.flush!(A.entries)
-    Solution = FEVector("u_h", FES)
+    Solution = FEVector(FES)
     Solution.entries .= A.entries \ b.entries
     
     ## plot solution (for e.g. Plotter = PyPlot)

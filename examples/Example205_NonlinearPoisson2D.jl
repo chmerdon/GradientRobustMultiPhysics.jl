@@ -111,9 +111,9 @@ function main(;
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1
-        nonlin_diffusion = NonlinearForm(Gradient, [Identity, Gradient], [1,1], diffusion_kernel!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", bonus_quadorder = 2, sparse_jacobian = false) 
+        nonlin_diffusion = NonlinearForm(Gradient, [Identity, Gradient], [1,1], diffusion_kernel!, [2,3]; name = "((1+#1^2) ∇#2, ∇#T)", bonus_quadorder = 2, sparse_jacobian = false) 
     elseif q == 2
-        nonlin_diffusion = NonlinearForm(Gradient, [Gradient], [1], diffusion_kernel!, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", bonus_quadorder = 4, jacobian = "auto", sparse_jacobian = false)   
+        nonlin_diffusion = NonlinearForm(Gradient, [Gradient], [1], diffusion_kernel!, [2,2]; name = "((κ+|∇#1|^2) ∇#1, ∇#T)", bonus_quadorder = 4, jacobian = "auto", sparse_jacobian = false)   
     else 
         @error "only q ∈ [1,2] !"
     end
@@ -140,11 +140,10 @@ function main(;
         
         ## create finite element space and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("u_h",FES)
+        Solution = FEVector{Float64}(FES)
 
         ## solve
-        @show Solution
-        GradientRobustMultiPhysics.solve!(Solution, Problem; linsolver = factorization, maxiterations = 10, show_statistics = true)
+        solve!(Solution, Problem; linsolver = factorization, maxiterations = 10, show_statistics = true)
 
         ## calculate L2 and H1 error and save data
         NDofs[level] = length(Solution.entries)

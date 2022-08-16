@@ -51,7 +51,7 @@ function main(; verbosity = 0, nrefinements = 4, Plotter = nothing)
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid; broken = true)]
 
     ## create a solution vector and solve the problem
-    Solution = FEVector{Float64}(["u_h","p_h"],FES)
+    Solution = FEVector(FES)
     solve!(Solution, Problem; show_statistics = true)
 
     ## plot

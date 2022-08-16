@@ -88,7 +88,7 @@ function main(; verbosity = 0, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H
 
         ## generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector("u_h",FES)
+        Solution = FEVector(FES)
 
         ## set initial solution
         interpolate!(Solution[1], u) 

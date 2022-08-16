@@ -26,17 +26,17 @@ function test_recastBLFintoLF()
     LF2 = LinearForm(Identity, [Divergence], [1]; name = "(p,div(v))")    # LinearForm for argument 2
     
     ## assemble BLF into matrix
-    B = FEMatrix{Float64}("B",FES[1], FES[2])
+    B = FEMatrix{Float64}(FES[1], FES[2])
     assemble_operator!(B[1,1], BLF)
 
     ## generate test vector with some constant functions
-    Test = FEVector("test",FES)
+    Test = FEVector(FES)
     interpolate!(Test[1], DataFunction((result,x) -> (result[1] = x[1]; result[2] = x[2]), [2, 2]; dependencies = "X", bonus_quadorder = 1)) # div(u) = 2
     interpolate!(Test[2], DataFunction([0.75]))
 
     ## assemble LF1 and LF2 into vectors
-    b1 = FEVector("b (LF1)",FES[1])
-    b2 = FEVector("b (LF2)",FES[2])
+    b1 = FEVector(FES[1])
+    b2 = FEVector(FES[2])
     assemble_operator!(b1[1], LF1, Test)
     assemble_operator!(b2[1], LF2, Test)
 
@@ -112,8 +112,8 @@ function test_2nd_derivs()
     update_basis!(FEBE_symH2,1)
 
     ## interpolate quadratic testfunction
-    Iu = FEVector{Float64}("Iu",FES)
-    interpolate!(Iu[1],testf)
+    Iu = FEVector(FES)
+    interpolate!(Iu[1], testf)
 
     ## check if operator evals have the correct length
     @assert size(FEBE_L.cvals,1) == length(expected_L)

@@ -283,14 +283,13 @@ end
 
 ## replaces #A and #T and #&j by ansatz or testfunction variables as specified in ProblemDescription
 function parse_unknowns(S::String, PDE::PDEDescription, position = (1,1), fixed_arguments = ())
-    dependencies = unique(fixed_arguments)
     Sout = deepcopy(S)
-    for j = 1 : length(dependencies)
-        Sout = replace(Sout, "#$j" => PDE.variables[dependencies[j]][1])
+    for j = 1 : length(fixed_arguments)
+        Sout = replace(Sout, "#$j" => PDE.variables[fixed_arguments[j]][1])
     end    
     if length(position) == 2
-        Sout = replace(Sout, "#A" => PDE.variables[position[1]][1])
-        Sout = replace(Sout, "#T" => PDE.variables[position[2]][2])
+        Sout = replace(Sout, "#A" => PDE.variables[position[2]][1])
+        Sout = replace(Sout, "#T" => PDE.variables[position[1]][2])
     else
         Sout = replace(Sout, "#T" => PDE.variables[position[1]][2])
     end
@@ -309,9 +308,9 @@ function Base.show(io::IO, PDE::PDEDescription)
     println(io, "===============")
     println(io, "  system name = $(PDE.name)\n")
 
-    println(io, "     id   | unknown name / variables / equation name")
+    println(io, "      id    | unknown name / variables [#A, #T] / equation name")
     for j=1:length(PDE.unknown_names)
-        print(io, "    [$j]   | $(PDE.unknown_names[j]) / $(PDE.variables[j]) / $(PDE.equation_names[j]) \n")
+        print(io, "     [$j]    | $(PDE.unknown_names[j]) / $(PDE.variables[j]) / $(PDE.equation_names[j]) \n")
     end
 
     println(io, "\n  LHS block | PDEOperator(s)")
@@ -320,7 +319,7 @@ function Base.show(io::IO, PDE::PDEDescription)
             print(io, "    [$j,$k]   | ")
             for o = 1 : length(PDE.LHSOperators[j,k])
                 if typeof(PDE.LHSOperators[j,k][o]) <: PDEOperator
-                    print(io, "$(parse_unknowns(PDE.LHSOperators[j,k][o].name, PDE, (j,k), PDE.LHSOperators[j,k][o].fixed_arguments_ids)) (APT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[2]), AT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[3]), regions = $(PDE.LHSOperators[j,k][o].regions))")
+                    print(io, "$(parse_unknowns(PDE.LHSOperators[j,k][o].name, PDE, (j,k), PDE.LHSOperators[j,k][o].fixed_arguments_ids)) (APT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[2]), AT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[3]), regions = $(PDE.LHSOperators[j,k][o].regions)$(PDE.LHSOperators[j,k][o].transposed_copy ? ", transposed copy to [$k,$j]" : ""))")
                 else
                     print(io, "$(typeof(PDE.LHSOperators[j,k][o]))")
                 end

@@ -72,7 +72,7 @@ function main(;
 
     ## generate FESpace and solution vector and interpolate initial state
     FES = FESpace{H1Pk{1,2,order}}(xgrid)
-    Solution = FEVector(["c_h","μ_h"], [FES, FES])
+    Solution = FEVector([FES, FES])
     interpolate!(Solution[1], c0) 
 
     ## generate time-dependent solver
@@ -87,7 +87,7 @@ function main(;
     p = GridVisualizer(; Plotter = Plotter, layout = (7,3), clear = true, resolution = (900,2100))
     if order > 1
         xgrid_upscale = uniform_refine(xgrid, order-1)
-        SolutionUpscaled = FEVector{Float64}("c_h (upscaled)",FESpace{H1P1{1}}(xgrid_upscale))
+        SolutionUpscaled = FEVector(FESpace{H1P1{1}}(xgrid_upscale))
         interpolate!(SolutionUpscaled[1], Solution[1])
     else
         xgrid_upscale = xgrid

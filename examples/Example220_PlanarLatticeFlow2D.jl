@@ -78,7 +78,7 @@ function main(; ν = 2e-4, nrefinements = 5, verbosity = 0, Plotter = nothing)
 
         ## create finite element spaces and solve
         FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
-        Solution = FEVector(["u_h $(probust ? "(probust)" : "classical")","p_h $(probust ? "(probust)" : "classical")"],FES)
+        Solution = FEVector(FES; name = ["u_h $(probust ? "(probust)" : "classical")", "p_h $(probust ? "(probust)" : "classical")"])
         solve!(Solution, Problem; show_statistics = true, show_solver_config = true)
 
         ## calculate L2 errors for u and p

@@ -26,7 +26,7 @@ function main()
     MAMA_BLF = DiscreteSymmetricBilinearForm([Identity,Identity],[FES,FES]; T = Rational{Int64})
 
     ## assemble mass matrix and divide by area
-    MAMA = FEMatrix{Rational{Int64}}("mass matrix",FES)
+    MAMA = FEMatrix{Rational{Int64}}(FES)
     assemble!(MAMA[1],MAMA_BLF)
     MAMA = MAMA.entries ./ xgrid[CellVolumes][1]
 

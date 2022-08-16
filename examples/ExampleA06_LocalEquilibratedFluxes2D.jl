@@ -98,7 +98,7 @@ function main(; verbosity = 0, order = 2, nlevels = 16, theta = 1//2, Plotter = 
 
         ## create a solution vector and solve the problem
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector("u_h",FES)
+        Solution = FEVector(FES)
         solve!(Solution, Problem)
         NDofs[level] = length(Solution[1])
 

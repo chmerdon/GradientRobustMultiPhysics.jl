@@ -100,7 +100,7 @@ function Base.show(io::IO, FEM::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) w
         @printf(io, "  [%d,%d] |",m,n);
         @printf(io, "  %6d |",FEM[j].FESX.ndofs);
         @printf(io, "  %6d |",FEM[j].FESY.ndofs);
-        @printf(io, " %s (%s,%s)\n",FEM[j].name,FEM[j].FESX.name,FEM[j].FESY.name);
+        @printf(io, " %s (%s, %s)\n",FEM[j].name,FEM[j].FESX.name,FEM[j].FESY.name);
     end    
 end
 
@@ -111,16 +111,14 @@ FEMatrix{TvM,TiM}(name::String, FES::FESpace{TvG,TiG,FETypeX,APTX}) where {TvG,T
 
 Creates FEMatrix with one square block (FES,FES).
 """
-function FEMatrix(name::String, FES::FESpace)
-    return FEMatrix{Float64,Int64}(name::String, FES)
+function FEMatrix(FES::FESpace; name = "auto")
+    return FEMatrix{Float64,Int64}(FES; name = name)
 end
-function FEMatrix{TvM}(name::String, FES::FESpace) where {TvM}
-    return FEMatrix{TvM,Int64}(name::String, FES)
+function FEMatrix{TvM}(FES::FESpace; name = "auto") where {TvM}
+    return FEMatrix{TvM,Int64}(FES; name = name)
 end
-function FEMatrix{TvM,TiM}(name::String, FES::FESpace{TvG,TiG,FETypeX,APTX}) where {TvM,TiM,TvG,TiG,FETypeX,APTX}
-    entries = ExtendableSparseMatrix{TvM,TiM}(FES.ndofs,FES.ndofs)
-    Block = FEMatrixBlock{TvM,TiM,TvG,TiG,FETypeX,FETypeX,APTX,APTX}(name, FES, FES, 0 , 0, FES.ndofs, FES.ndofs, entries)
-    return FEMatrix{TvM,TiM,TvG,TiG,1,1,1}([Block], entries)
+function FEMatrix{TvM,TiM}(FES::FESpace{TvG,TiG,FETypeX,APTX}; name = "auto") where {TvM,TiM,TvG,TiG,FETypeX,APTX}
+    return FEMatrix{TvM,TiM}([FES], [FES]; name = name)
 end
 
 """
@@ -130,16 +128,14 @@ FEMatrix{TvM,TiM}(name::String, FESX::FESpace{TvG,TiG,FETypeX,APTX}, FESY::FESpa
 
 Creates FEMatrix with one rectangular block (FESX,FESY).
 """
-function FEMatrix(name::String, FESX::FESpace, FESY::FESpace)
-    return FEMatrix{Float64,Int64}(name, FESX, FESY)
+function FEMatrix(FESX::FESpace, FESY::FESpace; name = "auto")
+    return FEMatrix{Float64,Int64}(FESX, FESY; name = name)
 end
-function FEMatrix{TvM}(name::String, FESX::FESpace, FESY::FESpace) where {TvM}
-    return FEMatrix{TvM,Int64}(name, FESX, FESY)
+function FEMatrix{TvM}(FESX::FESpace, FESY::FESpace; name = "auto") where {TvM}
+    return FEMatrix{TvM,Int64}(FESX, FESY; name = name)
 end
-function FEMatrix{TvM,TiM}(name::String, FESX::FESpace{TvG,TiG,FETypeX,APTX}, FESY::FESpace{TvG,TiG,FETypeY,APTY}) where {TvM,TiM,TvG,TiG,FETypeX,FETypeY,APTX,APTY}
-    entries = ExtendableSparseMatrix{TvM,TiM}(FESX.ndofs,FESY.ndofs)
-    Block = FEMatrixBlock{TvM,TiM,TvG,TiG,FETypeX,FETypeY,APTX,APTY}(name, FESX, FESY, 0 , 0, FESX.ndofs, FESY.ndofs, entries)
-    return FEMatrix{TvM,TiM,TvG,TiG,1,1,1}([Block], entries)
+function FEMatrix{TvM,TiM}(FESX::FESpace, FESY::FESpace; name = "auto") where {TvM,TiM}
+   return FEMatrix{TvM,TiM}([FESX], [FESY]; name = name)
 end
 
 """
@@ -149,32 +145,43 @@ FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 
 Creates FEMatrix with blocks (FESX[i],FESY[j]) (enumerated row-wise).
 """
-function FEMatrix(name::String, FES::Array{<:FESpace{TvG,TiG},1}) where {TvG,TiG}
-    return FEMatrix{Float64,Int64}(name, FES)
+function FEMatrix(FES::Array{<:FESpace{TvG,TiG},1}; name = "auto") where {TvG,TiG}
+    return FEMatrix{Float64,Int64}(FES; name = name)
 end
-function FEMatrix{TvM}(name::String, FES::Array{<:FESpace{TvG,TiG},1}) where {TvM,TvG,TiG}
-    return FEMatrix{TvM,Int64}(name, FES)
+function FEMatrix{TvM}(FES::Array{<:FESpace{TvG,TiG},1}; name = "auto") where {TvM,TvG,TiG}
+    return FEMatrix{TvM,Int64}(FES, FES; name = name)
 end
-function FEMatrix{TvM,TiM}(name::String, FES::Array{<:FESpace{TvG,TiG},1}) where {TvM,TiM,TvG,TiG}
-    ndofs = 0
-    for j=1:length(FES)
-        ndofs += FES[j].ndofs
-    end
-    entries = ExtendableSparseMatrix{TvM,TiM}(ndofs,ndofs)
+function FEMatrix{TvM,TiM}(FES::Array{<:FESpace{TvG,TiG},1}; name = "auto") where {TvM,TiM,TvG,TiG}
+    return FEMatrix{TvM,TiM}(FES, FES; name = name)
+end
 
-    Blocks = Array{FEMatrixBlock{TvM,TiM,TvG,TiG},1}(undef,length(FES)^2)
+function FEMatrix{TvM,TiM}(FESX::Array{<:FESpace{TvG,TiG},1}, FESY::Array{<:FESpace{TvG,TiG},1}; name = "auto") where {TvM,TiM,TvG,TiG}
+    ndofsX, ndofsY = 0, 0
+    for j=1:length(FESX)
+        ndofsX += FESX[j].ndofs
+    end
+    for j=1:length(FESY)
+        ndofsY += FESY[j].ndofs
+    end
+    entries = ExtendableSparseMatrix{TvM,TiM}(ndofsX,ndofsY)
+
+    if name == "auto"
+        name = ""
+    end
+
+    Blocks = Array{FEMatrixBlock{TvM,TiM,TvG,TiG},1}(undef,length(FESX)*length(FESY))
     offsetX = 0
     offsetY = 0
-    for j=1:length(FES)
+    for j=1:length(FESX)
         offsetY = 0
-        for k=1:length(FES)
-            Blocks[(j-1)*length(FES)+k] = FEMatrixBlock{TvM,TiM,TvG,TiG,eltype(FES[j]),eltype(FES[k]),assemblytype(FES[j]),assemblytype(FES[k])}(name * " [$j,$k]", FES[j], FES[k], offsetX , offsetY, offsetX+FES[j].ndofs, offsetY+FES[k].ndofs, entries)
-            offsetY += FES[k].ndofs
+        for k=1:length(FESY)
+            Blocks[(j-1)*length(FESY)+k] = FEMatrixBlock{TvM,TiM,TvG,TiG,eltype(FESX[j]),eltype(FESY[k]),assemblytype(FESX[j]),assemblytype(FESY[k])}(name * " [$j,$k]", FESX[j], FESY[k], offsetX , offsetY, offsetX+FESX[j].ndofs, offsetY+FESY[k].ndofs, entries)
+            offsetY += FESY[k].ndofs
         end    
-        offsetX += FES[j].ndofs
+        offsetX += FESX[j].ndofs
     end    
     
-    return FEMatrix{TvM,TiM,TvG,TiG,length(FES),length(FES),length(FES)^2}(Blocks, entries)
+    return FEMatrix{TvM,TiM,TvG,TiG,length(FESX),length(FESY),length(FESX)*length(FESY)}(Blocks, entries)
 end
 
 """

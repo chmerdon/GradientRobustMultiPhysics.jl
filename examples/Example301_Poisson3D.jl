@@ -59,7 +59,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
         
         ## create finite element space and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector("u_h",FES)
+        Solution = FEVector(FES)
 
         ## solve the problem
         solve!(Solution, Problem; show_statistics = true)

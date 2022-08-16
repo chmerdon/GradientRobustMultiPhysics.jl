@@ -68,7 +68,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
 
     ## generate FESpaces and Solution vector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-    Solution = FEVector(["u_h","p_h"],FES)
+    Solution = FEVector(FES)
 
     ## solve
     solve!(Solution, Problem; maxiterations = 50, target_residual = 1e-10, show_statistics = true)

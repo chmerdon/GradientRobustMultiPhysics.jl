@@ -6,7 +6,7 @@
 This example computes the velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem
 ```math
 \begin{aligned}
-- \mu \Delta \mathbf{u} + (\mathbf{u} \¢dot \nabla) \mathbf{u} + \nabla p & = \mathbf{f}\\
+- \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p & = \mathbf{f}\\
 \mathrm{div}(u) & = 0
 \end{aligned}
 ```
@@ -75,11 +75,11 @@ function main(;
 
     ## add convection term as chosen by iterationtype
     if iterationtype == 1 # Newton for c(u_h, u_h, v_h)
-        add_operator!(Problem, 1, NonlinearForm(Identity, [Identity, Gradient], [1,1], convection_kernel, [2,6]))
+        add_operator!(Problem, 1, NonlinearForm(Identity, [Identity, Gradient], [1,1], convection_kernel, [2,6]; name = "((#1⋅∇)#1, #T)"))
     elseif iterationtype == 2 # Picard (adds c(u_old, u_h, v_h) on left-hand side)
-        add_operator!(Problem, [1,1], BilinearForm([Gradient, Identity], [Identity], [1], Action(convection_kernel, [2,6]); transposed_assembly = true))
+        add_operator!(Problem, [1,1], BilinearForm([Gradient, Identity], [Identity], [1], Action(convection_kernel, [2,6]); name = "((#1⋅∇)#1, #T)", transposed_assembly = true))
     elseif iterationtype == 3 # fully explicit (adds c(u_old, u_old, v_h) on right-hand side)
-        add_rhsdata!(Problem, 1, LinearForm(Identity, [Identity, Gradient], [1,1], Action(convection_kernel, [2,6]); factor = -1))
+        add_rhsdata!(Problem, 1, LinearForm(Identity, [Identity, Gradient], [1,1], Action(convection_kernel, [2,6]); name = "((#1⋅∇)#1, #T)", factor = -1))
     end
 
     ## add right-hand side data 
@@ -97,10 +97,12 @@ function main(;
 
     ## generate FES spaces and solution vector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
-    Solution = FEVector(["u_h", "p_h"],FES)
+    Solution = FEVector(FES)
 
     ## solve
     solve!(Solution, Problem; skip_update = iterationtype == 3 ? -1 : 1, maxiterations = 20, target_residual = 1e-13, show_statistics = true)
+
+    @show norm(Solution), norms(Solution)
 
     ## plot last solution and convergence hisotry
     p = GridVisualizer(; Plotter = Plotter, layout = (1,3), clear = true, resolution = (1500,500))

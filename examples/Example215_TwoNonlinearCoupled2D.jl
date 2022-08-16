@@ -41,8 +41,8 @@ function main(; verbosity = 0, Plotter = nothing)
     Problem = PDEDescription("Problem")
 
     ## add two unknown with zero boundary data
-    add_unknown!(Problem; unknown_name = "u1", equation_name = "Equation for u1")
-    add_unknown!(Problem; unknown_name = "u2", equation_name = "Equation for u2")
+    add_unknown!(Problem; unknown_name = "u", equation_name = "Equation for u")
+    add_unknown!(Problem; unknown_name = "p", equation_name = "Equation for p")
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 2, [1,2,3,4], HomogeneousDirichletBoundary)
 
@@ -56,13 +56,13 @@ function main(; verbosity = 0, Plotter = nothing)
             return nothing
         end
     end
-    add_operator!(Problem,[1,1], NonlinearForm(OperatorPair{Identity,Gradient}, [OperatorPair{Identity,Gradient},Identity], [1,2], operator_kernel(1), [3,4]; name = "ν1 (∇u1,∇v) + α1 (u1 u2,v) - (f1,v)", dependencies = "X", newton = true))
-    add_operator!(Problem,[2,2], NonlinearForm(OperatorPair{Identity,Gradient}, [OperatorPair{Identity,Gradient},Identity], [2,1], operator_kernel(2), [3,4]; name = "ν2 (∇u2,∇v) + α2 (u1 u2,v) - (f2,v)", dependencies = "X", newton = true))
+    add_operator!(Problem, 1, NonlinearForm(OperatorPair{Identity,Gradient}, [OperatorPair{Identity,Gradient},Identity], [1,2], operator_kernel(1), [3,4]; name = "ν1 (∇#1,∇#T) + α1 (#1 #2,#T) - (f1,#T)", dependencies = "X", newton = true))
+    add_operator!(Problem, 2, NonlinearForm(OperatorPair{Identity,Gradient}, [OperatorPair{Identity,Gradient},Identity], [2,1], operator_kernel(2), [3,4]; name = "ν2 (∇#1,∇#T) + α2 (#1 #2,#T) - (f2,#T)", dependencies = "X", newton = true))
 
     ## discretise (here: u1 with P3, u2 with P2)
     FETypes = [H1P3{1,2},H1P2{1,2}]
     FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
-    Solution = FEVector(["u1","u2"],FES)
+    Solution = FEVector(FES)
 
     ## show problem and Solution structure
     @show Problem Solution

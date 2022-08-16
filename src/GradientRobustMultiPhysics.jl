@@ -178,12 +178,13 @@ export add_constraint!
 include("solvers.jl")
 export AbstractLinearSystem
 export SolverConfig
-
-export solve!, assemble!, apply_boundarydata!
-export TimeControlSolver, advance!, advance_until_stationarity!, advance_until_time!
+export solve, solve!, assemble!, apply_boundarydata!
 export show_statistics
+
+include("solvers_timedependent.jl")
 export AbstractTimeIntegrationRule
 export BackwardEuler, CrankNicolson
+export TimeControlSolver, advance!, advance_until_stationarity!, advance_until_time!
 
 include("diffeq_interface.jl")
 export eval_rhs!, eval_jacobian!, mass_matrix, jac_prototype

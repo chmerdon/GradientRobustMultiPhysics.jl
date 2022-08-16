@@ -85,6 +85,10 @@ Custom `length` function for `FEVectorBlock` that gives the coressponding number
 """
 Base.length(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
 
+function FEVector(name::Union{String, Array{String,1}}, FES)
+    return FEVector(FES; name = name)
+end
+
 """
 ````
 FEVector{T}(name::String, FES::FESpace) where T <: Real
@@ -92,11 +96,11 @@ FEVector{T}(name::String, FES::FESpace) where T <: Real
 
 Creates FEVector that has one block.
 """
-function FEVector(name::String, FES::FESpace{Tv,Ti,FEType,APT}) where {Tv,Ti,FEType,APT}
-    return FEVector{Float64}([name],[FES])
+function FEVector(FES::FESpace{Tv,Ti,FEType,APT}; name = "auto") where {Tv,Ti,FEType,APT}
+    return FEVector{Float64}([FES]; name = name)
 end
-function FEVector{T}(name::String, FES::FESpace{Tv,Ti,FEType,APT}) where {T,Tv,Ti,FEType,APT}
-    return FEVector{T}([name],[FES])
+function FEVector{T}(FES::FESpace{Tv,Ti,FEType,APT}; name = "auto") where {T,Tv,Ti,FEType,APT}
+    return FEVector{T}([FES]; name = name)
 end
 
 """
@@ -106,10 +110,21 @@ FEVector{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 
 Creates FEVector that has one block for each FESpace in FES.
 """
-function FEVector(name, FES::Array{<:FESpace{Tv,Ti},1}) where {Tv,Ti}
-    return FEVector{Float64}(name,FES)
+function FEVector(FES::Array{<:FESpace{Tv,Ti},1}; name = "auto") where {Tv,Ti}
+    return FEVector{Float64}(FES; name = name)
 end
-function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace{Tv,Ti},1}) where {T,Tv,Ti}
+function FEVector{T}(FES::Array{<:FESpace{Tv,Ti},1}; name = "auto") where {T,Tv,Ti}
+    if name == "auto"
+        names = ["#$j" for j in 1 : length(FES)]
+    elseif typeof(name) == String
+        names = Array{String,1}(undef, length(FES))
+        for j = 1:length(FES)
+            names[j] = name * " [#$j]"
+        end    
+    else
+        names = name
+    end
+    @assert length(names) == length(FES)
     @logmsg DeepInfo "Creating FEVector mit blocks $((p->p.name).(FES))"
     ndofs = 0
     for j = 1:length(FES)
@@ -119,17 +134,10 @@ function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace{Tv,Ti},1}) wher
     Blocks = Array{FEVectorBlock{T,Tv,Ti},1}(undef,length(FES))
     offset = 0
     for j = 1:length(FES)
-        Blocks[j] = FEVectorBlock{T,Tv,Ti,eltype(FES[j]),assemblytype(FES[j])}(name[j], FES[j], offset , offset+FES[j].ndofs, entries)
+        Blocks[j] = FEVectorBlock{T,Tv,Ti,eltype(FES[j]),assemblytype(FES[j])}(names[j], FES[j], offset , offset+FES[j].ndofs, entries)
         offset += FES[j].ndofs
     end    
     return FEVector{T,Tv,Ti}(Blocks, entries)
-end
-function FEVector{T}(name::String, FES::Array{<:FESpace{Tv,Ti},1}) where {T,Tv,Ti}
-    names = Array{String,1}(undef, length(FES))
-    for j = 1:length(FES)
-        names[j] = name * " [$j]"
-    end    
-    FEVector{T}(names, FES)
 end
 
 

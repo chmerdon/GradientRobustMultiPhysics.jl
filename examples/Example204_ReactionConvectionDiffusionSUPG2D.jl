@@ -55,7 +55,7 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
         return nothing
     end
     action = Action(action_kernel!, [3,3]; bonus_quadorder = max(α.bonus_quadorder,β.bonus_quadorder))
-    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
+    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇#A,∇#T) + (α#A + β⋅∇#A, #T)", transposed_assembly = true)
 end
 
 # function that provides the SUPG left-hand side operator
@@ -72,7 +72,7 @@ function SUPGOperator_LHS(α, β, ν, τ, xCellDiameters)
         return nothing
     end
     action = Action(action_kernel!, [2,4]; dependencies = "I", bonus_quadorder = max(α.bonus_quadorder,β.bonus_quadorder))
-    return BilinearForm([OperatorTriple{Identity,Gradient,Laplacian},Gradient], action; name = "τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)", transposed_assembly = true)
+    return BilinearForm([OperatorTriple{Identity,Gradient,Laplacian},Gradient], action; name = "τ (h^2 (-ν Δ#A + α#A + β⋅∇#A), β⋅∇#T)", transposed_assembly = true)
 end
 
 # function that provides the SUPG right-hand side operator
@@ -86,7 +86,7 @@ function SUPGOperator_RHS(f, β, τ, xCellDiameters)
         return nothing
     end
     action = Action(action_kernel!, [2,2]; xdim = 2, dependencies = "XI", bonus_quadorder = max(f.bonus_quadorder,β.bonus_quadorder))
-    return LinearForm(Gradient, action; name = "τ (h^2 f, β⋅∇v)")
+    return LinearForm(Gradient, action; name = "τ (h^2 f, β⋅∇#1)")
 end
 
 ## the SUPG stabilisation is weighted by powers of the cell diameter
@@ -153,7 +153,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 10, nlevels = 
 
         ## generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector("u_h",FES)
+        Solution = FEVector(FES)
 
         ## solve PDE
         solve!(Solution, Problem)

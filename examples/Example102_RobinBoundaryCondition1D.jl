@@ -56,16 +56,18 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
     add_unknown!(Problem; unknown_name = "u", equation_name = "reaction-convection-diffusion equation")
 
     ## add nonlinear operator
-    add_operator!(Problem, [1,1], NonlinearForm(OperatorPair{Identity, Gradient}, [OperatorPair{Identity, Gradient}], [1], operator_kernel!, [2,2]; name = "∇u ⋅ ∇v + (u ∇u + u) ⋅ v", bonus_quadorder = 4, newton = true) )
+    add_operator!(Problem, [1,1], NonlinearForm(OperatorPair{Identity, Gradient}, [OperatorPair{Identity, Gradient}], [1], operator_kernel!, [2,2]; name = "(∇#1, ∇#T) + (#1∇#1 + #1, #T)", bonus_quadorder = 4, newton = true) )
 
     ## right-hand side data
     add_rhsdata!(Problem, 1, LinearForm(Identity, f))
 
     ## Robin boundary data right
-    add_operator!(Problem, [1,1], BilinearForm([Identity, Identity], Action(robin_kernel!, [1,1]); name = "(g - u) ⋅ v", AT = ON_BFACES, regions = [1]) )
+    add_operator!(Problem, [1,1], BilinearForm([Identity, Identity], Action(robin_kernel!, [1,1]); name = "(g - #A, #T)", AT = ON_BFACES, regions = [1]) )
     
     ## Dirichlet boundary data left
     add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = uD)
+
+    @show Problem
 
     ## choose some finite element type and generate a FESpace for the grid
     ## (here it is a one-dimensional H1-conforming P2 element H1P2{1,1})
@@ -73,8 +75,7 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
     FES = FESpace{FEType}(xgrid)
 
     ## generate a solution vector and solve
-    Solution = FEVector("u_h",FES)
-    solve!(Solution, Problem; show_statistics = true)
+    Solution = solve(Problem, FES; show_statistics = true)
 
     ## compute L2 error
     L2error = L2ErrorIntegrator(u)

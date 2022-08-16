@@ -91,7 +91,7 @@ function main(;
     xgrid = bimetal_strip2D(; scale = scale, n = 2*(nref+1))
 
     ## prepare nonlinear operator (one for each bimetal region)
-    nonlin_operator = NonlinearForm(Gradient, [Gradient], [1], op, [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [1,2], dependencies = "I", bonus_quadorder = 3, sparse_jacobian = true, newton = true) 
+    nonlin_operator = NonlinearForm(Gradient, [Gradient], [1], op, [4,4,7]; name = "C(ϵ(#1)-ϵT):∇#T", regions = [1,2], dependencies = "I", bonus_quadorder = 3, sparse_jacobian = true, newton = true) 
     
     ## generate problem description and assign nonlinear operators
     Problem = PDEDescription("nonlinear elasticity problem")
@@ -102,7 +102,7 @@ function main(;
 
     ## create finite element space and solution vector
     FES = FESpace{H1Pk{2,2,order}}(xgrid)
-    Solution = FEVector("u_h", FES)
+    Solution = FEVector(FES)
 
     ## solve
     solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9, show_statistics = true)

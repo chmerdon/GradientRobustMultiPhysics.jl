@@ -51,13 +51,13 @@ function main(; Plotter = nothing, verbosity = 0, ϵ = 1e-4, nrefinements = 6, F
     Problem = PDEDescription("obstacle problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "obstacle problem")
     add_operator!(Problem, [1,1], LaplaceOperator(1.0; store = true))
-    add_operator!(Problem, [1,1], NonlinearForm(Identity, [Identity], [1], obstacle_penalty_kernel!, [1,1]; name = "eps^{-1} ||(u-χ)_||", dependencies = "X", factor = 1/ϵ, newton = true) )
+    add_operator!(Problem, [1,1], NonlinearForm(Identity, [Identity], [1], obstacle_penalty_kernel!, [1,1]; name = "eps^{-1} ((#1-χ)_, #T)", dependencies = "X", factor = 1/ϵ, newton = true) )
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
     add_rhsdata!(Problem, 1, LinearForm(Identity, f; store = true))
         
     ## create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)
-    Solution = FEVector("u_h",FES)
+    Solution = FEVector(FES)
 
     ## solve
     @show Problem Solution

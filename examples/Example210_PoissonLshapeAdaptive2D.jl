@@ -89,8 +89,7 @@ function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter 
         println("------- LEVEL $level")
         @time begin
             FES = FESpace{FEType}(xgrid)
-            Solution = FEVector{Float64}("u_h",FES)
-            solve!(Solution, Problem)
+            Solution = solve(Problem, FES)
             ndofs = length(Solution[1])
             push!(NDofs, ndofs)
             println("\t ndof =  $ndofs")

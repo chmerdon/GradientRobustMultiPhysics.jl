@@ -132,7 +132,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
         ## generate FES spaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
-        Solution = FEVector(["u_h", "p_h"],FES)
+        Solution = FEVector(FES)
 
         ## solve
         solve!(Solution, Problem; time = T)

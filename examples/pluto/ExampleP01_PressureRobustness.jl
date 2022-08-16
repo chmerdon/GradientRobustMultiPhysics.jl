@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.17.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -121,7 +121,7 @@ begin
 	end
 		
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-	Solution = FEVector{Float64}(["u_h", "p_h"],FES)
+	Solution = FEVector(FES)
 	
 	## choose reconstrution operator in right-hand side
 	if reconstruct == "classical"

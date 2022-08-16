@@ -235,10 +235,10 @@ $(TYPEDSIGNATURES)
 
 constructor for a bilinearform a(u,v) = (C ϵ(u), ϵ(v)) where C is the 2D stiffness tensor
 for isotropic media in Voigt notation, i.e.
-C ϵ(u) = 2 μ ϵ(u) + λ tr(ϵ(u)) for Lame parameters μ and λ
+ℂ ϵ(u) = 2 μ ϵ(u) + λ tr(ϵ(u)) for Lame parameters μ and λ
     
-    In Voigt notation C is a 3 x 3 matrix
-    C = [c11,c12,  0
+    In Voigt notation ℂ is a 3 x 3 matrix
+    ℂ = [c11,c12,  0
          c12,c11,  0
            0,  0,c33]
     
@@ -248,7 +248,7 @@ Note: ϵ is the symmetric part of the gradient (in Voigt notation)
     
 """
 function HookStiffnessOperator2D(μ, λ; 
-    name = "(C(μ,λ) ϵ(#A),ϵ(#T))", 
+    name = "(ℂ(μ,λ) ϵ(#A),ϵ(#T))", 
     AT::Type{<:AssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0], 
     ϵ = SymmetricGradient{1}, 
@@ -271,10 +271,10 @@ $(TYPEDSIGNATURES)
 
 constructor for a bilinearform a(u,v) = (C ϵ(u), ϵ(v)) where C is the 3D stiffness tensor
 for isotropic media in Voigt notation, i.e.
-C ϵ(u) = 2 μ ϵ(u) + λ tr(ϵ(u)) for Lame parameters μ and λ
+ℂ ϵ(u) = 2 μ ϵ(u) + λ tr(ϵ(u)) for Lame parameters μ and λ
 
-    In Voigt notation C is a 6 x 6 matrix
-    C = [c11,c12,c12,  0,  0,  0
+    In Voigt notation ℂ is a 6 x 6 matrix
+    ℂ = [c11,c12,c12,  0,  0,  0
          c12,c11,c12,  0,  0,  0
          c12,c12,c11,  0,  0,  0
            0,  0,  0,c44,  0,  0
@@ -287,7 +287,7 @@ Note: ϵ is the symmetric part of the gradient (in Voigt notation)
     
 """
 function HookStiffnessOperator3D(μ, λ;
-    name = "(C(μ,λ) ϵ(#A),ϵ(#T))", 
+    name = "(ℂ(μ,λ) ϵ(#A),ϵ(#T))", 
     AT::Type{<:AssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0],
     ϵ = SymmetricGradient{1},
@@ -363,7 +363,11 @@ function BilinearForm(
 
     # construct PDEoperator
     if name == "auto"
-        name = apply_action_to == 1 ? "A(...,$(operators_linear[1])(#A)):$(operators_linear[2])(#T)" : "$(operators_linear[1])(#A):A(...,$(operators_linear[2])(#T))"
+        if action.name == "no action"
+            name = "($(operators_linear[1])(#A), $(operators_linear[2])(#T))"
+        else
+            name = apply_action_to == 1 ? "(A(...,$(operators_linear[1])(#A)), $(operators_linear[2])(#T))" : "($(operators_linear[1])(#A), A(...,$(operators_linear[2])(#T)))"
+        end
     end
     
     append!(operators_current, operators_linear)
@@ -807,15 +811,15 @@ function update_storage!(O::PDEOperator, SC, CurrentSolution::FEVector{T,Tv,Ti},
             SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
             SC.LHS_AssemblyPatterns[j,k][o].newton_args = O.newton_arguments
             skip_preps = false
-            A = FEMatrix{T}("SystemMatrix", FES[1], FES[end])
-            b = FEVector{T}("SystemRhs", FES[1])
+            A = FEMatrix{T}(FES[1], FES[end])
+            b = FEVector{T}(FES[1])
             #set_nonzero_pattern!(A)
         else
             A = O.storage_A
             b = O.storage_b
             if size(A[1,1],1) < FES[1].ndofs || size(A[1,1],2) < FES[end].ndofs
                 @info "re-init storage"
-                A = FEMatrix{T}("SystemMatrix", FES[1], FES[end])
+                A = FEMatrix{T}(FES[1], FES[end])
                 SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
                 SC.LHS_AssemblyPatterns[j,k][o].newton_args = O.newton_arguments
                 #set_nonzero_pattern!(A)
@@ -833,14 +837,14 @@ function update_storage!(O::PDEOperator, SC, CurrentSolution::FEVector{T,Tv,Ti},
         O.storage_b = b
     else
         if !O.storage_init || typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-            A = FEMatrix{T}("SystemMatrix", FES[1], FES[2])
+            A = FEMatrix{T}(FES[1], FES[2])
             SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
             O.storage_init = true
             skip_preps = false
         else
             A = O.storage_A
             if size(A[1,1],1) < FES[1].ndofs || size(A[1,1],2) < FES[2].ndofs
-                A = FEMatrix{T}("SystemMatrix", FES[1], FES[2])
+                A = FEMatrix{T}(FES[1], FES[2])
                 SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
                 skip_preps = false
             else

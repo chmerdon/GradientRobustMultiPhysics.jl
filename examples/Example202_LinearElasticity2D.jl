@@ -51,8 +51,7 @@ function main(; verbosity = 0, E = 1000, ν = 0.4, Plotter = nothing)
     ## show and solve PDE
     @show Problem
     FEType = H1P1{2} # P1-Courant FEM will be used
-    Solution = FEVector("u_h",FESpace{FEType}(xgrid))
-    solve!(Solution, Problem)
+    Solution = solve(Problem, FESpace{FEType}(xgrid))
 
     ## plot stress on displaced mesh
     displace_mesh!(xgrid, Solution[1]; magnify = 4)

@@ -37,9 +37,10 @@ function main(; verbosity = 0, ν = 1e-2, h = 0.02, T = 2, order = 2, τ = 5//10
     ## generate empty PDEDescription for three unknowns (h, u)
     Problem = PDEDescription("Burger's Equation")
     add_unknown!(Problem; unknown_name = "u", equation_name = "Burger's Equation")
-    add_operator!(Problem, 1, NonlinearForm(Gradient, [Identity], [1], f, [1,1]; newton = true, bonus_quadorder = 2))
+    add_operator!(Problem, 1, NonlinearForm(Gradient, [Identity], [1], f, [1,1]; name = "(f(#A),∇#T)", newton = true, bonus_quadorder = 2))
     add_operator!(Problem, [1,1], LaplaceOperator(ν))
     add_constraint!(Problem, CombineDofs(1, 1, [1],[num_nodes(xgrid)]))
+    @show Problem
 
     ## prepare solution vector and interpolate u0
     Solution = FEVector("u_h", FESpace{FEType}(xgrid))

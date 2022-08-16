@@ -38,7 +38,7 @@ function main(;order::Int = 1, testmode = false)
 
     ## do the Hcurl and Hdiv interpolation of the function and its curl, resp.
     FES = [FESpace{FE[1]}(xgrid), FESpace{FE[2]}(xgrid)]
-    Interpolations = FEVector(["Hcurl-Interpolation", "Hdiv-Interpolation"], FES)
+    Interpolations = FEVector(FES)
     interpolate!(Interpolations[1], u)
     interpolate!(Interpolations[2], curl(u))
 
@@ -47,7 +47,7 @@ function main(;order::Int = 1, testmode = false)
     
     ## Generate the test space and some matching FEVector
     FEStest = FESpace{testFE}(xgrid; broken = true)
-    error = FEVector("ErrorVector", FEStest)
+    error = FEVector(FEStest)
 
     ## Define (yet undiscrete) linear forms that represents testing each side of the identity with the testspace functions
     LF1 = LinearForm(Identity, [Identity]) # identity of test function is multiplied with identity of other argument

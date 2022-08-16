@@ -54,7 +54,7 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
         return nothing
     end
     action = Action(action_kernel!, [3,3]; bonus_quadorder = max(α.bonus_quadorder,β.bonus_quadorder))
-    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
+    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇#A,∇#T) + (α#A + β⋅∇#A, #T)", transposed_assembly = true)
 end
 
 ## everything is wrapped in a main function
@@ -89,7 +89,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 1e-2, nlevels 
         ## first we define an item-dependent action kernel...
         xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
         stab_action = Action((result,input,item) -> (result .= input .* xFaceVolumes[item[1]]^2), [2,2]; name = "stabilisation action", dependencies = "I")
-        JumpStabilisation = BilinearForm([Jump(Gradient), Jump(Gradient)], stab_action; AT = ON_IFACES, factor = τ, name = "τ |F|^2 [∇(u)]⋅[∇(v)]")
+        JumpStabilisation = BilinearForm([Jump(Gradient), Jump(Gradient)], stab_action; AT = ON_IFACES, factor = τ, name = "τ |F|^2 [∇(#A)]⋅[∇(#T)]")
         add_operator!(Problem, [1,1], JumpStabilisation)
     end
 
@@ -108,12 +108,9 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 1e-2, nlevels 
         xgrid = uniform_refine(xgrid)
         xFaceVolumes = xgrid[FaceVolumes] # update xFaceVolumes used in stabilisation definition
 
-        ## generate FESpace and solution vector
+        ## generate FESpace and solve
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector("u_h",FES)
-
-        ## solve PDE
-        solve!(Solution, Problem)
+        Solution = solve(Problem, FES)
 
         ## interpolate (just for comparison)
         Interpolation = FEVector("I(u)",FES)

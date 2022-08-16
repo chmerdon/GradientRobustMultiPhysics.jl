@@ -46,15 +46,12 @@ function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 5, Plotter = no
     ## add boundary data (here: zero data for boundary regions 1:4)
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
 
-    ## discretise = choose FEVector with appropriate FESpaces
+    ## choose FESpace to discretise
     FEType = H1Pk{1,2,order}
-    Solution = FEVector("u_h",FESpace{FEType}(xgrid))
-
-    ## show problem and Solution structure
-    @show Problem Solution
-
-    ## solve for chosen Solution vector
-    solve!(Solution, Problem; show_statistics = true)
+    FES = FESpace{FEType}(xgrid)
+    
+    ## solve
+    Solution = solve(Problem, FES; show_statistics = true)
 
     ## plot solution (for e.g. Plotter = PyPlot)
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))

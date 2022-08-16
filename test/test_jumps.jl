@@ -51,7 +51,7 @@ function test_disc_LF(xgrid, discontinuity)
     # generate constant P0 function with no jumps
     ncomponents = 1
     FE = FESpace{H1Q1{ncomponents}}(xgrid)
-    FEFunction = FEVector{Float64}("velocity",FE)
+    FEFunction = FEVector(FE)
     fill!(FEFunction[1],1)
 
 
@@ -86,12 +86,12 @@ function test_disc_BLF(xgrid, discontinuity)
     # generate constant P0 function with no jumps
     ncomponents = 1
     FE = FESpace{L2P0{ncomponents}}(xgrid)
-    FEFunction = FEVector{Float64}("velocity",FE)
+    FEFunction = FEVector(FE)
     fill!(FEFunction[1],1)
  
     action = NoAction()
     TestForm = DiscreteBilinearForm([IdentityDisc{discontinuity}, IdentityDisc{discontinuity}], [FE, FE], action; AT = ON_IFACES)
-    A = FEMatrix{Float64}("test",FE)
+    A = FEMatrix{Float64}(FE)
     assemble!(A[1,1], TestForm)
     flush!(A[1,1].entries)
 
