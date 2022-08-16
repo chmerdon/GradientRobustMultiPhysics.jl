@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>220 : Planar Lattice Flow 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li class="is-active"><a class="tocitem" href>220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li><li><a class="tocitem" href="../ExampleA11_NavierStokesFixpointIterations/">A11 : Navier-Stokes Fixed-point iterations</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>220 : Planar Lattice Flow 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>220 : Planar Lattice Flow 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example220_PlanarLatticeFlow2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Planar-Lattice-Flow-2D"><a class="docs-heading-anchor" href="#:-Planar-Lattice-Flow-2D">220 : Planar Lattice Flow 2D</a><a id=":-Planar-Lattice-Flow-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Planar-Lattice-Flow-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example220_PlanarLatticeFlow2D.jl">source code</a>)</p><p>This example computes an approximation to the planar lattice flow test problem of the Stokes equations</p><p class="math-container">\[\begin{aligned}
+- \nu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = \mathbf{f}\\
+\mathrm{div}(\mathbf{u}) &amp; = 0
+\end{aligned}\]</p><p>with an exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\nu$</span> and Dirichlet boundary data for <span>$\mathbf{u}$</span>.</p><p>Here the exact data for the planar lattice flow</p><p class="math-container">\[\begin{aligned}
+\mathbf{u}(x,y,t) &amp; := \exp(-8 \pi^2 \nu t) \begin{pmatrix} \sin(2 \pi x) sin(2 \pi y) \\ \cos(2 \pi x) cos(2 \pi y) \end{pmatrix}\\
+p(x,y,t) &amp; := \exp(-8 \pi^2 \nu t) ( \cos(4 \pi x) - \cos(4 \pi y)) / 4
+\end{aligned}\]</p><p>is prescribed at fixed time <span>$t = 0$</span> with <span>$\mathbf{f} = - \nu \Delta \mathbf{u}$</span>.</p><p>In this example the Navier-Stokes equations are solved with a pressure-robust variant of the Bernardi–Raugel finite element method and the nonlinear convection term (that involves reconstruction operators) is automatically differentiated for a Newton iteration.</p><pre><code class="language-julia hljs">module Example220_PlanarLatticeFlow2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+
+# everything is wrapped in a main function
+function main(; ν = 2e-4, nrefinements = 5, verbosity = 0, Plotter = nothing)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # generate a unit square mesh and refine
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
+
+    # negotiate data
+    u = DataFunction((result, x, t) -&gt; (
+            result[1] = exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
+            result[2] = exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
+        ), [2,2]; name = &quot;u&quot;, dependencies = &quot;XT&quot;, bonus_quadorder = 6)
+    p = DataFunction((result, x, t) -&gt; (
+            result[1] = exp(-8*pi*pi*ν*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
+        ), [1,2]; name = &quot;p&quot;, dependencies = &quot;XT&quot;, bonus_quadorder = 4)
+    Δu = eval_Δ(u)
+    f = DataFunction((result, x, t) -&gt; (
+            result .= -ν*Δu(x,t); # ∇p + (u ⋅ ∇)u = 0
+        ), [2,2]; name = &quot;f&quot;, dependencies = &quot;XT&quot;, bonus_quadorder = 4)
+
+    # set finite elements (Bernardi--Raugel)
+    FEType = [H1BR{2}, L2P0{1}]
+
+    # prepare comparison plot
+    vis = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))
+
+    for probust in [false,true]
+
+        # set identity operator
+        IdentityV = probust ? ReconstructionIdentity{HDIVBDM1{2}} : Identity
+
+        # setup a bestapproximation problem via a predefined prototype
+        Problem = PDEDescription(&quot;planar lattice flow problem&quot;)
+        add_unknown!(Problem; equation_name = &quot;momentum equation&quot;, unknown_name = &quot;velocity&quot;)
+        add_unknown!(Problem; equation_name = &quot;incompressibility constraint&quot;, unknown_name = &quot;pressure&quot;)
+        add_operator!(Problem, [1,1], LaplaceOperator(ν; store = true))
+        add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
+        add_operator!(Problem, [1,1], ConvectionOperator(1, IdentityV, 2, 2; test_operator = IdentityV, newton = true))
+        add_constraint!(Problem, FixedIntegralMean(2,0))
+        add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
+        add_rhsdata!(Problem, 1, LinearForm(IdentityV, f))
+        @show Problem
+
+        # create finite element spaces and solve
+        FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
+        Solution = FEVector(FES; name = [&quot;u_h $(probust ? &quot;(probust)&quot; : &quot;classical&quot;)&quot;, &quot;p_h $(probust ? &quot;(probust)&quot; : &quot;classical&quot;)&quot;])
+        solve!(Solution, Problem; show_statistics = true, show_solver_config = true)
+
+        # calculate L2 errors for u and p
+        L2errorV = L2ErrorIntegrator(u, Identity)
+        L2errorP = L2ErrorIntegrator(p, Identity)
+        println(&quot;|| u - u_h || = $(sqrt(evaluate(L2errorV,Solution[1])))&quot;)
+        println(&quot;|| p - p_h || = $(sqrt(evaluate(L2errorP,Solution[2])))&quot;)
+
+        # plot
+        scalarplot!(vis[1+probust,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 5, title = &quot;$(Solution[1].name) (abs + quiver)&quot;)
+        vectorplot!(vis[1+probust,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false)
+        scalarplot!(vis[1+probust,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 7, title = &quot;$(Solution[2].name)&quot;)
+    end
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example220_PlanarLatticeFlow2D.main()
+Problem = 
+PDE-DESCRIPTION
+===============
+  system name = planar lattice flow problem
+
+      id    | unknown name / variables [#A, #T] / equation name
+     [1]    | velocity / [&quot;v&quot;, &quot;w&quot;] / momentum equation 
+     [2]    | pressure / [&quot;p&quot;, &quot;q&quot;] / incompressibility constraint 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | 0.0002 (∇v,∇w) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | ((id(v) ⋅ ∇) v, id(w)) [Newton] [∂v] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | -(p, div(w)) (APT = BilinearForm, AT = ON_CELLS, regions = [0], transposed copy to [2,1] with factor -1.0)
+    [2,1]   | none
+    [2,2]   | none
+
+  RHS block | PDEOperator(s)
+     [1]    | (f, id(w)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
+     [2]    | none
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+   BoundaryOperator[2] : 
+
+  GlobalConstraints[1] : Mean[2] != 0 
+
+┌ Info: ========== Solving planar lattice flow problem (at fixed time 0) ==========
+│ 	Equation (1.1) momentum equation for velocity (discretised by H1BR{2}, ndofs = 10434)
+└ 	Equation (1.2) incompressibility constraint for pressure (discretised by L2P0{1} (broken), ndofs = 4096)
+SC = 
+SOLVER-CONFIGURATION
+======================
+  overall nonlinear = true
+  overall timedependent = true
+  anderson_iterations = 0
+  subiterations = UnitRange{Int64}[1:2]
+  show_iteration_details = true
+  timedependent_equations = Any[]
+  anderson_unknowns = [1]
+  show_statistics = true
+  anderson_metric = l2
+  skip_update = [1]
+  linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
+  damping = 0
+  time = 0
+  parallel_storage = false
+  show_solver_config = true
+  anderson_damping = 1
+  check_nonlinear_residual = true
+  fixed_penalty = 1.0e60
+  target_residual = 1.0e-10
+  maxiterations = 10
+  AssemblyTriggers = 
+         LHS_AT[1] :  A  I 
+         LHS_AT[2] :  N  N 
+         RHS_AT[1] :  T 
+         RHS_AT[2] :  N 
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
+
+  LHS_dependencies = [[1] [1, 2]; [2, 1] [2]]
+
+
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	    init  |                             | 2.31e+01/5.30e-06/2.32e+01
+	      1   | 4.155028e-17 | 8.045259e-02 | 5.96e-01/1.61e-01/2.42e+00
+	      2   | 8.887402e-17 | 1.024548e-02 | 6.55e-01/1.51e-01/8.11e-01
+	      3   | 7.823324e-17 | 4.138344e-03 | 5.60e-01/4.72e-01/1.04e+00
+	      4   | 7.556922e-17 | 7.867024e-04 | 5.67e-01/4.11e-01/9.82e-01
+	      5   | 7.727662e-17 | 1.935933e-05 | 5.59e-01/1.27e-01/6.90e-01
+	      6   | 7.405266e-17 | 6.645766e-08 | 5.63e-01/1.44e-01/7.11e-01
+	      7   | 7.532137e-17 | 3.700312e-13 | 5.80e-01/1.28e-01/7.12e-01
+	    total |                             | 2.72e+01/1.59e+00/3.21e+01
+
+┌ Info: =================================== STATISTICS ===================================
+│ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
+│ 	----------------------------------------------------------------------------------
+│ 	LHS[1,1][1] 	| 4.3183e+00 	| 1.7172e+07 	| 1.7172e+07 	| 0.0002 (∇v,∇w)
+│ 	LHS[1,1][2] 	| 3.7747e+00 	| 4.5888e+05 	| 9.2737e+06 	| ((id(v) ⋅ ∇) v, id(w)) [Newton] [∂v]
+│ 	LHS[1,2][1] 	| 3.0130e+00 	| 1.1363e+07 	| 1.1363e+07 	| -(p, div(w))
+└ 	RHS[1,][1] 	| 6.7112e+00 	| 1.4265e+08 	| 1.2743e+09 	| (f, id(w))
+|| u - u_h || = 0.31044598969524145
+|| p - p_h || = 0.19225996887573957
+Problem = 
+PDE-DESCRIPTION
+===============
+  system name = planar lattice flow problem
+
+      id    | unknown name / variables [#A, #T] / equation name
+     [1]    | velocity / [&quot;v&quot;, &quot;w&quot;] / momentum equation 
+     [2]    | pressure / [&quot;p&quot;, &quot;q&quot;] / incompressibility constraint 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | 0.0002 (∇v,∇w) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | ((R(v) ⋅ ∇) v, R(w)) [Newton] [∂v] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | -(p, div(w)) (APT = BilinearForm, AT = ON_CELLS, regions = [0], transposed copy to [2,1] with factor -1.0)
+    [2,1]   | none
+    [2,2]   | none
+
+  RHS block | PDEOperator(s)
+     [1]    | (f, R(w)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
+     [2]    | none
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+   BoundaryOperator[2] : 
+
+  GlobalConstraints[1] : Mean[2] != 0 
+
+┌ Info: ========== Solving planar lattice flow problem (at fixed time 0) ==========
+│ 	Equation (1.1) momentum equation for velocity (discretised by H1BR{2}, ndofs = 10434)
+└ 	Equation (1.2) incompressibility constraint for pressure (discretised by L2P0{1} (broken), ndofs = 4096)
+SC = 
+SOLVER-CONFIGURATION
+======================
+  overall nonlinear = true
+  overall timedependent = true
+  anderson_iterations = 0
+  subiterations = UnitRange{Int64}[1:2]
+  show_iteration_details = true
+  timedependent_equations = Any[]
+  anderson_unknowns = [1]
+  show_statistics = true
+  anderson_metric = l2
+  skip_update = [1]
+  linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
+  damping = 0
+  time = 0
+  parallel_storage = false
+  show_solver_config = true
+  anderson_damping = 1
+  check_nonlinear_residual = true
+  fixed_penalty = 1.0e60
+  target_residual = 1.0e-10
+  maxiterations = 10
+  AssemblyTriggers = 
+         LHS_AT[1] :  A  I 
+         LHS_AT[2] :  N  N 
+         RHS_AT[1] :  T 
+         RHS_AT[2] :  N 
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
+
+  LHS_dependencies = [[1] [1, 2]; [2, 1] [2]]
+
+
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	    init  |                             | 1.72e+00/5.00e-06/1.72e+00
+	      1   | 4.112261e-17 | 9.171721e-02 | 5.97e-01/1.91e-01/7.93e-01
+	      2   | 1.036318e-16 | 1.199596e-05 | 5.86e-01/1.61e-01/7.51e-01
+	      3   | 1.048434e-16 | 6.220656e-08 | 5.91e-01/1.51e-01/7.46e-01
+	      4   | 1.045792e-16 | 2.059311e-14 | 5.86e-01/1.30e-01/7.20e-01
+	    total |                             | 4.08e+00/6.32e-01/4.74e+00
+
+┌ Info: =================================== STATISTICS ===================================
+│ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
+│ 	----------------------------------------------------------------------------------
+│ 	LHS[1,1][1] 	| 1.0629e-01 	| 7.1589e+06 	| 7.1589e+06 	| 0.0002 (∇v,∇w)
+│ 	LHS[1,1][2] 	| 1.0666e+00 	| 5.1624e+05 	| 6.7144e+06 	| ((R(v) ⋅ ∇) v, R(w)) [Newton] [∂v]
+│ 	LHS[1,2][1] 	| 2.2204e-02 	| 2.0148e+06 	| 2.0148e+06 	| -(p, div(w))
+└ 	RHS[1,][1] 	| 2.8721e+00 	| 1.4270e+08 	| 7.3169e+08 	| (f, R(w))
+|| u - u_h || = 0.006284334068126126
+|| p - p_h || = 0.016720063839268228</code></pre><p><img src="../../images/Example220_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 22:14">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
