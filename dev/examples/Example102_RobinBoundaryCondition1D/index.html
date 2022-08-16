@@ -26,8 +26,7 @@ end
 # kernel for Robin boundary condition
 function robin_kernel!(result, input)
     # input = [u]
-    eval_data!(g)
-    result[1] = g.val[1] - input[1] # = g - u (will be multiplied with v)
+    result[1] = g()[1] - input[1] # = g - u (will be multiplied with v)
     return nothing
 end
 
@@ -102,17 +101,17 @@ PDE-DESCRIPTION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.52e+01/6.60e-06/1.52e+01
-	      1   | 7.420453e-14 | 6.400322e-01 | 1.37e+00/1.24e-04/1.72e+00
-	      2   | 4.529748e-14 | 5.344356e-02 | 3.99e-04/9.72e-05/5.67e-04
-	      3   | 5.506533e-14 | 4.413179e-05 | 1.73e-04/3.91e-05/2.32e-04
-	      4   | 4.017811e-14 | 4.725667e-11 | 1.50e-04/2.72e-05/1.86e-04
-	    total |                             | 1.66e+01/2.94e-04/1.70e+01
+	    init  |                             | 1.54e+01/6.00e-06/1.55e+01
+	      1   | 7.420453e-14 | 6.400322e-01 | 1.36e+00/1.37e-04/1.71e+00
+	      2   | 4.529748e-14 | 5.344356e-02 | 4.41e-04/1.09e-04/6.29e-04
+	      3   | 5.506533e-14 | 4.413179e-05 | 1.83e-04/3.95e-05/2.41e-04
+	      4   | 4.017811e-14 | 4.725667e-11 | 1.79e-04/2.97e-05/2.19e-04
+	    total |                             | 1.68e+01/3.22e-04/1.72e+01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 5.3386e+00 	| 4.3200e+03 	| 4.3074e+07 	| (∇u, ∇v) + (u∇u + u, v) [AD-Newton] [∂u]
-│ 	LHS[1,1][2] 	| 4.1635e+00 	| 0.0000e+00 	| 3.0030e+06 	| (g - u, v)
-└ 	RHS[1,][1] 	| 3.6819e+00 	| 0.0000e+00 	| 2.9850e+05 	| (f, id(v))
-L2error = 1.0271403975283884e-5</code></pre><p><img src="../../images/Example102_RobinBoundaryCondition1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example101_Bestapproximation1D/">« 101 : L2-Bestapproximation 1D</a><a class="docs-footer-nextpage" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 5.3771e+00 	| 4.3200e+03 	| 4.2988e+07 	| (∇u, ∇v) + (u∇u + u, v) [AD-Newton] [∂u]
+│ 	LHS[1,1][2] 	| 4.2014e+00 	| 0.0000e+00 	| 3.0030e+06 	| (g - u, v)
+└ 	RHS[1,][1] 	| 3.7797e+00 	| 0.0000e+00 	| 2.9850e+05 	| (f, id(v))
+L2error = 1.0271403975283884e-5</code></pre><p><img src="../../images/Example102_RobinBoundaryCondition1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example101_Bestapproximation1D/">« 101 : L2-Bestapproximation 1D</a><a class="docs-footer-nextpage" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 21:21">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

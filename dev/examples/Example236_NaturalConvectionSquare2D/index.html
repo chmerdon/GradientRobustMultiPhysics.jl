@@ -100,7 +100,7 @@ PDE-DESCRIPTION
   LHS block | PDEOperator(s)
     [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
             | ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-    [1,2]   | (p, div(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0], transposed copy to [2,1])
+    [1,2]   | -(p, div(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0], transposed copy to [2,1] with factor -1.0)
     [1,3]   | -Ra v⋅g T (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | none
     [2,2]   | none
@@ -165,27 +165,27 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 3.69e+00/4.40e-06/3.70e+00
-	      1   | 1.178005e-11 | 1.710197e+03 | 2.33e-01/2.49e-01/4.87e-01
-	      2   | 5.328201e-12 | 1.029414e+03 | 2.24e-01/2.19e-01/4.46e-01
-	      3   | 4.449706e-12 | 6.245192e+02 | 2.23e-01/2.11e-01/4.39e-01
-	      4   | 4.052294e-12 | 3.852044e+02 | 2.24e-01/1.86e-01/4.14e-01
-	      5   | 3.868129e-12 | 2.482485e+02 | 2.24e-01/1.92e-01/4.20e-01
-	      6   | 4.018676e-12 | 1.980286e+02 | 2.23e-01/1.98e-01/4.25e-01
-	      7   | 4.052604e-12 | 1.111594e+02 | 2.24e-01/1.93e-01/4.21e-01
-	      8   | 3.925584e-12 | 6.100656e+01 | 2.23e-01/2.04e-01/4.31e-01
-	    total |                             | 5.49e+00/1.65e+00/7.20e+00
+	    init  |                             | 4.18e+00/6.10e-06/4.18e+00
+	      1   | 1.178005e-11 | 1.710197e+03 | 2.63e-01/2.68e-01/5.37e-01
+	      2   | 5.328201e-12 | 1.029414e+03 | 2.52e-01/2.32e-01/4.88e-01
+	      3   | 4.449706e-12 | 6.245192e+02 | 2.51e-01/2.24e-01/4.79e-01
+	      4   | 4.052294e-12 | 3.852044e+02 | 2.51e-01/1.97e-01/4.52e-01
+	      5   | 3.868129e-12 | 2.482485e+02 | 2.51e-01/2.04e-01/4.60e-01
+	      6   | 4.018676e-12 | 1.980286e+02 | 2.51e-01/2.12e-01/4.68e-01
+	      7   | 4.052604e-12 | 1.111594e+02 | 2.51e-01/2.10e-01/4.66e-01
+	      8   | 3.925584e-12 | 6.100656e+01 | 2.51e-01/2.16e-01/4.71e-01
+	    total |                             | 6.20e+00/1.76e+00/8.02e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 8.6085e-02 	| 7.1589e+06 	| 7.1589e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 1.4194e+00 	| 5.1624e+05 	| 7.6097e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
-│ 	LHS[1,2][1] 	| 1.8830e-02 	| 1.9619e+06 	| 1.9619e+06 	| (p, div(v))
-│ 	LHS[1,3][1] 	| 1.5269e+00 	| 2.8874e+06 	| 2.8874e+06 	| -Ra v⋅g T
-│ 	LHS[3,1][1] 	| 2.0058e+00 	| 5.7360e+05 	| 8.1259e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
-│ 	LHS[3,3][1] 	| 1.1444e-02 	| 6.5885e+05 	| 6.5885e+05 	| ∇(T)⋅∇(V)
-└ 	LHS[3,3][2] 	| 2.3615e-01 	| 5.7360e+05 	| 6.3986e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
+│ 	LHS[1,1][1] 	| 9.5484e-02 	| 7.1589e+06 	| 7.1589e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 1.5921e+00 	| 5.1624e+05 	| 7.6097e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
+│ 	LHS[1,2][1] 	| 2.2570e-02 	| 1.9619e+06 	| 1.9619e+06 	| -(p, div(v))
+│ 	LHS[1,3][1] 	| 1.7359e+00 	| 2.8874e+06 	| 2.8874e+06 	| -Ra v⋅g T
+│ 	LHS[3,1][1] 	| 2.2635e+00 	| 5.7360e+05 	| 8.1259e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
+│ 	LHS[3,3][1] 	| 1.3937e-02 	| 6.5885e+05 	| 6.5885e+05 	| ∇(T)⋅∇(V)
+└ 	LHS[3,3][2] 	| 2.6789e-01 	| 5.7360e+05 	| 6.3986e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
 ┌ Info: ========== Solving natural convection problem ==========
 │ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 10434)
 │ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 4096)
@@ -193,20 +193,20 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 3.90e-01/4.30e-06/3.91e-01
-	      1   | 3.970993e-12 | 3.366297e+00 | 2.24e-01/2.26e-01/5.26e-01
-	      2   | 4.027189e-12 | 6.899417e-03 | 2.24e-01/1.97e-01/4.25e-01
-	      3   | 3.895126e-12 | 4.473131e-07 | 2.24e-01/5.23e-01/7.51e-01
-	      4   | 3.945485e-12 | 4.124407e-12 | 2.25e-01/1.92e-01/4.21e-01
-	    total |                             | 1.29e+00/1.14e+00/2.52e+00
+	    init  |                             | 4.43e-01/4.70e-06/4.43e-01
+	      1   | 3.970993e-12 | 3.366297e+00 | 2.50e-01/3.28e-01/5.85e-01
+	      2   | 4.027189e-12 | 6.899417e-03 | 2.50e-01/2.04e-01/4.58e-01
+	      3   | 3.895126e-12 | 4.473131e-07 | 2.51e-01/5.82e-01/8.37e-01
+	      4   | 3.945485e-12 | 4.124407e-12 | 2.51e-01/1.96e-01/4.51e-01
+	    total |                             | 1.44e+00/1.31e+00/2.79e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 7.2658e-02 	| 7.1589e+06 	| 7.1589e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 8.0240e-01 	| 5.1624e+05 	| 6.3402e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
-│ 	LHS[1,2][1] 	| 1.8098e-02 	| 1.9619e+06 	| 1.9619e+06 	| (p, div(v))
-│ 	LHS[1,3][1] 	| 5.8427e-02 	| 2.8874e+06 	| 2.8874e+06 	| -Ra v⋅g T
-│ 	LHS[3,1][1] 	| 2.0486e-01 	| 5.7360e+05 	| 2.8680e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
-│ 	LHS[3,3][1] 	| 1.0625e-02 	| 6.5885e+05 	| 6.5885e+05 	| ∇(T)⋅∇(V)
-└ 	LHS[3,3][2] 	| 1.1540e-01 	| 5.7360e+05 	| 2.8680e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]</code></pre><p><img src="../../images/Example236_NaturalConvectionSquare2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example235_NaturalConvectionTriangle2D/">« 235 : Natural Convection Triangle 2D</a><a class="docs-footer-nextpage" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 8.3151e-02 	| 7.1589e+06 	| 7.1589e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 8.9133e-01 	| 5.1624e+05 	| 6.3402e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
+│ 	LHS[1,2][1] 	| 2.2104e-02 	| 1.9619e+06 	| 1.9619e+06 	| -(p, div(v))
+│ 	LHS[1,3][1] 	| 6.6607e-02 	| 2.8874e+06 	| 2.8874e+06 	| -Ra v⋅g T
+│ 	LHS[3,1][1] 	| 2.3156e-01 	| 5.7360e+05 	| 2.8680e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
+│ 	LHS[3,3][1] 	| 1.2948e-02 	| 6.5885e+05 	| 6.5885e+05 	| ∇(T)⋅∇(V)
+└ 	LHS[3,3][2] 	| 1.3031e-01 	| 5.7360e+05 	| 2.8680e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]</code></pre><p><img src="../../images/Example236_NaturalConvectionSquare2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example235_NaturalConvectionTriangle2D/">« 235 : Natural Convection Triangle 2D</a><a class="docs-footer-nextpage" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 21:21">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
