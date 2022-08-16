@@ -27,10 +27,11 @@ function main(; Plotter = nothing, verbosity = 0)
 
     # we want to use a broken space and constrain the normal jumps on interior faces
     # in form of a Lagrange multiplier which needs an additional unknown
-    add_unknown!(Problem; unknown_name = &quot;LM face jumps&quot;, equation_name = &quot;face jump constraint&quot;)
+    add_unknown!(Problem; unknown_name = &quot;λ&quot;, equation_name = &quot;face jump constraint&quot;)
     add_operator!(Problem, [1,2], LagrangeMultiplier(NormalFluxDisc{Jump}; AT = ON_IFACES))
     # the diagonal operator sets the Lagrange multiplier on all boundary face regions to zero
     add_operator!(Problem, [2,2], DiagonalOperator(1; regions = [1,2,3,4]))
+    @show Problem
 
     # choose some (inf-sup stable) finite element types
     # first space is the Hdiv element that lives ON_CELLS
@@ -39,8 +40,7 @@ function main(; Plotter = nothing, verbosity = 0)
     FES = [FESpace{FEType[1], ON_CELLS}(xgrid; broken = true),FESpace{FEType[2], ON_FACES}(xgrid; broken = true)]
 
     # solve
-    Solution = FEVector([&quot;u_h (Hdiv-broken)&quot;, &quot;LM face jumps&quot;],FES)
-    solve!(Solution, Problem)
+    Solution = solve(Problem, FES)
 
     # solve again with the (unbroken) Hdiv-continuous element to test that we get the same result
     # note: for an FESpace living ON_CELLS and broken = false is the default
@@ -61,16 +61,38 @@ function main(; Plotter = nothing, verbosity = 0)
     vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false)
     scalarplot!(p[1,2],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7, title = &quot;u_2 (abs + quiver)&quot;)
     vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false)
-
 end
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example209_FaceLagrangeMultiplier2D.main()
+Problem = 
+PDE-DESCRIPTION
+===============
+  system name = constrained L2-bestapproximation problem
+
+      id    | unknown name / variables [#A, #T] / equation name
+     [1]    | u / [&quot;u&quot;, &quot;v&quot;] / L2-bestapproximation equation 
+     [2]    | λ / [&quot;λ&quot;, &quot;μ&quot;] / face jump constraint 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | (u,v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (λ, [[NormalFlux]](v)) (APT = BilinearForm, AT = ON_IFACES, regions = [0], transposed copy to [2,1])
+    [2,1]   | none
+    [2,2]   | DiagonalOperator{Int64}
+
+  RHS block | PDEOperator(s)
+     [1]    | (u, id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
+     [2]    | none
+
+   BoundaryOperator[1] : 
+   BoundaryOperator[2] : 
+
+
 ┌ Info: ========== Solving constrained L2-bestapproximation problem ==========
-│ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; u_h (Hdiv-broken) (HDIVRT1{2} (broken), ndofs = 2048)
-└ 	Equation (1.2) face jump constraint : LM face jumps &gt;&gt; LM face jumps (H1P1{1} (broken), ndofs = 800)
+│ 	Equation (1.1) L2-bestapproximation equation for u (discretised by HDIVRT1{2} (broken), ndofs = 2048)
+└ 	Equation (1.2) face jump constraint for λ (discretised by H1P1{1} (broken), ndofs = 800)
 [ Info: overall residual = 4.884517645741208e-16
 ┌ Info: ========== Solving L2-Bestapproximation problem ==========
-└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; u_h (Hdiv-cont.) (HDIVRT1{2}, ndofs = 1312)
+└ 	Equation (1.1) L2-bestapproximation equation for u (discretised by HDIVRT1{2}, ndofs = 1312)
 [ Info: overall residual = 4.3042323572289977e-16
 	L2error(Hdiv-broken) = 0.0004715248381994809
 	L2error(Hdiv-cont.) = 0.00047152483819947713
-	L2error(difference) = 5.616912853180266e-16</code></pre><p><img src="../../images/Example209_FaceLagrangeMultiplier2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example208_ObstacleProblem2D/">« 208 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	L2error(difference) = 5.616912853180266e-16</code></pre><p><img src="../../images/Example209_FaceLagrangeMultiplier2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example208_ObstacleProblem2D/">« 208 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

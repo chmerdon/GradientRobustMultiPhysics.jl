@@ -32,8 +32,7 @@ function main(; verbosity = 0, E = 1000, ν = 0.4, Plotter = nothing)
     # show and solve PDE
     @show Problem
     FEType = H1P1{2} # P1-Courant FEM will be used
-    Solution = FEVector(&quot;u_h&quot;,FESpace{FEType}(xgrid))
-    solve!(Solution, Problem)
+    Solution = solve(Problem, FESpace{FEType}(xgrid))
 
     # plot stress on displaced mesh
     displace_mesh!(xgrid, Solution[1]; magnify = 4)
@@ -49,11 +48,11 @@ PDE-DESCRIPTION
 ===============
   system name = linear elasticity problem
 
-     id   | unknown name / variables / equation name
-    [1]   | u / [&quot;u&quot;, &quot;v&quot;] / displacement equation 
+      id    | unknown name / variables [#A, #T] / equation name
+     [1]    | u / [&quot;u&quot;, &quot;v&quot;] / displacement equation 
 
   LHS block | PDEOperator(s)
-    [1,1]   | (C(μ,λ) ϵ(u),ϵ(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,1]   | (ℂ(μ,λ) ϵ(u),ϵ(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
 
   RHS block | PDEOperator(s)
      [1]    | (g, id(v)) (APT = LinearForm, AT = ON_BFACES, regions = [2])
@@ -63,5 +62,5 @@ PDE-DESCRIPTION
 
 
 ┌ Info: ========== Solving linear elasticity problem ==========
-└ 	Equation (1.1) displacement equation : u &gt;&gt; u_h (H1P1{2}, ndofs = 3738)
-[ Info: overall residual = 2.7964928753476036e-11</code></pre><p><img src="../../images/Example202_LinearElasticity2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example201_PoissonProblem2D/">« 201 : Poisson-Problem 2D</a><a class="docs-footer-nextpage" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+└ 	Equation (1.1) displacement equation for u (discretised by H1P1{2}, ndofs = 3738)
+[ Info: overall residual = 2.7964928753476036e-11</code></pre><p><img src="../../images/Example202_LinearElasticity2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example201_PoissonProblem2D/">« 201 : Poisson-Problem 2D</a><a class="docs-footer-nextpage" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

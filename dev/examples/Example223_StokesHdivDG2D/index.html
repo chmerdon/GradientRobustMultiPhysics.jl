@@ -113,7 +113,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
         # generate FES spaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
-        Solution = FEVector([&quot;u_h&quot;, &quot;p_h&quot;],FES)
+        Solution = FEVector(FES)
 
         # solve
         solve!(Solution, Problem; time = T)
@@ -141,16 +141,16 @@ PDE-DESCRIPTION
 ===============
   system name = incompressible Stokes-Problem
 
-     id   | unknown name / variables / equation name
-    [1]   | u / [&quot;u&quot;, &quot;v&quot;] / momentum equation 
-    [2]   | p / [&quot;p&quot;, &quot;q&quot;] / incompressibility constraint 
+      id    | unknown name / variables [#A, #T] / equation name
+     [1]    | u / [&quot;u&quot;, &quot;v&quot;] / momentum equation 
+     [2]    | p / [&quot;p&quot;, &quot;q&quot;] / incompressibility constraint 
 
   LHS block | PDEOperator(s)
     [1,1]   | 0.001 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
             | μ/h_F [u] [v] (APT = BilinearForm, AT = ON_FACES, regions = [0])
             | -μ [u] {grad(v)*n} (APT = BilinearForm, AT = ON_FACES, regions = [0])
             | -μ {grad(u)*n} [v]  (APT = BilinearForm, AT = ON_FACES, regions = [0])
-    [1,2]   | (u, div(q)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (p, div(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0], transposed copy to [2,1])
     [2,1]   | none
     [2,2]   | none
 
@@ -167,24 +167,24 @@ PDE-DESCRIPTION
   GlobalConstraints[1] : Mean[2] != 0 
 
 ┌ Info: ========== Solving incompressible Stokes-Problem (at fixed time 1) ==========
-│ 	Equation (1.1) momentum equation : u &gt;&gt; u_h (HDIVBDM1{2}, ndofs = 56)
-└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 16)
+│ 	Equation (1.1) momentum equation for u (discretised by HDIVBDM1{2}, ndofs = 56)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 16)
 [ Info: overall residual = 9.572129878787136e-17
 ┌ Info: ========== Solving incompressible Stokes-Problem (at fixed time 1) ==========
-│ 	Equation (1.1) momentum equation : u &gt;&gt; u_h (HDIVBDM1{2}, ndofs = 208)
-└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 64)
+│ 	Equation (1.1) momentum equation for u (discretised by HDIVBDM1{2}, ndofs = 208)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 64)
 [ Info: overall residual = 2.168941856281264e-16
 ┌ Info: ========== Solving incompressible Stokes-Problem (at fixed time 1) ==========
-│ 	Equation (1.1) momentum equation : u &gt;&gt; u_h (HDIVBDM1{2}, ndofs = 800)
-└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 256)
+│ 	Equation (1.1) momentum equation for u (discretised by HDIVBDM1{2}, ndofs = 800)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 256)
 [ Info: overall residual = 6.806324246011109e-16
 ┌ Info: ========== Solving incompressible Stokes-Problem (at fixed time 1) ==========
-│ 	Equation (1.1) momentum equation : u &gt;&gt; u_h (HDIVBDM1{2}, ndofs = 3136)
-└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 1024)
+│ 	Equation (1.1) momentum equation for u (discretised by HDIVBDM1{2}, ndofs = 3136)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 1024)
 [ Info: overall residual = 2.2232583739162484e-15
 ┌ Info: ========== Solving incompressible Stokes-Problem (at fixed time 1) ==========
-│ 	Equation (1.1) momentum equation : u &gt;&gt; u_h (HDIVBDM1{2}, ndofs = 12416)
-└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 4096)
+│ 	Equation (1.1) momentum equation for u (discretised by HDIVBDM1{2}, ndofs = 12416)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 4096)
 [ Info: overall residual = 8.076304641447135e-15
 
     ndofs   |   || u - u_h ||    order |   || p - p_h ||    order | || ∇(u - u_h) ||   order |
@@ -193,4 +193,4 @@ PDE-DESCRIPTION
        272  |     1.118e-02      3.34  |     1.747e-02      1.04  |     3.910e-01      2.02  |
       1056  |     2.737e-03      2.08  |     8.742e-03      1.02  |     1.936e-01      1.04  |
       4160  |     6.809e-04      2.03  |     4.372e-03      1.01  |     9.612e-02      1.02  |
-     16512  |     1.712e-04      2.00  |     2.186e-03      1.01  |     4.803e-02      1.01  |</code></pre><p><img src="../../images/Example223_StokesHdivDG2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_PressureRobustness2D/">« 222 : Pressure-robustness 2D</a><a class="docs-footer-nextpage" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span> »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+     16512  |     1.712e-04      2.00  |     2.186e-03      1.01  |     4.803e-02      1.01  |</code></pre><p><img src="../../images/Example223_StokesHdivDG2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_PressureRobustness2D/">« 222 : Pressure-robustness 2D</a><a class="docs-footer-nextpage" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span> »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

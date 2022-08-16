@@ -36,20 +36,20 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
         return nothing
     end
     action = Action(action_kernel!, [3,3]; bonus_quadorder = max(α.bonus_quadorder,β.bonus_quadorder))
-    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = &quot;ν(∇u,∇v) + (αu + β⋅∇u, v)&quot;, transposed_assembly = true)
+    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = &quot;ν(∇#A,∇#T) + (α#A + β⋅∇#A, #T)&quot;, transposed_assembly = true)
 end</code></pre><p>function that provides the SUPG left-hand side operator       τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)</p><pre><code class="language-julia hljs">function SUPGOperator_LHS(α, β, ν, τ, xCellDiameters)
     function action_kernel!(result, input, item)</code></pre><p>input = [u<em>h,∇u</em>h,Δu<em>h] as a vector of length 4 compute residual -νΔu</em>h + (β⋅∇)u<em>h + αu</em>h</p><pre><code class="language-julia hljs">        result[1] = - ν * input[4] + α()[1] * input[1] + dot(β(), view(input, 2:3))</code></pre><p>multiply stabilisation factor</p><pre><code class="language-julia hljs">        result[1] *= τ * xCellDiameters[item[1]]^2</code></pre><p>compute coefficients for ∇ eval of test function v_h</p><pre><code class="language-julia hljs">        result .= result[1] * β()  # will be multiplied with ∇v_h
         return nothing
     end
     action = Action(action_kernel!, [2,4]; dependencies = &quot;I&quot;, bonus_quadorder = max(α.bonus_quadorder,β.bonus_quadorder))
-    return BilinearForm([OperatorTriple{Identity,Gradient,Laplacian},Gradient], action; name = &quot;τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)&quot;, transposed_assembly = true)
+    return BilinearForm([OperatorTriple{Identity,Gradient,Laplacian},Gradient], action; name = &quot;τ (h^2 (-ν Δ#A + α#A + β⋅∇#A), β⋅∇#T)&quot;, transposed_assembly = true)
 end</code></pre><p>function that provides the SUPG right-hand side operator                  τ (h^2 f, β⋅∇v)</p><pre><code class="language-julia hljs">function SUPGOperator_RHS(f, β, τ, xCellDiameters)
     function action_kernel!(result, input, x, item)</code></pre><p>input = [v,∇v] as a vector of length 3 compute f times stabilisation factor</p><pre><code class="language-julia hljs">        result[1] = f(x)[1] * τ * xCellDiameters[item[1]]^2
         result .= result[1] * β()  # will be multiplied with ∇v_h
         return nothing
     end
     action = Action(action_kernel!, [2,2]; xdim = 2, dependencies = &quot;XI&quot;, bonus_quadorder = max(f.bonus_quadorder,β.bonus_quadorder))
-    return LinearForm(Gradient, action; name = &quot;τ (h^2 f, β⋅∇v)&quot;)
+    return LinearForm(Gradient, action; name = &quot;τ (h^2 f, β⋅∇#1)&quot;)
 end
 
 # the SUPG stabilisation is weighted by powers of the cell diameter
@@ -116,7 +116,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 10, nlevels = 
 
         # generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector(&quot;u_h&quot;,FES)
+        Solution = FEVector(FES)
 
         # solve PDE
         solve!(Solution, Problem)
@@ -149,8 +149,8 @@ PDE-DESCRIPTION
 ===============
   system name = reaction-convection-diffusion problem
 
-     id   | unknown name / variables / equation name
-    [1]   | u / [&quot;u&quot;, &quot;v&quot;] / reaction-convection-diffusion equation 
+      id    | unknown name / variables [#A, #T] / equation name
+     [1]    | u / [&quot;u&quot;, &quot;v&quot;] / reaction-convection-diffusion equation 
 
   LHS block | PDEOperator(s)
     [1,1]   | ν(∇u,∇v) + (αu + β⋅∇u, v) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
@@ -158,26 +158,26 @@ PDE-DESCRIPTION
 
   RHS block | PDEOperator(s)
      [1]    | (f, id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
-            | τ (h^2 f, β⋅∇v) (APT = LinearForm, AT = ON_CELLS, regions = [0])
+            | τ (h^2 f, β⋅∇#1) (APT = LinearForm, AT = ON_CELLS, regions = [0])
 
    BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
                          
 
 
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
-└ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 41)
+└ 	Equation (1.1) reaction-convection-diffusion equation for u (discretised by H1Pk{1,2,2}, ndofs = 41)
 [ Info: overall residual = 2.9920034147326648e-15
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
-└ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 145)
+└ 	Equation (1.1) reaction-convection-diffusion equation for u (discretised by H1Pk{1,2,2}, ndofs = 145)
 [ Info: overall residual = 2.2420967967263026e-15
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
-└ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 545)
+└ 	Equation (1.1) reaction-convection-diffusion equation for u (discretised by H1Pk{1,2,2}, ndofs = 545)
 [ Info: overall residual = 9.673736820647642e-16
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
-└ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 2113)
+└ 	Equation (1.1) reaction-convection-diffusion equation for u (discretised by H1Pk{1,2,2}, ndofs = 2113)
 [ Info: overall residual = 4.86475422382295e-16
 ┌ Info: ========== Solving reaction-convection-diffusion problem ==========
-└ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 8321)
+└ 	Equation (1.1) reaction-convection-diffusion equation for u (discretised by H1Pk{1,2,2}, ndofs = 8321)
 [ Info: overall residual = 2.598909397287274e-16
 
     ndofs   |   || u - u_h ||    order |   || u - Iu ||     order | || ∇(u - u_h) ||   order |  || ∇(u - Iu) ||   order |
@@ -186,4 +186,4 @@ PDE-DESCRIPTION
        145  |     9.634e-05      3.44  |     9.342e-05      3.33  |     3.639e-03      2.29  |     3.575e-03      2.22  |
        545  |     1.403e-05      2.91  |     1.160e-05      3.15  |     1.218e-03      1.65  |     8.906e-04      2.10  |
       2113  |     1.835e-06      3.00  |     1.448e-06      3.07  |     3.433e-04      1.87  |     2.224e-04      2.05  |
-      8321  |     2.008e-07      3.23  |     1.809e-07      3.03  |     6.654e-05      2.39  |     5.560e-05      2.02  |</code></pre><p><img src="../../images/Example204_ReactionConvectionDiffusionSUPG2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example203_ReactionConvectionDiffusion2D/">« 203 : Reaction-Convection-Diffusion-Problem 2D</a><a class="docs-footer-nextpage" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      8321  |     2.008e-07      3.23  |     1.809e-07      3.03  |     6.654e-05      2.39  |     5.560e-05      2.02  |</code></pre><p><img src="../../images/Example204_ReactionConvectionDiffusionSUPG2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example203_ReactionConvectionDiffusion2D/">« 203 : Reaction-Convection-Diffusion-Problem 2D</a><a class="docs-footer-nextpage" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

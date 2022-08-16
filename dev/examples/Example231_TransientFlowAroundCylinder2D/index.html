@@ -50,8 +50,8 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
 
     # generate FESpaces and Solution vector and UpscaledSolution vector (for plot on finer grid)
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-    Solution = FEVector{Float64}([&quot;u_h&quot;,&quot;p_h&quot;],FES)
-    UpscaledSolution = FEVector{Float64}([&quot;u_h (fine)&quot;, &quot;p_h (fine)&quot;],[FESpace{H1P1{2}}(xgrid_plot),FESpace{H1P1{1}}(xgrid_plot)])
+    Solution = FEVector(FES)
+    UpscaledSolution = FEVector([FESpace{H1P1{2}}(xgrid_plot),FESpace{H1P1{1}}(xgrid_plot)])
 
     # prepare drag lift calculation by testfunctions
     function circle_bnd_testfunction(component) # mask for drag/lift testfunction
@@ -80,8 +80,8 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
     DLIntegrator = ItemIntegrator([Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     # prepare drag/lift calculation
-    TestFunctionD = FEVector{Float64}(&quot;drag testfunction&quot;,Solution[1].FES)
-    TestFunctionL = FEVector{Float64}(&quot;lift testfunction&quot;,Solution[1].FES)
+    TestFunctionD = FEVector(Solution[1].FES)
+    TestFunctionL = FEVector(Solution[1].FES)
     xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
     dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = &quot;drag test&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 0)
     lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = &quot;lift test&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 0)
@@ -157,4 +157,4 @@ function make_grid(W,H; n=20,maxvol=0.1)
     simplexgrid(builder,maxvolume=16*maxvol, unsuitable = unsuitable)
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example231_TransientFlowAroundCylinder2D_1.png" alt/> <img src="../../images/Example231_TransientFlowAroundCylinder2D_2.png" alt/> <img src="../../images/Example231_TransientFlowAroundCylinder2D_3.png" alt/> <img src="../../images/Example231_TransientFlowAroundCylinder2D_4.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example230_FlowAroundCylinder2D/">« 230 : Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example231_TransientFlowAroundCylinder2D_1.png" alt/> <img src="../../images/Example231_TransientFlowAroundCylinder2D_2.png" alt/> <img src="../../images/Example231_TransientFlowAroundCylinder2D_3.png" alt/> <img src="../../images/Example231_TransientFlowAroundCylinder2D_4.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example230_FlowAroundCylinder2D/">« 230 : Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

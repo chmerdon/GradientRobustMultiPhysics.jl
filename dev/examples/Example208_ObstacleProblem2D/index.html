@@ -30,13 +30,13 @@ function main(; Plotter = nothing, verbosity = 0, ϵ = 1e-4, nrefinements = 6, F
     Problem = PDEDescription(&quot;obstacle problem&quot;)
     add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;obstacle problem&quot;)
     add_operator!(Problem, [1,1], LaplaceOperator(1.0; store = true))
-    add_operator!(Problem, [1,1], NonlinearForm(Identity, [Identity], [1], obstacle_penalty_kernel!, [1,1]; name = &quot;eps^{-1} ||(u-χ)_||&quot;, dependencies = &quot;X&quot;, factor = 1/ϵ, newton = true) )
+    add_operator!(Problem, [1,1], NonlinearForm(Identity, [Identity], [1], obstacle_penalty_kernel!, [1,1]; name = &quot;eps^{-1} ((#1-χ)_, #T)&quot;, dependencies = &quot;X&quot;, factor = 1/ϵ, newton = true) )
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
     add_rhsdata!(Problem, 1, LinearForm(Identity, f; store = true))
 
     # create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)
-    Solution = FEVector(&quot;u_h&quot;,FES)
+    Solution = FEVector(FES)
 
     # solve
     @show Problem Solution
@@ -54,12 +54,12 @@ PDE-DESCRIPTION
 ===============
   system name = obstacle problem
 
-     id   | unknown name / variables / equation name
-    [1]   | u / [&quot;u&quot;, &quot;v&quot;] / obstacle problem 
+      id    | unknown name / variables [#A, #T] / equation name
+     [1]    | u / [&quot;u&quot;, &quot;v&quot;] / obstacle problem 
 
   LHS block | PDEOperator(s)
     [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-            | eps^{-1} ||(u-χ)_|| [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+            | eps^{-1} ((u-χ)_, v) [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
 
   RHS block | PDEOperator(s)
      [1]    | (Constant([-1]), id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
@@ -72,28 +72,28 @@ Solution =
 FEVector information
 ====================
    block  |  ndofs  | name (FEType) 
- [    1]  |    8321 | u_h (H1P1{1})
+ [    1]  |    8321 | #1 (H1P1{1})
 
 ┌ Info: ========== Solving obstacle problem ==========
-└ 	Equation (1.1) obstacle problem : u &gt;&gt; u_h (H1P1{1}, ndofs = 8321)
+└ 	Equation (1.1) obstacle problem for u (discretised by H1P1{1}, ndofs = 8321)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 5.83e+00/5.60e-06/5.83e+00
-	      1   | 1.320230e-15 | 1.741413e+00 | 8.35e-02/2.76e-02/1.12e-01
-	      2   | 1.192998e-15 | 6.073690e-02 | 7.04e-02/2.95e-02/1.00e-01
-	      3   | 9.549872e-16 | 4.050710e-02 | 7.14e-02/2.19e-02/9.40e-02
-	      4   | 7.578113e-16 | 2.865242e-02 | 7.10e-02/2.22e-02/9.39e-02
-	      5   | 5.441027e-16 | 1.847692e-02 | 6.97e-02/6.55e-02/1.36e-01
-	      6   | 5.136840e-16 | 9.456218e-03 | 6.93e-02/2.07e-02/9.06e-02
-	      7   | 4.951823e-16 | 2.891193e-03 | 6.93e-02/2.13e-02/9.13e-02
-	      8   | 4.789991e-16 | 3.887883e-04 | 6.91e-02/2.12e-02/9.10e-02
-	      9   | 4.824588e-16 | 4.824588e-16 | 7.05e-02/2.26e-02/9.37e-02
-	    total |                             | 6.48e+00/2.52e-01/6.74e+00
+	    init  |                             | 5.07e+00/4.80e-06/5.07e+00
+	      1   | 1.320230e-15 | 1.741413e+00 | 7.45e-02/2.49e-02/9.99e-02
+	      2   | 1.192998e-15 | 6.073690e-02 | 9.79e-02/2.63e-02/1.25e-01
+	      3   | 9.549872e-16 | 4.050710e-02 | 6.31e-02/1.96e-02/8.33e-02
+	      4   | 7.578113e-16 | 2.865242e-02 | 6.26e-02/2.07e-02/8.38e-02
+	      5   | 5.441027e-16 | 1.847692e-02 | 6.28e-02/2.07e-02/8.40e-02
+	      6   | 5.136840e-16 | 9.456218e-03 | 6.45e-02/1.98e-02/8.48e-02
+	      7   | 4.951823e-16 | 2.891193e-03 | 6.43e-02/1.95e-02/8.44e-02
+	      8   | 4.789991e-16 | 3.887883e-04 | 6.59e-02/2.15e-02/8.80e-02
+	      9   | 4.824588e-16 | 4.824588e-16 | 6.54e-02/2.07e-02/8.67e-02
+	    total |                             | 5.69e+00/1.94e-01/5.89e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 2.2364e+00 	| 2.7520e+06 	| 2.7520e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 3.4707e+00 	| 5.9639e+06 	| 7.0553e+07 	| eps^{-1} ||(u-χ)_|| [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 6.8901e-01 	| 7.6189e+05 	| 7.6189e+05 	| (Constant([-1]), id(v))</code></pre><p><img src="../../images/Example208_ObstacleProblem2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example207_NonlinearElasticityBimetal2D/">« 207 : Nonlinear Elasticity Bimetal 2D</a><a class="docs-footer-nextpage" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 1.9228e+00 	| 2.7520e+06 	| 2.7520e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 3.0613e+00 	| 5.9639e+06 	| 7.0553e+07 	| eps^{-1} ((u-χ)_, v) [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 5.9947e-01 	| 7.6189e+05 	| 7.6189e+05 	| (Constant([-1]), id(v))</code></pre><p><img src="../../images/Example208_ObstacleProblem2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example207_NonlinearElasticityBimetal2D/">« 207 : Nonlinear Elasticity Bimetal 2D</a><a class="docs-footer-nextpage" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -76,8 +76,7 @@ function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter 
         println(&quot;------- LEVEL $level&quot;)
         @time begin
             FES = FESpace{FEType}(xgrid)
-            Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
-            solve!(Solution, Problem)
+            Solution = solve(Problem, FES)
             ndofs = length(Solution[1])
             push!(NDofs, ndofs)
             println(&quot;\t ndof =  $ndofs&quot;)
@@ -149,210 +148,210 @@ end
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example210_PoissonLshapeAdaptive2D.main()
 ------- LEVEL 1
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 21)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 21)
 [ Info: overall residual = 1.4936523181711914e-15
 	 ndof =  21
-@time  solver =  1.507846 seconds (1.67 M allocations: 96.277 MiB, 3.77% gc time, 99.70% compilation time)
-@time  η eval =  2.176163 seconds (1.45 M allocations: 79.547 MiB, 2.60% gc time, 99.83% compilation time)
-@time  e eval =  4.131176 seconds (5.42 M allocations: 297.513 MiB, 2.66% gc time, 99.82% compilation time)
-@time  refine =  0.080510 seconds (87.46 k allocations: 4.927 MiB, 99.79% compilation time)
+@time  solver =  1.328840 seconds (1.67 M allocations: 96.423 MiB, 5.97% gc time, 99.72% compilation time)
+@time  η eval =  1.877029 seconds (1.45 M allocations: 79.633 MiB, 2.15% gc time, 99.84% compilation time)
+@time  e eval =  3.554126 seconds (5.41 M allocations: 296.338 MiB, 2.10% gc time, 99.82% compilation time)
+@time  refine =  0.069609 seconds (87.46 k allocations: 4.927 MiB, 99.80% compilation time)
 	    η =  1.2064583360169907
 	    e =  0.20764746516243865
 ------- LEVEL 2
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 41)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 41)
 [ Info: overall residual = 1.3933188378624375e-15
 	 ndof =  41
-@time  solver =  0.002866 seconds (3.44 k allocations: 334.852 KiB)
-@time  η eval =  0.000921 seconds (1.24 k allocations: 84.406 KiB)
-@time  e eval =  0.001865 seconds (10.38 k allocations: 425.094 KiB)
-@time  refine =  0.000060 seconds (49 allocations: 5.484 KiB)
+@time  solver =  0.002496 seconds (3.43 k allocations: 333.914 KiB)
+@time  η eval =  0.000822 seconds (1.24 k allocations: 84.406 KiB)
+@time  e eval =  0.001626 seconds (10.38 k allocations: 425.094 KiB)
+@time  refine =  0.000048 seconds (49 allocations: 5.484 KiB)
 	    η =  0.699363303780635
 	    e =  0.12808914488126533
 ------- LEVEL 3
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 67)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 67)
 [ Info: overall residual = 2.225297973982015e-15
 	 ndof =  67
-@time  solver =  0.002935 seconds (3.65 k allocations: 391.734 KiB)
-@time  η eval =  0.001016 seconds (1.26 k allocations: 86.219 KiB)
-@time  e eval =  0.002890 seconds (17.18 k allocations: 680.156 KiB)
-@time  refine =  0.000073 seconds (49 allocations: 6.219 KiB)
+@time  solver =  0.002563 seconds (3.64 k allocations: 391.859 KiB)
+@time  η eval =  0.000838 seconds (1.26 k allocations: 86.219 KiB)
+@time  e eval =  0.002467 seconds (17.18 k allocations: 680.156 KiB)
+@time  refine =  0.000053 seconds (49 allocations: 6.219 KiB)
 	    η =  0.4521377020155059
 	    e =  0.08269561626760584
 ------- LEVEL 4
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 93)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 93)
 [ Info: overall residual = 2.658456793691295e-15
 	 ndof =  93
-@time  solver =  0.002646 seconds (3.88 k allocations: 507.758 KiB)
-@time  η eval =  0.000902 seconds (1.28 k allocations: 88.062 KiB)
-@time  e eval =  0.003823 seconds (23.98 k allocations: 935.219 KiB)
-@time  refine =  0.000062 seconds (52 allocations: 9.953 KiB)
+@time  solver =  0.002264 seconds (3.86 k allocations: 506.820 KiB)
+@time  η eval =  0.000828 seconds (1.28 k allocations: 88.062 KiB)
+@time  e eval =  0.003262 seconds (23.98 k allocations: 935.219 KiB)
+@time  refine =  0.000050 seconds (52 allocations: 9.953 KiB)
 	    η =  0.30443683244048675
 	    e =  0.05537088982183
 ------- LEVEL 5
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 119)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 119)
 [ Info: overall residual = 2.608876467651255e-15
 	 ndof =  119
-@time  solver =  0.002767 seconds (4.09 k allocations: 571.398 KiB)
-@time  η eval =  0.000970 seconds (1.30 k allocations: 89.922 KiB)
-@time  e eval =  0.004812 seconds (30.78 k allocations: 1.163 MiB)
-@time  refine =  0.000068 seconds (53 allocations: 13.391 KiB)
+@time  solver =  0.002404 seconds (4.08 k allocations: 571.523 KiB)
+@time  η eval =  0.000879 seconds (1.30 k allocations: 89.922 KiB)
+@time  e eval =  0.004070 seconds (30.78 k allocations: 1.163 MiB)
+@time  refine =  0.000053 seconds (53 allocations: 13.391 KiB)
 	    η =  0.2203282351651376
 	    e =  0.03965969913361387
 ------- LEVEL 6
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 145)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 145)
 [ Info: overall residual = 2.9982767052786005e-15
 	 ndof =  145
-@time  solver =  0.002899 seconds (4.31 k allocations: 668.062 KiB)
-@time  η eval =  0.001040 seconds (1.32 k allocations: 91.719 KiB)
-@time  e eval =  0.005806 seconds (37.58 k allocations: 1.412 MiB)
-@time  refine =  0.000067 seconds (60 allocations: 15.203 KiB)
+@time  solver =  0.002581 seconds (4.29 k allocations: 667.125 KiB)
+@time  η eval =  0.000944 seconds (1.32 k allocations: 91.719 KiB)
+@time  e eval =  0.004950 seconds (37.58 k allocations: 1.412 MiB)
+@time  refine =  0.000055 seconds (60 allocations: 15.203 KiB)
 	    η =  0.1762744224302262
 	    e =  0.03132434391645208
 ------- LEVEL 7
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 192)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 192)
 [ Info: overall residual = 2.6755982598352064e-15
 	 ndof =  192
-@time  solver =  0.003239 seconds (4.71 k allocations: 773.578 KiB)
-@time  η eval =  0.001129 seconds (1.35 k allocations: 94.797 KiB)
-@time  e eval =  0.007509 seconds (49.48 k allocations: 1.847 MiB)
-@time  refine =  0.000071 seconds (64 allocations: 16.656 KiB)
+@time  solver =  0.002926 seconds (4.70 k allocations: 772.641 KiB)
+@time  η eval =  0.001030 seconds (1.35 k allocations: 94.797 KiB)
+@time  e eval =  0.006448 seconds (49.48 k allocations: 1.847 MiB)
+@time  refine =  0.000064 seconds (64 allocations: 16.656 KiB)
 	    η =  0.14099823000025685
 	    e =  0.024700543922290402
 ------- LEVEL 8
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 257)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 257)
 [ Info: overall residual = 3.404038466443546e-15
 	 ndof =  257
-@time  solver =  0.003796 seconds (5.19 k allocations: 1009.531 KiB)
-@time  η eval =  0.001289 seconds (1.40 k allocations: 99.750 KiB)
-@time  e eval =  0.010134 seconds (67.28 k allocations: 2.498 MiB)
-@time  refine =  0.000096 seconds (65 allocations: 18.781 KiB)
+@time  solver =  0.003400 seconds (5.18 k allocations: 1008.594 KiB)
+@time  η eval =  0.001192 seconds (1.40 k allocations: 99.750 KiB)
+@time  e eval =  0.008646 seconds (67.28 k allocations: 2.498 MiB)
+@time  refine =  0.000071 seconds (65 allocations: 18.781 KiB)
 	    η =  0.11095486274991224
 	    e =  0.019413443504801113
 ------- LEVEL 9
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 325)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 325)
 [ Info: overall residual = 4.039059527081868e-15
 	 ndof =  325
-@time  solver =  0.004397 seconds (5.71 k allocations: 1.161 MiB)
-@time  η eval =  0.001496 seconds (1.45 k allocations: 104.828 KiB)
-@time  e eval =  0.012851 seconds (85.28 k allocations: 3.159 MiB)
-@time  refine =  0.000096 seconds (72 allocations: 32.422 KiB)
+@time  solver =  0.004049 seconds (5.70 k allocations: 1.160 MiB)
+@time  η eval =  0.001384 seconds (1.45 k allocations: 104.828 KiB)
+@time  e eval =  0.010901 seconds (85.28 k allocations: 3.159 MiB)
+@time  refine =  0.000105 seconds (72 allocations: 32.422 KiB)
 	    η =  0.08461684077566957
 	    e =  0.014148054973920323
 ------- LEVEL 10
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 411)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 411)
 [ Info: overall residual = 4.948156636138679e-15
 	 ndof =  411
-@time  solver =  0.005315 seconds (6.28 k allocations: 1.413 MiB)
-@time  η eval =  0.001777 seconds (1.52 k allocations: 110.797 KiB)
-@time  e eval =  0.016310 seconds (109.13 k allocations: 4.032 MiB)
-@time  refine =  0.000125 seconds (90 allocations: 42.797 KiB)
+@time  solver =  0.004771 seconds (6.27 k allocations: 1.412 MiB)
+@time  η eval =  0.001623 seconds (1.52 k allocations: 110.797 KiB)
+@time  e eval =  0.013965 seconds (109.13 k allocations: 4.032 MiB)
+@time  refine =  0.000119 seconds (90 allocations: 42.797 KiB)
 	    η =  0.0645153841353086
 	    e =  0.010765787226538603
 ------- LEVEL 11
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 559)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 559)
 [ Info: overall residual = 5.687064315371205e-15
 	 ndof =  559
-@time  solver =  0.006670 seconds (7.50 k allocations: 1.867 MiB)
-@time  η eval =  0.002225 seconds (1.62 k allocations: 121.375 KiB)
-@time  e eval =  0.022275 seconds (148.58 k allocations: 5.478 MiB)
-@time  refine =  0.000178 seconds (105 allocations: 48.391 KiB)
+@time  solver =  0.006116 seconds (7.49 k allocations: 1.866 MiB)
+@time  η eval =  0.002032 seconds (1.62 k allocations: 121.375 KiB)
+@time  e eval =  0.056658 seconds (148.64 k allocations: 5.480 MiB, 65.25% gc time)
+@time  refine =  0.000515 seconds (105 allocations: 48.391 KiB)
 	    η =  0.048488311479138596
 	    e =  0.008034967299250748
 ------- LEVEL 12
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 765)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 765)
 [ Info: overall residual = 6.507029788417548e-15
 	 ndof =  765
-@time  solver =  0.008978 seconds (9.39 k allocations: 2.445 MiB)
-@time  η eval =  0.002950 seconds (1.98 k allocations: 138.891 KiB)
-@time  e eval =  0.030560 seconds (205.48 k allocations: 7.561 MiB)
-@time  refine =  0.000198 seconds (125 allocations: 55.016 KiB)
+@time  solver =  0.008330 seconds (9.38 k allocations: 2.444 MiB)
+@time  η eval =  0.002650 seconds (1.98 k allocations: 138.891 KiB)
+@time  e eval =  0.026568 seconds (205.48 k allocations: 7.561 MiB)
+@time  refine =  0.000185 seconds (125 allocations: 55.016 KiB)
 	    η =  0.03531580676395031
 	    e =  0.005826860657684084
 ------- LEVEL 13
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 1049)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 1049)
 [ Info: overall residual = 7.849575101278485e-15
 	 ndof =  1049
-@time  solver =  0.011368 seconds (11.90 k allocations: 3.228 MiB)
-@time  η eval =  0.003771 seconds (3.04 k allocations: 172.125 KiB)
-@time  e eval =  0.042081 seconds (283.93 k allocations: 10.433 MiB)
-@time  refine =  0.000252 seconds (144 allocations: 79.844 KiB)
+@time  solver =  0.010213 seconds (11.89 k allocations: 3.227 MiB)
+@time  η eval =  0.003350 seconds (3.04 k allocations: 172.125 KiB)
+@time  e eval =  0.036097 seconds (283.93 k allocations: 10.433 MiB)
+@time  refine =  0.000215 seconds (144 allocations: 79.844 KiB)
 	    η =  0.026161112362157516
 	    e =  0.0043057688215345355
 ------- LEVEL 14
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 1407)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 1407)
 [ Info: overall residual = 8.602299044140988e-15
 	 ndof =  1407
-@time  solver =  0.014712 seconds (16.62 k allocations: 4.125 MiB)
-@time  η eval =  0.004867 seconds (6.44 k allocations: 246.141 KiB)
-@time  e eval =  0.056852 seconds (395.48 k allocations: 14.256 MiB)
-@time  refine =  0.000304 seconds (181 allocations: 120.047 KiB)
+@time  solver =  0.012923 seconds (16.61 k allocations: 4.124 MiB)
+@time  η eval =  0.004282 seconds (6.44 k allocations: 246.141 KiB)
+@time  e eval =  0.048577 seconds (395.48 k allocations: 14.256 MiB)
+@time  refine =  0.000289 seconds (181 allocations: 120.047 KiB)
 	    η =  0.019132321226153257
 	    e =  0.0031282484960664767
 ------- LEVEL 15
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 1899)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 1899)
 [ Info: overall residual = 9.816368704188975e-15
 	 ndof =  1899
-@time  solver =  0.018932 seconds (23.34 k allocations: 5.660 MiB)
-@time  η eval =  0.006315 seconds (11.38 k allocations: 352.312 KiB)
-@time  e eval =  0.135728 seconds (551.59 k allocations: 19.574 MiB, 41.57% gc time)
-@time  refine =  0.000786 seconds (243 allocations: 136.734 KiB)
+@time  solver =  0.016922 seconds (23.33 k allocations: 5.658 MiB)
+@time  η eval =  0.005661 seconds (11.38 k allocations: 352.312 KiB)
+@time  e eval =  0.065692 seconds (551.51 k allocations: 19.571 MiB)
+@time  refine =  0.000345 seconds (243 allocations: 136.734 KiB)
 	    η =  0.014214742705189161
 	    e =  0.0023170782126997426
 ------- LEVEL 16
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 2632)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 2632)
 [ Info: overall residual = 1.1784361045926902e-14
 	 ndof =  2632
-@time  solver =  0.026112 seconds (33.38 k allocations: 6.940 MiB)
-@time  η eval =  0.008677 seconds (18.76 k allocations: 511.109 KiB)
-@time  e eval =  0.108236 seconds (783.45 k allocations: 27.471 MiB)
-@time  refine =  0.000526 seconds (301 allocations: 197.016 KiB)
+@time  solver =  0.022750 seconds (33.37 k allocations: 6.939 MiB)
+@time  η eval =  0.007452 seconds (18.76 k allocations: 511.109 KiB)
+@time  e eval =  0.095248 seconds (783.45 k allocations: 27.471 MiB)
+@time  refine =  0.000452 seconds (301 allocations: 197.016 KiB)
 	    η =  0.01030792778297421
 	    e =  0.0016816677513626004
 ------- LEVEL 17
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 3586)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 3586)
 [ Info: overall residual = 1.4016801464021707e-14
 	 ndof =  3586
-@time  solver =  0.034095 seconds (46.33 k allocations: 9.160 MiB)
-@time  η eval =  0.011571 seconds (28.34 k allocations: 716.141 KiB)
-@time  e eval =  0.148811 seconds (1.08 M allocations: 37.718 MiB)
-@time  refine =  0.000674 seconds (381 allocations: 290.766 KiB)
+@time  solver =  0.030878 seconds (46.32 k allocations: 9.160 MiB)
+@time  η eval =  0.009964 seconds (28.34 k allocations: 716.141 KiB)
+@time  e eval =  0.158399 seconds (1.08 M allocations: 37.720 MiB, 20.62% gc time)
+@time  refine =  0.000726 seconds (381 allocations: 290.766 KiB)
 	    η =  0.007627208670980272
 	    e =  0.0012432460364896715
 ------- LEVEL 18
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 4834)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 4834)
 [ Info: overall residual = 1.6147804395854413e-14
 	 ndof =  4834
-@time  solver =  0.045314 seconds (62.98 k allocations: 12.561 MiB)
-@time  η eval =  0.015285 seconds (41.02 k allocations: 988.125 KiB)
-@time  e eval =  0.255185 seconds (1.48 M allocations: 51.290 MiB, 17.96% gc time)
-@time  refine =  0.001079 seconds (499 allocations: 433.672 KiB)
+@time  solver =  0.040422 seconds (62.97 k allocations: 12.560 MiB)
+@time  η eval =  0.013338 seconds (41.02 k allocations: 988.125 KiB)
+@time  e eval =  0.173856 seconds (1.48 M allocations: 51.289 MiB)
+@time  refine =  0.000750 seconds (499 allocations: 433.672 KiB)
 	    η =  0.005664231339870271
 	    e =  0.0009217759234222521
 ------- LEVEL 19
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1Pk{1,2,2}, ndofs = 6545)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 6545)
 [ Info: overall residual = 2.0075611792507686e-14
 	 ndof =  6545
-@time  solver =  0.061366 seconds (86.43 k allocations: 17.437 MiB)
-@time  η eval =  0.020345 seconds (58.40 k allocations: 1.329 MiB)
-@time  e eval =  0.275755 seconds (2.03 M allocations: 69.833 MiB)
+@time  solver =  0.087307 seconds (86.43 k allocations: 17.437 MiB, 35.38% gc time)
+@time  η eval =  0.017691 seconds (58.40 k allocations: 1.329 MiB)
+@time  e eval =  0.230843 seconds (2.03 M allocations: 69.833 MiB)
 
     ndofs   |   || u - u_h ||    order | || ∇(u - u_h) ||   order |         η          order |
 ============|==========================|==========================|==========================|
@@ -374,4 +373,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
       2632  |     1.699e-05      3.05  |     1.682e-03      1.96  |     1.031e-02      1.97  |
       3586  |     1.087e-05      2.89  |     1.243e-03      1.95  |     7.627e-03      1.95  |
       4834  |     6.560e-06      3.38  |     9.218e-04      2.00  |     5.664e-03      1.99  |
-      6545  |     3.840e-06      3.53  |     6.643e-04      2.16  |     4.105e-03      2.12  |</code></pre><p><img src="../../images/Example210_PoissonLshapeAdaptive2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example209_FaceLagrangeMultiplier2D/">« 209 : Lagrange Multiplier on Faces</a><a class="docs-footer-nextpage" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      6545  |     3.840e-06      3.53  |     6.643e-04      2.16  |     4.105e-03      2.12  |</code></pre><p><img src="../../images/Example210_PoissonLshapeAdaptive2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example209_FaceLagrangeMultiplier2D/">« 209 : Lagrange Multiplier on Faces</a><a class="docs-footer-nextpage" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

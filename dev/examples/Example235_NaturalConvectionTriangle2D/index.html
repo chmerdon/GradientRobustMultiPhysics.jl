@@ -68,7 +68,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
 
     # construct FESpaces and Solution veector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
-    Solution = FEVector([&quot;v_h&quot;, &quot;p_h&quot;, &quot;T_h&quot;],FES)
+    Solution = FEVector(FES)
 
     # solve (fixedpoint iteration by solving consecutively equations [3] and [1,2] + Anderson acceleration)
     if anderson
@@ -95,15 +95,15 @@ PDE-DESCRIPTION
 ===============
   system name = natural convection problem
 
-     id   | unknown name / variables / equation name
-    [1]   | u / [&quot;u&quot;, &quot;v&quot;] / momentum equation 
-    [2]   | p / [&quot;p&quot;, &quot;q&quot;] / incompressibility constraint 
-    [3]   | T / [&quot;T&quot;, &quot;U&quot;] / temperature equation 
+      id    | unknown name / variables [#A, #T] / equation name
+     [1]    | u / [&quot;u&quot;, &quot;v&quot;] / momentum equation 
+     [2]    | p / [&quot;p&quot;, &quot;q&quot;] / incompressibility constraint 
+     [3]    | T / [&quot;T&quot;, &quot;U&quot;] / temperature equation 
 
   LHS block | PDEOperator(s)
     [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
             | ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-    [1,2]   | (u, div(q)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (p, div(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0], transposed copy to [2,1])
     [1,3]   | -Ra v⋅g T (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | none
     [2,2]   | none
@@ -128,9 +128,9 @@ PDE-DESCRIPTION
   GlobalConstraints[1] : Mean[2] != 0 
 
 ┌ Info: ========== Solving natural convection problem ==========
-│ 	Equation (1.1) momentum equation : u &gt;&gt; v_h (H1BR{2}, ndofs = 10530)
-│ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 4096)
-└ 	Equation (1.3) temperature equation : T &gt;&gt; T_h (H1P1{1}, ndofs = 2145)
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 10530)
+│ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 4096)
+└ 	Equation (1.3) temperature equation for T (discretised by H1P1{1}, ndofs = 2145)
 SC = 
 SOLVER-CONFIGURATION
 ======================
@@ -169,49 +169,49 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 7.51e+00/4.20e-06/7.51e+00
-	      1   | 7.416533e-12 | 9.615916e+02 | 1.56e+00/2.66e-01/1.83e+00
-	      2   | 9.745580e-12 | 5.931504e+02 | 2.50e-01/2.94e-01/5.49e-01
-	      3   | 7.440885e-12 | 6.568060e+02 | 2.46e-01/2.56e-01/5.07e-01
-	      4   | 8.629909e-12 | 3.990824e+02 | 2.49e-01/2.12e-01/4.65e-01
-	      5   | 7.389156e-12 | 2.340174e+02 | 2.47e-01/2.37e-01/4.88e-01
-	      6   | 7.155862e-12 | 1.387982e+02 | 2.47e-01/2.03e-01/4.55e-01
-	      7   | 7.081296e-12 | 8.267079e+01 | 2.47e-01/2.03e-01/4.55e-01
-	    total |                             | 1.05e+01/1.67e+00/1.23e+01
+	    init  |                             | 6.96e+00/4.40e-06/6.99e+00
+	      1   | 7.416533e-12 | 9.615916e+02 | 1.41e+00/2.02e-01/1.61e+00
+	      2   | 9.745580e-12 | 5.931504e+02 | 2.23e-01/2.59e-01/4.86e-01
+	      3   | 7.440885e-12 | 6.568060e+02 | 2.20e-01/2.33e-01/4.57e-01
+	      4   | 8.629909e-12 | 3.990824e+02 | 2.21e-01/2.15e-01/4.40e-01
+	      5   | 7.389156e-12 | 2.340174e+02 | 2.20e-01/1.99e-01/4.23e-01
+	      6   | 7.155862e-12 | 1.387982e+02 | 2.20e-01/1.94e-01/4.18e-01
+	      7   | 7.081296e-12 | 8.267079e+01 | 2.20e-01/2.14e-01/4.39e-01
+	    total |                             | 9.69e+00/1.52e+00/1.13e+01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 8.5164e-02 	| 3.6023e+06 	| 3.6023e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 1.4013e+00 	| 5.1624e+05 	| 7.0975e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
-│ 	LHS[1,2][1] 	| 1.2380e+00 	| 1.0832e+06 	| 1.0832e+06 	| (u, div(q))
-│ 	LHS[1,3][1] 	| 2.4491e+00 	| 2.8887e+06 	| 2.8887e+06 	| -Ra v⋅g T
-│ 	LHS[3,1][1] 	| 2.3217e+00 	| 5.7360e+05 	| 8.7961e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
-│ 	LHS[3,3][1] 	| 6.9847e-02 	| 6.5971e+05 	| 6.5971e+05 	| ∇(T)⋅∇(V)
-└ 	LHS[3,3][2] 	| 2.4414e-01 	| 5.7360e+05 	| 5.8284e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
+│ 	LHS[1,1][1] 	| 7.9982e-02 	| 3.6023e+06 	| 3.6023e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 1.2545e+00 	| 5.1624e+05 	| 7.0975e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
+│ 	LHS[1,2][1] 	| 1.3672e+00 	| 1.0832e+06 	| 1.0832e+06 	| (p, div(v))
+│ 	LHS[1,3][1] 	| 2.1711e+00 	| 2.8887e+06 	| 2.8887e+06 	| -Ra v⋅g T
+│ 	LHS[3,1][1] 	| 2.1211e+00 	| 5.7360e+05 	| 8.7961e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
+│ 	LHS[3,3][1] 	| 1.1188e-02 	| 6.5971e+05 	| 6.5971e+05 	| ∇(T)⋅∇(V)
+└ 	LHS[3,3][2] 	| 2.0928e-01 	| 5.7360e+05 	| 5.8284e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
 ┌ Info: ========== Solving natural convection problem ==========
-│ 	Equation (1.1) momentum equation : u &gt;&gt; v_h (H1BR{2}, ndofs = 10530)
-│ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 4096)
-└ 	Equation (1.3) temperature equation : T &gt;&gt; T_h (H1P1{1}, ndofs = 2145)
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 10530)
+│ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 4096)
+└ 	Equation (1.3) temperature equation for T (discretised by H1P1{1}, ndofs = 2145)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.45e-01/4.50e-06/4.45e-01
-	      1   | 6.913961e-12 | 2.205491e+01 | 2.47e-01/2.79e-01/5.34e-01
-	      2   | 6.796984e-12 | 1.839015e+00 | 2.46e-01/2.12e-01/4.63e-01
-	      3   | 6.800815e-12 | 9.514267e-03 | 2.47e-01/2.02e-01/4.54e-01
-	      4   | 6.858711e-12 | 3.288516e-07 | 2.47e-01/2.20e-01/4.72e-01
-	      5   | 6.724920e-12 | 7.321993e-12 | 2.47e-01/2.17e-01/4.69e-01
-	    total |                             | 1.68e+00/1.13e+00/2.85e+00
+	    init  |                             | 3.88e-01/4.10e-06/3.88e-01
+	      1   | 6.913961e-12 | 2.205491e+01 | 2.23e-01/2.51e-01/4.80e-01
+	      2   | 6.796984e-12 | 1.839015e+00 | 2.23e-01/1.97e-01/4.24e-01
+	      3   | 6.800815e-12 | 9.514267e-03 | 2.23e-01/2.03e-01/4.30e-01
+	      4   | 6.858711e-12 | 3.288516e-07 | 2.23e-01/1.87e-01/4.14e-01
+	      5   | 6.724920e-12 | 7.321993e-12 | 2.22e-01/1.95e-01/4.21e-01
+	    total |                             | 1.50e+00/1.03e+00/2.57e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 7.8814e-02 	| 3.6023e+06 	| 3.6023e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 1.0610e+00 	| 5.1624e+05 	| 3.0974e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
-│ 	LHS[1,2][1] 	| 2.1519e-02 	| 1.0832e+06 	| 1.0832e+06 	| (u, div(q))
-│ 	LHS[1,3][1] 	| 6.7688e-02 	| 2.8887e+06 	| 2.8887e+06 	| -Ra v⋅g T
-│ 	LHS[3,1][1] 	| 2.6859e-01 	| 5.7360e+05 	| 3.4416e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
-│ 	LHS[3,3][1] 	| 1.3346e-02 	| 6.5971e+05 	| 6.5971e+05 	| ∇(T)⋅∇(V)
-└ 	LHS[3,3][2] 	| 1.5742e-01 	| 5.7360e+05 	| 3.4416e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
-	Nu = 13.978023716648313</code></pre><p><img src="../../images/Example235_NaturalConvectionTriangle2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example231_TransientFlowAroundCylinder2D/">« 231 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 7.3243e-02 	| 3.6023e+06 	| 3.6023e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 9.6142e-01 	| 5.1624e+05 	| 3.0974e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
+│ 	LHS[1,2][1] 	| 1.7879e-02 	| 1.0832e+06 	| 1.0832e+06 	| (p, div(v))
+│ 	LHS[1,3][1] 	| 5.8823e-02 	| 2.8887e+06 	| 2.8887e+06 	| -Ra v⋅g T
+│ 	LHS[3,1][1] 	| 2.3749e-01 	| 5.7360e+05 	| 3.4416e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
+│ 	LHS[3,3][1] 	| 1.0813e-02 	| 6.5971e+05 	| 6.5971e+05 	| ∇(T)⋅∇(V)
+└ 	LHS[3,3][2] 	| 1.3322e-01 	| 5.7360e+05 	| 3.4416e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
+	Nu = 13.978023716648313</code></pre><p><img src="../../images/Example235_NaturalConvectionTriangle2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example231_TransientFlowAroundCylinder2D/">« 231 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -72,7 +72,7 @@ function main(; verbosity = 0, order = 2, nlevels = 16, theta = 1//2, Plotter = 
 
         # create a solution vector and solve the problem
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector(&quot;u_h&quot;,FES)
+        Solution = FEVector(FES)
         solve!(Solution, Problem)
         NDofs[level] = length(Solution[1])
 
@@ -145,7 +145,7 @@ function get_local_equilibration_estimator(xgrid::ExtendableGrid{Tv,Ti}, Solutio
     FESDual = FESpace{FETypeDual}(xgrid)
     xItemDofs::Union{VariableTargetAdjacency{Ti},SerialVariableTargetAdjacency{Ti},Array{Ti,2}} = FESDual[CellDofs]
     xItemDofs_uh::Union{VariableTargetAdjacency{Ti},SerialVariableTargetAdjacency{Ti},Array{Ti,2}} = Solution[1].FES[CellDofs]
-    DualSolution = FEVector{T}(&quot;σ_h&quot;,FESDual)
+    DualSolution = FEVector{T}(FESDual)
 
     # partition of unity and their gradients
     POUFEType = H1P1{1}
@@ -331,209 +331,209 @@ end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA06_LocalEquilibratedFluxes2D.main()
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 21)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 21)
 [ Info: overall residual = 1.076401158743041e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.842386111s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.679319726s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.001342016s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.001225329s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.001130213s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.001018824s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 43)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 43)
 [ Info: overall residual = 1.5592607100143473e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.001993842s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.00166344s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.002472952s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.002175652s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.001567833s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.001435534s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.001863439s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.001638639s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.000718216s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.000696617s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 66)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 66)
 [ Info: overall residual = 1.7505826822829505e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.00382958s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.00333538s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.002039043s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.001897045s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.003548974s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.003110275s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.003476773s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.003073574s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 92)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 92)
 [ Info: overall residual = 2.1494000908616575e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.005915024s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.00500982s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.001096823s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.001017725s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.005514316s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.004743814s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.005409514s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.004610811s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.000777316s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.000758818s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 118)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 118)
 [ Info: overall residual = 2.5176999872823827e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.007014747s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.006125247s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.002095844s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.001913646s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.007402755s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.006509257s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.006566938s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.005726037s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 144)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 144)
 [ Info: overall residual = 3.143265326249717e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.008894987s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.007637183s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.002115544s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.001877745s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.008987889s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.007665984s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.00860728s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.007397878s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 209)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 209)
 [ Info: overall residual = 2.3876879113359915e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.011941751s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.010512852s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.004397192s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.004031797s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.012208156s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.010895762s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.011642345s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.010472652s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.001913941s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.001722941s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 308)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 308)
 [ Info: overall residual = 3.487925025781605e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.015766631s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.013701729s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.012176756s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.011049266s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.015225119s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.013420622s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.069051451s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.013188417s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.004392992s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.003773391s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 376)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 376)
 [ Info: overall residual = 4.816810770932452e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.0190575s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.016304492s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.014907514s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.012545402s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.022015962s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.018376142s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.01856979s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.015644476s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.003215068s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.043224139s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 504)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 504)
 [ Info: overall residual = 5.127112797235328e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.026023447s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.02247004s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.020996641s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.018211738s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.026448856s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.022654844s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.026972367s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.022972553s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.003087265s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.002757966s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 797)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 797)
 [ Info: overall residual = 5.707881889398438e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.040194044s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.034569132s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.039262025s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.033743713s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.042206986s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.036429477s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.03668997s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.03154956s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.004509294s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.003981696s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 1092)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 1092)
 [ Info: overall residual = 7.315400706631599e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.097244642s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.046215513s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.049766145s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.043061537s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.055382763s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.048275263s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.052178996s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.046645323s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.01383209s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.042967635s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 1540)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 1540)
 [ Info: overall residual = 1.0394323843854769e-14
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.082688137s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.067043414s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.069732365s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.057925095s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.076379504s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.064097543s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.079929179s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.066386798s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.024615617s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.019975581s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 2168)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 2168)
 [ Info: overall residual = 1.0053721458734567e-14
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.108815385s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.093767358s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.097452347s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.084146426s 
 [ Info:   Starting equilibrating patch group 6 on thread 1... 
-[ Info: Finished equilibration patch group 6 on thread 1 in 0.002805459s 
+[ Info: Finished equilibration patch group 6 on thread 1 in 0.002552461s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.107006047s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.092142319s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.03191267s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.027161354s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.109630003s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.091872113s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 3228)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 3228)
 [ Info: overall residual = 1.2325674690063401e-14
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.16615839s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.143216949s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.140527952s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.118914764s 
 [ Info:   Starting equilibrating patch group 6 on thread 1... 
-[ Info: Finished equilibration patch group 6 on thread 1 in 0.004238189s 
+[ Info: Finished equilibration patch group 6 on thread 1 in 0.00374649s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.163518034s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.140940194s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.046856584s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.04027327s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.187954348s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.140724788s 
 ┌ Info: ========== Solving Poisson problem ==========
-└ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 4776)
+└ 	Equation (1.1) Poisson equation for u (discretised by H1P2{1,2}, ndofs = 4776)
 [ Info: overall residual = 1.6991441042497213e-14
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.270823287s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.20595546s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.213563685s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.202947987s 
 [ Info:   Starting equilibrating patch group 6 on thread 1... 
-[ Info: Finished equilibration patch group 6 on thread 1 in 0.011706346s 
+[ Info: Finished equilibration patch group 6 on thread 1 in 0.010049042s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.239076318s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.20719019s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.076756734s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.066304197s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.24147333s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.205757654s 
 
     ndofs   |   || u - u_h ||    order | || ∇(u - u_h) ||   order |         η          order |  || ∇u - σ_h ||    order |
 ============|==========================|==========================|==========================|==========================|
@@ -552,4 +552,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
       1540  |     4.139e-05      3.74  |     3.177e-03      2.16  |     3.295e-03      2.20  |     8.058e-04      2.66  |
       2168  |     2.488e-05      2.98  |     2.156e-03      2.27  |     2.227e-03      2.29  |     5.414e-04      2.33  |
       3228  |     1.311e-05      3.22  |     1.451e-03      1.99  |     1.494e-03      2.01  |     3.478e-04      2.22  |
-      4776  |     6.827e-06      3.33  |     9.602e-04      2.11  |     9.893e-04      2.11  |     2.199e-04      2.34  |</code></pre><p><img src="../../images/ExampleA06_LocalEquilibratedFluxes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA05_DiffEQ/">« A05 : Comparison with DifferentialEquations.jl</a><a class="docs-footer-nextpage" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Monday 15 August 2022 18:00">Monday 15 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      4776  |     6.827e-06      3.33  |     9.602e-04      2.11  |     9.893e-04      2.11  |     2.199e-04      2.34  |</code></pre><p><img src="../../images/ExampleA06_LocalEquilibratedFluxes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA05_DiffEQ/">« A05 : Comparison with DifferentialEquations.jl</a><a class="docs-footer-nextpage" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 13:49">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
