@@ -94,6 +94,7 @@ function assemble!(
     AP::AssemblyPattern{APT,T,AT,Tv,Ti},
     FEB = [];
     factor = 1,
+    factor_transpose = factor,
     transposed_assembly::Bool = false,
     transpose_copy = nothing,
     skip_preps::Bool = false,
@@ -356,9 +357,9 @@ function assemble!(
                                 end
                                 if transpose_copy !== nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
                                     if transposed_assembly == true
-                                    _addnz(transpose_copy,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,-1)
+                                    _addnz(transpose_copy,arow,acol,localmatrix[dof_i,dof_j] * itemfactor / factor * factor_transpose,-1)
                                     else
-                                    _addnz(transpose_copy,acol,arow,localmatrix[dof_i,dof_j] * itemfactor,-1)
+                                    _addnz(transpose_copy,acol,arow,localmatrix[dof_i,dof_j] * itemfactor / factor * factor_transpose,-1)
                                     end
                                 end
                         #  end
@@ -385,15 +386,16 @@ function assemble!(
     AP::AssemblyPattern{APT,T,AT},
     FEB::Array{<:FEVectorBlock{T,TvG,TiG},1};
     factor = 1,
+    factor_transpose = factor,
     skip_preps::Bool = false,
     fixed_arguments = nothing, # ignored
     transposed_assembly::Bool = false,
     transpose_copy = nothing) where {APT <: APT_BilinearForm, T <: Real, AT <: AssemblyType, TvM, TiM, TvG, TiG}
 
     if typeof(transpose_copy) <: FEMatrixBlock
-        assemble!(A.entries, AP, FEB; factor = factor, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy.entries, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
+        assemble!(A.entries, AP, FEB; factor = factor, factor_transpose = factor_transpose, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy.entries, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
     else
-        assemble!(A.entries, AP, FEB; factor = factor, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
+        assemble!(A.entries, AP, FEB; factor = factor, factor_transpose = factor_transpose, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
     end
 end
 

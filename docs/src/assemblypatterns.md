@@ -21,7 +21,7 @@ The following table lists all available assembly patterns, their constuctor name
 | APT_BilinearForm    | BilinearForm       |     no   |          yes          |          no           |
 | APT_NonlinearForm   | NonlinearForm      |     no   |          yes          |         yes           |
 
-Evaluations of the other AssemblyPatterns may be possible in a future update, but currently have to be performed by maintaining a duplicate of the pattern rewritten as an ItemIntegrator.
+Evaluations of the other AssemblyPatterns may be possible in a future update, but currently have to be performed by maintaining a duplicate of the pattern rewritten as an ItemIntegrator or by matrix vector mutliplications.
 
 
 #### Constructor details

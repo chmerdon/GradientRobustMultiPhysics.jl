@@ -6,7 +6,7 @@ Usually quadrature is a hidden layer as quadrature rules are chosen automaticall
 Hence, quadrature rules are only needed if the user wants write his own low-level assembly.
 
 
-Quadrature rules consist of points (coordinates of evauation points with respect to reference geometry) and weights. There are constructors for several AbstractElementGeometries (from ExtendableGrids) and different order (some have generic formulas for abitrary order), see below for a detailed list.
+Quadrature rules consist of points (coordinates of evaluation points with respect to reference geometry) and weights. There are constructors for several AbstractElementGeometries (from ExtendableGrids) and different order (some have generic formulas for arbitrary order), see below for a detailed list.
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]

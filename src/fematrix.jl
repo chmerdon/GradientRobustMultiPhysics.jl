@@ -123,10 +123,12 @@ end
 
 """
 ````
-FEMatrix{TvM,TiM}(name::String, FESX::FESpace{TvG,TiG,FETypeX,APTX}, FESY::FESpace{TvG,TiG,FETypeY,APTY}) where {TvG,TiG,FETypeX,FETypeY,APTX,APTY}
+FEMatrix{TvM,TiM}(FESX, FESY; name = "auto")
 ````
 
-Creates FEMatrix with one rectangular block (FESX,FESY).
+Creates FEMatrix with one rectangular block (FESX,FESY) if FESX and FESY are single FESpaces, or
+a rectangular block matrix with blocks corresponding to the entries of the FESpace vectors FESX and FESY.
+Optionally a name for the matrix can be given.
 """
 function FEMatrix(FESX::FESpace, FESY::FESpace; name = "auto")
     return FEMatrix{Float64,Int64}(FESX, FESY; name = name)
@@ -137,14 +139,6 @@ end
 function FEMatrix{TvM,TiM}(FESX::FESpace, FESY::FESpace; name = "auto") where {TvM,TiM}
    return FEMatrix{TvM,TiM}([FESX], [FESY]; name = name)
 end
-
-"""
-````
-FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
-````
-
-Creates FEMatrix with blocks (FESX[i],FESY[j]) (enumerated row-wise).
-"""
 function FEMatrix(FES::Array{<:FESpace{TvG,TiG},1}; name = "auto") where {TvG,TiG}
     return FEMatrix{Float64,Int64}(FES; name = name)
 end
@@ -154,7 +148,7 @@ end
 function FEMatrix{TvM,TiM}(FES::Array{<:FESpace{TvG,TiG},1}; name = "auto") where {TvM,TiM,TvG,TiG}
     return FEMatrix{TvM,TiM}(FES, FES; name = name)
 end
-
+# main constructor
 function FEMatrix{TvM,TiM}(FESX::Array{<:FESpace{TvG,TiG},1}, FESY::Array{<:FESpace{TvG,TiG},1}; name = "auto") where {TvM,TiM,TvG,TiG}
     ndofsX, ndofsY = 0, 0
     for j=1:length(FESX)

@@ -349,10 +349,16 @@ function boundarydata!(
                     end    
                     bregiondofs = Base.unique(bregiondofs)
                     append!(fixed_dofs,bregiondofs)
+                else
+                    bregiondofs = []
+                    ifaces::Array{Int,1} = O.ifaces4bregion[r]
+                    ibfaces::Array{Int,1} = O.ibfaces4bregion[r]
+                    for bface in ibfaces
+                        append!(bregiondofs,xBFaceDofs[:,bface])
+                    end    
+                    bregiondofs = Base.unique(bregiondofs)
                 end
                 bregion::Int = CorrectDirichletBoundaryRegions[r]
-                ifaces::Array{Int,1} = O.ifaces4bregion[r]
-                ibfaces::Array{Int,1} = O.ibfaces4bregion[r]
                 if length(ifaces) > 0
                     interpolate!(Target, ON_BFACES, data_exact; items = ibfaces, time = time)
                     ## subtract interpolation of OtherData

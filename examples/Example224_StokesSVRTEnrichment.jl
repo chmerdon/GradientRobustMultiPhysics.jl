@@ -128,20 +128,19 @@ end
 function get_problem(; μ = 1, order = 1, boundary_data = nothing, rhs = nothing)
     ## define problem
     Problem = PDEDescription("Stokes problem")
-    add_unknown!(Problem; equation_name = "momentum equation (Pk part)", unknown_name = "u_Pk")
-    add_unknown!(Problem; equation_name = "momentum equation (RT enrichment)", unknown_name = "u_RT")
+    add_unknown!(Problem; equation_name = "momentum equation (Pk part)", unknown_name = "u_Pk", variables = ["u^{ct}","v^{ct}"])
+    add_unknown!(Problem; equation_name = "momentum equation (RT enrichment)", unknown_name = "u_RT", variables = ["u^R","v^R"])
     add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "p")
 
     ## add Laplacian for Pk part
     add_operator!(Problem, [1,1], LaplaceOperator(μ))
 
-    if order > 1 ## add consistency terms
-        add_operator!(Problem, [1,2], BilinearForm([Laplacian, Identity]; name = "μ (L(u_Pk), v_RT)", factor = μ))
-        add_operator!(Problem, [2,1], BilinearForm([Identity, Laplacian]; name = "-μ (u_RT, L(v_Pk))", factor = -μ))
+    if order > 1 ## add consistency terms (skew-symmetric)
+        add_operator!(Problem, [1,2], BilinearForm([Laplacian, Identity]; factor = μ, also_transposed_block = true, transpose_factor = -μ))
     else ## add stabilisation for RT0
         α = 1.0
         lump = true
-        ARR = BilinearForm([Divergence, Divergence]; name = "α (div u_RT,div v_RT) $(lump ? "[lumped]" : "")", factor = α*μ, APT = lump ? APT_LumpedBilinearForm : APT_BilinearForm)
+        ARR = BilinearForm([Divergence, Divergence]; factor = α*μ, APT = lump ? APT_LumpedBilinearForm : APT_BilinearForm)
         add_operator!(Problem, [2,2], ARR)
     end
 

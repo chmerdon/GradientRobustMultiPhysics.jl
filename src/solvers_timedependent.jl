@@ -632,7 +632,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver{T,Tt}, timestep::Tt;
     end
 
     if TCS.SC.user_params[:show_statistics]
-        show_statistics(TCS.PDE,TCS.SC)
+        GradientRobustMultiPhysics.show_statistics(TCS.PDE,TCS.SC)
         @info "totaltime = $(totaltime)s"
     end
 
@@ -651,7 +651,6 @@ function advance_until_time!(TCS::TimeControlSolver{T,Tt}, timestep::Tt, finalti
     statistics = TCS.statistics
     maxiterations = TCS.SC.user_params[:maxiterations]
     show_details = TCS.SC.user_params[:show_iteration_details]
-    show_statistics = TCS.SC.user_params[:show_statistics]
     check_nonlinear_residual = TCS.SC.user_params[:check_nonlinear_residual]
     @info "Advancing in time from $(Float64(TCS.ctime)) until $(Float64(finaltime))"
     steptime::Float64 = 0
@@ -704,7 +703,7 @@ function advance_until_time!(TCS::TimeControlSolver{T,Tt}, timestep::Tt, finalti
     end
 
     if TCS.SC.user_params[:show_statistics]
-        show_statistics(TCS.PDE,TCS.SC)
+        GradientRobustMultiPhysics.show_statistics(TCS.PDE,TCS.SC)
         @info "totaltime = $(totaltime)s"
     end
 

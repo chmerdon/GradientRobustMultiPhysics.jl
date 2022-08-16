@@ -70,6 +70,7 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Assembly
     fixed_arguments_ids::Array{Int,1}
     newton_arguments::Array{Int,1}
     factor::T
+    transpose_factor::T
     regions::Array{Int,1}
     transposed_assembly::Bool
     transposed_copy::Bool
@@ -78,12 +79,12 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Assembly
     storage_init::Bool
     storage_A::Union{Nothing,AbstractMatrix{T},FEMatrix{T}}
     storage_b::Union{Nothing,AbstractVector{T},FEVector{T}}
-    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} = new{T,APT,AT}(name,ops,false,NoAction(),NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,NoAction(),NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,regions,false,false,false,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger,false)
+    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} = new{T,APT,AT}(name,ops,false,NoAction(),NoAction(),NoAction(),[1],[],[],[],1,1,[0],false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,NoAction(),NoAction(),NoAction(),[1],[],[],[],factor,factor,[0],false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,factor,[0],false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,factor,regions,false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,factor,regions,false,false,store,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,factor,regions,false,false,store,assembly_trigger,false)
 end 
 
 get_pattern(::AbstractPDEOperator) = APT_Undefined
@@ -213,6 +214,11 @@ Example: LagrangeMultiplier(Divergence) is used to render the pressure the Lagra
 function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; name = "auto", AT::Type{<:AssemblyType} = ON_CELLS, action::AbstractAction = NoAction(), regions::Array{Int,1} = [0], store::Bool = false, factor = -1)
     if name == "auto"
         name = "(#A, $operator(#T))"
+        if factor == -1
+            name = "-" * name
+        elseif factor != 1
+            name = "$factor " * name
+        end
     end
     O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[operator, Identity], action, [1], factor, regions, store, AssemblyInitial)
     O.transposed_copy = true
@@ -332,7 +338,9 @@ Optional arguments:
 - AT                : specifies on which entities of the grid the BilinearForm is assembled (default: ON_CELLS)
 - APT               : specifies the subtype of the APT_BilinearForm AssemblyPattern used for assembly (e.g. for lumping (wip))
 - factor            : additional factor that is multiplied during assembly
-- transposed_assembly : transposes the resulting assembled matrix
+- transposed_assembly : transposes the resulting assembled matrix (consider true here for non-symmetric operators)
+- also_transposed_block : when true toggles assembly of transposed system matrix block
+- transpose_factor  : factor for transposed block (default = factor)
 - store             : stores a matrix of the BilinearForm with the latest assembly result
                       (e.g. when the operators sits in a system block that has to be reassembled in an iterative scheme)
 
@@ -356,6 +364,8 @@ function BilinearForm(
     factor = 1,
     regions::Array{Int,1} = [0],
     transposed_assembly::Bool = false,
+    also_transposed_block = false,
+    transpose_factor = factor,
     store::Bool = false)
 
     # check formalities
@@ -368,6 +378,11 @@ function BilinearForm(
         else
             name = apply_action_to == 1 ? "(A(...,$(operators_linear[1])(#A)), $(operators_linear[2])(#T))" : "($(operators_linear[1])(#A), A(...,$(operators_linear[2])(#T)))"
         end
+        if factor == -1
+            name = "-" * name
+        elseif factor != 1
+            name = "$factor " * name
+        end
     end
     
     append!(operators_current, operators_linear)
@@ -375,6 +390,8 @@ function BilinearForm(
     O.fixed_arguments = 1:length(coeff_from)
     O.fixed_arguments_ids = coeff_from
     O.transposed_assembly = transposed_assembly
+    O.transposed_copy = also_transposed_block
+    O.transpose_factor = transpose_factor
     return O
 end
 

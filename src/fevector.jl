@@ -91,10 +91,11 @@ end
 
 """
 ````
-FEVector{T}(name::String, FES::FESpace) where T <: Real
+FEVector{T}(FES; name = "auto") where T <: Real
 ````
 
-Creates FEVector that has one block.
+Creates FEVector that has one block if FES is a single FESpace, and a blockwise FEVector if FES is a vector of FESpaces.
+Optionally a name for the vector (as a String), or each of the blocks (as a vector of Strings) can be specified.
 """
 function FEVector(FES::FESpace{Tv,Ti,FEType,APT}; name = "auto") where {Tv,Ti,FEType,APT}
     return FEVector{Float64}([FES]; name = name)
@@ -102,17 +103,10 @@ end
 function FEVector{T}(FES::FESpace{Tv,Ti,FEType,APT}; name = "auto") where {T,Tv,Ti,FEType,APT}
     return FEVector{T}([FES]; name = name)
 end
-
-"""
-````
-FEVector{T}(name::String, FES::Array{FESpace,1}) where T <: Real
-````
-
-Creates FEVector that has one block for each FESpace in FES.
-"""
 function FEVector(FES::Array{<:FESpace{Tv,Ti},1}; name = "auto") where {Tv,Ti}
     return FEVector{Float64}(FES; name = name)
 end
+# main constructor
 function FEVector{T}(FES::Array{<:FESpace{Tv,Ti},1}; name = "auto") where {T,Tv,Ti}
     if name == "auto"
         names = ["#$j" for j in 1 : length(FES)]

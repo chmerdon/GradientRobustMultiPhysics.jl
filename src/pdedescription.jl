@@ -319,7 +319,7 @@ function Base.show(io::IO, PDE::PDEDescription)
             print(io, "    [$j,$k]   | ")
             for o = 1 : length(PDE.LHSOperators[j,k])
                 if typeof(PDE.LHSOperators[j,k][o]) <: PDEOperator
-                    print(io, "$(parse_unknowns(PDE.LHSOperators[j,k][o].name, PDE, (j,k), PDE.LHSOperators[j,k][o].fixed_arguments_ids)) (APT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[2]), AT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[3]), regions = $(PDE.LHSOperators[j,k][o].regions)$(PDE.LHSOperators[j,k][o].transposed_copy ? ", transposed copy to [$k,$j]" : ""))")
+                    print(io, "$(parse_unknowns(PDE.LHSOperators[j,k][o].name, PDE, (j,k), PDE.LHSOperators[j,k][o].fixed_arguments_ids)) (APT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[2]), AT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[3]), regions = $(PDE.LHSOperators[j,k][o].regions)$(PDE.LHSOperators[j,k][o].transposed_copy ? ", transposed copy to [$k,$j] with factor $(PDE.LHSOperators[j,k][o].transpose_factor)" : ""))")
                 else
                     print(io, "$(typeof(PDE.LHSOperators[j,k][o]))")
                 end

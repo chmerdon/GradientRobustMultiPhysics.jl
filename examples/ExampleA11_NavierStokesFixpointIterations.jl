@@ -102,8 +102,6 @@ function main(;
     ## solve
     solve!(Solution, Problem; skip_update = iterationtype == 3 ? -1 : 1, maxiterations = 20, target_residual = 1e-13, show_statistics = true)
 
-    @show norm(Solution), norms(Solution)
-
     ## plot last solution and convergence hisotry
     p = GridVisualizer(; Plotter = Plotter, layout = (1,3), clear = true, resolution = (1500,500))
     scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true), 1, :), levels = 3, colorbarticks = 9, title = "u_h (abs + quiver)")

@@ -37,8 +37,7 @@ end
 ## kernel for Robin boundary condition
 function robin_kernel!(result, input)
     ## input = [u]
-    eval_data!(g)
-    result[1] = g.val[1] - input[1] # = g - u (will be multiplied with v)
+    result[1] = g()[1] - input[1] # = g - u (will be multiplied with v)
     return nothing
 end
 
