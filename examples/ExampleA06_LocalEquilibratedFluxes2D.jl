@@ -171,7 +171,7 @@ function get_local_equilibration_estimator(xgrid::ExtendableGrid{Tv,Ti}, Solutio
     FESDual = FESpace{FETypeDual}(xgrid)
     xItemDofs::Union{VariableTargetAdjacency{Ti},SerialVariableTargetAdjacency{Ti},Array{Ti,2}} = FESDual[CellDofs]
     xItemDofs_uh::Union{VariableTargetAdjacency{Ti},SerialVariableTargetAdjacency{Ti},Array{Ti,2}} = Solution[1].FES[CellDofs]
-    DualSolution = FEVector{T}("σ_h",FESDual)
+    DualSolution = FEVector{T}(FESDual)
 
     ## partition of unity and their gradients
     POUFEType = H1P1{1}

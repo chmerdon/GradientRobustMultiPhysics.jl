@@ -194,7 +194,7 @@ function test(; Plotter = nothing)
                   ]
     error = []
     for FETypes in testspaces
-        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1))
+        push!(error, solver(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1))
         println("FETypes = $FETypes   error = $(error[end])")
     end
 
@@ -204,7 +204,7 @@ function test(; Plotter = nothing)
                   ]
     error = []
     for FETypes in testspaces
-        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, Plotter = Plotter))
+        push!(error, solver(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, Plotter = Plotter))
         println("FETypes = $FETypes   error = $(error[end])")
     end
     return maximum(error)
