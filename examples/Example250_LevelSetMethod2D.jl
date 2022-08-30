@@ -58,15 +58,12 @@ function main(; verbosity = 0, Plotter = nothing, timestep = 1//500, T = 3//10, 
 
     ## setup timestep-wise plot as a do_after_timestep callback function
     plot_every::Int = ceil(1//100 / timestep)
-    function do_after_each_timestep(step, statistics)
-        if step % plot_every == 0
+    function do_after_each_timestep(TCS)
+        if TCS.cstep % plot_every == 0
             interpolate!(SolutionUpscaled[1],Solution[1])
-            scalarplot!((step == 0) ? p[1,2] : p[1,3], xgrid_upscale, nodevals[1], levels = [0.5], flimits = [-0.05,1.05], colorbarticks = [0, 0.25, 0.5, 0.75, 1], title = "ϕ (t = $(Float64(TProblem.ctime)))")
+            scalarplot!((TCS.cstep == 0) ? p[1,2] : p[1,3], xgrid_upscale, nodevals[1], levels = [0.5], flimits = [-0.05,1.05], colorbarticks = [0, 0.25, 0.5, 0.75, 1], title = "ϕ (t = $(Float64(TCS.ctime)))")
         end
     end
-
-    ## plot initial state
-    do_after_each_timestep(0,nothing)
 
     ## use time control solver by GradientRobustMultiPhysics
     advance_until_time!(TProblem, timestep, T; do_after_each_timestep = do_after_each_timestep)

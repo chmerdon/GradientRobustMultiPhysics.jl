@@ -404,7 +404,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
         # ASSEMBLE (TIME-DEPENDENT) BOUNDARY DATA
         for k = 1 : nsubitblocks
             d = subiterations[s][k]
-            if any(PDE.BoundaryOperators[d].timedependent) == true
+            if any(is_timedependent.(PDE.BoundaryOperators[d])) == true
                 boundarydata!(x[s][k],PDE.BoundaryOperators[d],x[s]; time = TCS.ctime, skip_enumerations = true)
             end
         end    
@@ -583,7 +583,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver{T,Tt}, timestep::Tt;
                 @printf("       ")
             end
             if do_after_each_timestep !== nothing
-                do_after_each_timestep(0, statistics)
+                do_after_each_timestep(TCS)
             end
             @printf("\n\t        |            |  (total)   |  (total,nits)  |    (s)    |")
         else
@@ -592,7 +592,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver{T,Tt}, timestep::Tt;
                 @printf("       ")
             end
             if do_after_each_timestep !== nothing
-                do_after_each_timestep(0, statistics)
+                do_after_each_timestep(TCS)
             end
             @printf("\n\t        |            |  (total)   |    (s)    |")
         end
@@ -616,7 +616,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver{T,Tt}, timestep::Tt;
             end
         end
         if do_after_each_timestep != nothing
-            do_after_each_timestep(TCS.cstep, statistics)
+            do_after_each_timestep(TCS)
         end
         if sum(statistics[:,2]) < stationarity_threshold
             @info "stationarity detected after $iteration timesteps"
@@ -661,7 +661,7 @@ function advance_until_time!(TCS::TimeControlSolver{T,Tt}, timestep::Tt, finalti
                 @printf("       ")
             end
             if do_after_each_timestep !== nothing
-                do_after_each_timestep(0, statistics)
+                do_after_each_timestep(TCS)
             end
             @printf("\n\t        |            |  (total)   |    (total)     |    (s)    |")
         else
@@ -670,7 +670,7 @@ function advance_until_time!(TCS::TimeControlSolver{T,Tt}, timestep::Tt, finalti
                 @printf("       ")
             end
             if do_after_each_timestep !== nothing
-                do_after_each_timestep(0, statistics)
+                do_after_each_timestep(TCS)
             end
             @printf("\n\t        |            |  (total)   |    (s)    ")
         end
@@ -694,7 +694,7 @@ function advance_until_time!(TCS::TimeControlSolver{T,Tt}, timestep::Tt, finalti
             end
         end
         if do_after_each_timestep !== nothing
-            do_after_each_timestep(TCS.cstep, statistics)
+            do_after_each_timestep(TCS)
         end
     end
 

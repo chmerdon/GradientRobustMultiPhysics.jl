@@ -89,12 +89,12 @@ function main(; use_gravity = true, newton = false, nlevels = 4, Plotter = nothi
             xgrid = uniform_refine(xgrid)
         end
 
-        # generate FESpaces and solution vector
+        ## generate FESpaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
         Solution = [FEVector(FES),FEVector(FES)]
         NDoFs[lvl] = length(Solution[1].entries)
 
-        # solve with and without reconstruction
+        ## solve with and without reconstruction
         for reconstruct in [true, false]
             Target = Solution[reconstruct+1]
             setup_and_solve!(Target, xgrid; use_gravity = use_gravity, reconstruct = reconstruct, newton = newton, c = c, M = M, λ = λ, μ = μ, γ = γ)
@@ -102,7 +102,7 @@ function main(; use_gravity = true, newton = false, nlevels = 4, Plotter = nothi
             Results[reconstruct ? 4 : 3, lvl] = sqrt(evaluate(VeloGradError,Target[1]))
             Results[reconstruct ? 6 : 5, lvl] = sqrt(evaluate(DensityError,Target[2]))
 
-            # check error in mass constraint
+            ## check error in mass constraint
             Md = sum(Target[2][:] .* xgrid[CellVolumes])
             println("\tmass_error = $M - $Md = $(abs(M-Md))")
         end

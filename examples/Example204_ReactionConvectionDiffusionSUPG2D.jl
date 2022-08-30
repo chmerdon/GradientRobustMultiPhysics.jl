@@ -58,16 +58,16 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
     return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇#A,∇#T) + (α#A + β⋅∇#A, #T)", transposed_assembly = true)
 end
 
-# function that provides the SUPG left-hand side operator
-#       τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)
+## function that provides the SUPG left-hand side operator
+##       τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)
 function SUPGOperator_LHS(α, β, ν, τ, xCellDiameters)
     function action_kernel!(result, input, item)
-        # input = [u_h,∇u_h,Δu_h] as a vector of length 4
-        # compute residual -νΔu_h + (β⋅∇)u_h + αu_h
+        ## input = [u_h,∇u_h,Δu_h] as a vector of length 4
+        ## compute residual -νΔu_h + (β⋅∇)u_h + αu_h
         result[1] = - ν * input[4] + α()[1] * input[1] + dot(β(), view(input, 2:3))
-        # multiply stabilisation factor
+        ## multiply stabilisation factor
         result[1] *= τ * xCellDiameters[item[1]]^2
-        # compute coefficients for ∇ eval of test function v_h
+        ## compute coefficients for ∇ eval of test function v_h
         result .= result[1] * β()  # will be multiplied with ∇v_h
         return nothing
     end
@@ -75,12 +75,12 @@ function SUPGOperator_LHS(α, β, ν, τ, xCellDiameters)
     return BilinearForm([OperatorTriple{Identity,Gradient,Laplacian},Gradient], action; name = "τ (h^2 (-ν Δ#A + α#A + β⋅∇#A), β⋅∇#T)", transposed_assembly = true)
 end
 
-# function that provides the SUPG right-hand side operator
-#                  τ (h^2 f, β⋅∇v)
+## function that provides the SUPG right-hand side operator
+##                  τ (h^2 f, β⋅∇v)
 function SUPGOperator_RHS(f, β, τ, xCellDiameters)
     function action_kernel!(result, input, x, item)
-        # input = [v,∇v] as a vector of length 3
-        # compute f times stabilisation factor
+        ## input = [v,∇v] as a vector of length 3
+        ## compute f times stabilisation factor
         result[1] = f(x)[1] * τ * xCellDiameters[item[1]]^2
         result .= result[1] * β()  # will be multiplied with ∇v_h
         return nothing

@@ -45,7 +45,7 @@ mutable struct PDEDescription
     algebraic_constraint::Array{Bool,1}
     LHSOperators::Array{Array{AbstractPDEOperator,1},2}
     RHSOperators::Array{Array{AbstractPDEOperator,1},1}
-    BoundaryOperators::Array{BoundaryOperator,1}
+    BoundaryOperators::Array{Array{BoundaryData,1},1}
     GlobalConstraints::Array{AbstractGlobalConstraint,1}
 end
 
@@ -91,9 +91,9 @@ function PDEDescription(name::String, nunknowns::Int; algebraic::Array{Bool,1} =
     end
 
     # BOUNDARY OPERATOR
-    MyBoundary = Array{BoundaryOperator,1}(undef,nunknowns)
+    MyBoundary = Array{Array{BoundaryData},1}(undef,nunknowns)
     for j=1:nunknowns
-        MyBoundary[j] = BoundaryOperator()
+        MyBoundary[j] = Array{BoundaryData,1}(undef,0)
     end
 
     # GLOBAL CONSTRAINTS
@@ -136,7 +136,7 @@ function add_unknown!(PDE::PDEDescription; equation_name::String = "", unknown_n
     push!(PDE.variables, variables)
     push!(PDE.algebraic_constraint,algebraic_constraint)
     push!(PDE.RHSOperators,[])
-    push!(PDE.BoundaryOperators, BoundaryOperator())
+    push!(PDE.BoundaryOperators, Array{BoundaryData,1}(undef, 0))
     NewLHS = Array{Array{AbstractPDEOperator,1},2}(undef,nunknowns,nunknowns)
     for j=1:nunknowns, k = 1:nunknowns
         if j < nunknowns && k < nunknowns
@@ -264,8 +264,9 @@ Adds the given boundary data with the specified AbstractBoundaryType at the spec
 
 Note: If the data function is time-dependent (see User Data documentation) it is evaluated in any advance! step of a TimeControlSolver.
 """
-function add_boundarydata!(PDE::PDEDescription,position::Int, regions, btype::Type{<:AbstractBoundaryType}; data = Nothing)
-    Base.append!(PDE.BoundaryOperators[position],regions, btype; data = data)
+function add_boundarydata!(PDE::PDEDescription, position::Int, regions, btype::Type{<:AbstractBoundaryType}; data = nothing, mask = 1)
+    NewBoundaryData = BoundaryData(btype; data = data, mask = mask, regions = regions)
+    Base.push!(PDE.BoundaryOperators[position], NewBoundaryData)
     @logmsg DeepInfo "Added boundary_data for unknown $(PDE.unknown_names[position]) in region(s) $regions to PDEDescription $(PDE.name)"
     return PDE.BoundaryOperators[position]
 end

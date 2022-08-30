@@ -38,55 +38,37 @@ collects boundary data for a component of the system and allows to specify a Abs
 so far only DirichletBoundary types (see above)
 
 """
-mutable struct BoundaryOperator <: AbstractPDEOperator
-    regions4boundarytype :: Dict{Type{<:AbstractBoundaryType},Array{Int,1}}
-    data4bregion :: Array{Any,1}
-    timedependent :: Array{Bool,1}
-    quadorder4bregion :: Array{Int,1}
-    ifaces4bregion::Array{Array{Int,1},1}
-    ibfaces4bregion::Array{Array{Int,1},1}
-    homdofs::Array{Int,1}
+mutable struct BoundaryData{BDT <: AbstractBoundaryType, MType, FType}
+    data::FType
+    mask::MType   # which components are involved?
+    bregions::Array{Int,1}  # which regions are involved?
+    timedependent::Bool
+    ifaces::Array{Int,1}
+    ibfaces::Array{Int,1}
+    bdofs::Array{Int,1}
 end
 
-function BoundaryOperator()
-    regions4boundarytype = Dict{Type{<:AbstractBoundaryType},Array{Int,1}}()
-    quadorder4bregion = zeros(Int,0)
-    timedependent = Array{Bool,1}([])
-    return BoundaryOperator(regions4boundarytype, [], timedependent, quadorder4bregion,Array{Array{Int,1},1}(undef,0),Array{Array{Int,1},1}(undef,0),[])
-end
+BoundaryDataType(::BoundaryData{BDT}) where {BDT} = BDT
+is_timedependent(BD::BoundaryData) = BD.timedependent
 
-function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBoundaryType}; data = Nothing)
-    O.regions4boundarytype[btype]=push!(get(O.regions4boundarytype, btype, []),region)
-    while length(O.data4bregion) < region
-        push!(O.data4bregion, Nothing)
+function BoundaryData(BDT::Type{<:AbstractBoundaryType}; data = nothing, regions = [0], mask = 1)
+    if data == nothing
+        timedependent = false
+    else
+        timedependent = is_timedependent(data)
     end
-    while length(O.quadorder4bregion) < region
-        push!(O.quadorder4bregion, 0)
-        push!(O.timedependent, false)
-    end
-    if typeof(data) <: AbstractUserDataType
-        O.quadorder4bregion[region] = data.bonus_quadorder
-        O.timedependent[region] = is_timedependent(data)
-    end
-    O.data4bregion[region] = data
+    return BoundaryData{BDT, typeof(mask), typeof(data)}(data, mask, regions, timedependent, zeros(Int,0), zeros(Int,0), zeros(Int,0))
 end
 
 
-function Base.append!(O::BoundaryOperator,regions::Array{Int,1}, btype::Type{<:AbstractBoundaryType}; data = Nothing)
-    for j = 1 : length(regions)
-        append!(O,regions[j], btype; data = data)
-    end
-end
-
-
-
-# this function assembles all boundary data at once
+# this function assembles all boundary data for the Target block at once
 # first all interpolation Dirichlet boundaries are assembled
-# then all hoomogeneous Dirichlet boundaries are set to zero
+# then all homogeneous Dirichlet boundaries are set to zero
 # then all DirichletBestapprox boundaries are handled (previous data is fixed)
+# at last all CorrectDirichlet boundaries are assembled (taking into account previous data)
 function boundarydata!(
     Target::FEVectorBlock{T,Tv,Ti},
-    O::BoundaryOperator,
+    O::Array{BoundaryData,1},
     OtherData = [];
     time = 0,
     fixed_penalty = 1e60,
@@ -99,7 +81,7 @@ function boundarydata!(
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     nbfaces::Int = 0
-    if length(O.regions4boundarytype) > 0
+    if length(O) > 0
         xBFaceDofs::DofMapTypes{Ti} = FE[BFaceDofs]
         nbfaces = num_sources(xBFaceDofs)
         xBFaceFaces::Array{Ti,1} = FE.xgrid[BFaceFaces]
@@ -107,45 +89,41 @@ function boundarydata!(
     end
 
     ######################
-    # Dirichlet boundary #
+    # Dirichlet boundary # TODO : APPLY MASK!!!
     ######################
 
     # INTERPOLATION DIRICHLET BOUNDARY
-    InterDirichletBoundaryRegions = get(O.regions4boundarytype,InterpolateDirichletBoundary,[])
-    if length(InterDirichletBoundaryRegions) > 0
-
-        # find Dirichlet dofs
-        for r = 1 : length(InterDirichletBoundaryRegions)
+    InterDirichletBoundaryRegions = []
+    InterDirichletBoundaryOperators = []
+    for j = 1 : length(O)
+        if BoundaryDataType(O[j]) == InterpolateDirichletBoundary
+            append!(InterDirichletBoundaryRegions, O[j].bregions)
+            push!(InterDirichletBoundaryOperators,j)
+            regions = O[j].bregions
+            ifaces = O[j].ifaces
+            ibfaces = O[j].ibfaces
+            bdofs = O[j].bdofs
             if skip_enumerations == false
-                while length(O.ifaces4bregion) < r
-                    push!(O.ifaces4bregion,[])
-                    push!(O.ibfaces4bregion,[])
-                end
-                O.ifaces4bregion[r] = []
-                O.ibfaces4bregion[r] = []
-                ifaces = O.ifaces4bregion[r]
-                ibfaces = O.ibfaces4bregion[r]
-                bregiondofs = []
                 for bface = 1 : nbfaces
-                    if xBFaceRegions[bface] == InterDirichletBoundaryRegions[r]
+                    if xBFaceRegions[bface] in regions
                         append!(ifaces,xBFaceFaces[bface])
                         append!(ibfaces,bface)
-                        append!(bregiondofs,xBFaceDofs[:,bface])
+                        for dof = 1 : num_targets(xBFaceDofs,bface)
+                            append!(bdofs, xBFaceDofs[dof,bface])
+                        end
                     end
                 end    
-                bregiondofs = Base.unique(bregiondofs)
-                append!(fixed_dofs,bregiondofs)
+                bdofs = Base.unique(bdofs)
+                append!(fixed_dofs,bdofs)
+                fixed_dofs = Base.unique(fixed_dofs)
             end
-            bregion::Int = InterDirichletBoundaryRegions[r]
-            ifaces::Array{Int,1} = O.ifaces4bregion[r]
-            ibfaces::Array{Int,1} = O.ibfaces4bregion[r]
             if length(ifaces) > 0
                 if FE.broken == true
                     # face interpolation expects continuous dofmaps
                     # quick and dirty fix: use face interpolation and remap dofs to broken dofs
                     FESc = FESpace{FEType}(FE.xgrid)
                     Targetc = FEVector{T}(FESc)
-                    interpolate!(Targetc[1], FESc, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
+                    interpolate!(Targetc[1], FESc, ON_FACES, O[j].data; items = ifaces, time = time)
                     xBFaceDofsc = FESc[BFaceDofs]
                     dof::Int = 0
                     dofc::Int = 0
@@ -158,109 +136,126 @@ function boundarydata!(
                     end
                 else
                     # use face interpolation
-                    interpolate!(Target, ON_BFACES, O.data4bregion[bregion]; items = ibfaces, time = time)
+                    interpolate!(Target, ON_BFACES, O[j].data; items = ibfaces, time = time)
                 end
             end
-        end   
-
-        @debug "Int-DBnd = $InterDirichletBoundaryRegions"# (ndofs = $(length(fixed_dofs)))"
+        end
     end
 
-    # HOMOGENEOUS DIRICHLET BOUNDARY
-    HomDirichletBoundaryRegions = get(O.regions4boundarytype,HomogeneousDirichletBoundary,[])
-    if length(HomDirichletBoundaryRegions) > 0
+    if length(InterDirichletBoundaryRegions) > 0
+        @debug "Int-DBnd = $InterDirichletBoundaryRegions"
+    end
 
-        # find Dirichlet dofs
-        hom_dofs = O.homdofs
-        if skip_enumerations == false
-            hom_dofs = []
-            for r = 1 : length(HomDirichletBoundaryRegions)
+
+    # HOMOGENEOUS DIRICHLET BOUNDARY
+    HomDirichletBoundaryRegions = []
+    HomDirichletBoundaryOperators = []
+    for j = 1 : length(O)
+        if BoundaryDataType(O[j]) == HomogeneousDirichletBoundary
+            append!(HomDirichletBoundaryRegions, O[j].bregions)
+            push!(HomDirichletBoundaryOperators,j)
+
+            # find Dirichlet dofs
+            regions = O[j].bregions
+            bdofs = O[j].bdofs
+            if skip_enumerations == false
+                bdofs = []
                 for bface = 1 : nbfaces
-                    if xBFaceRegions[bface] == HomDirichletBoundaryRegions[r]
-                        append!(hom_dofs,xBFaceDofs[:,bface])
+                    if xBFaceRegions[bface] in regions
+                        for dof = 1 : num_targets(xBFaceDofs,bface)
+                            append!(bdofs, xBFaceDofs[dof,bface])
+                        end
                     end    
                 end    
+                bdofs = Base.unique(bdofs)
+                append!(fixed_dofs,bdofs)
+                fixed_dofs = Base.unique(fixed_dofs)
             end
-            hom_dofs = Base.unique(hom_dofs)
-            append!(fixed_dofs,hom_dofs)
-            fixed_dofs = Base.unique(fixed_dofs)
+
+            # set homdofs to zero
+            for j in bdofs
+                Target[j] = 0
+            end    
         end
-
-        # set homdofs to zero
-        for j in hom_dofs
-            Target[j] = 0
-        end    
-
+    end
+    if length(HomDirichletBoundaryOperators) > 0
         @debug "Hom-DBnd = $HomDirichletBoundaryRegions (ndofs = $(length(hom_dofs)))"
     end
 
     # BEST-APPROXIMATION DIRICHLET BOUNDARY
-    BADirichletBoundaryRegions = get(O.regions4boundarytype,BestapproxDirichletBoundary,[])
+    BADirichletBoundaryRegions = []
+    BADirichletBoundaryOperators = []
+    for j = 1 : length(O)
+        if BoundaryDataType(O[j]) == BestapproxDirichletBoundary
+            append!(BADirichletBoundaryRegions, O[j].bregions)
+            push!(BADirichletBoundaryOperators,j)
+        end
+    end
+
     if length(BADirichletBoundaryRegions) > 0
+
+        # prepare vector to store bestapproximation boundary data
+        Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
+        b::Array{T,1} = zeros(T,FE.ndofs)
 
         # find Dirichlet dofs
         BAdofs::Array{Ti,1} = zeros(Ti,0)
-        for bface = 1 : nbfaces
-            for r = 1 : length(BADirichletBoundaryRegions)
-                if xBFaceRegions[bface] == BADirichletBoundaryRegions[r]
+        exclude_dofs = zeros(Ti,0)
+        for j = 1 : length(O)
+            bdofs = O[j].bdofs
+            mask = O[j].mask
+            regions = O[j].bregions
+            for bface = 1 : nbfaces
+                if xBFaceRegions[bface] in regions
                     for dof = 1 : num_targets(xBFaceDofs,bface)
-                        push!(BAdofs,xBFaceDofs[dof,bface])
+                        push!(bdofs,xBFaceDofs[dof,bface])
                     end
-                    break
-                end    
+                end   
+            end
+
+            ## assemble rhs for best-approximation problem
+            if Dboperator == Identity
+                action = fdot_action(O[j].data)
+            elseif Dboperator == NormalFlux
+                action = fdotn_action(O[j].data, FE.xgrid; bfaces = true)
+            elseif Dboperator == TangentFlux && xdim == 2 # Hcurl on 2D domains
+                action = fdott2d_action(O[j].data, FE.xgrid; bfaces = true)
+            elseif Dboperator == TangentFlux && xdim == 3 # Hcurl on 3D domains, does not work properly yet
+                @warn "Hcurl boundary data in 3D may not work properly yet"
+                action = fdott23_action(O[j].data, FE.xgrid; bedges = true)
             end    
+            set_time!(O[j].data, time)
+            set_time!(action, time)
+            RHS_bnd = DiscreteLinearForm([Dboperator], [FE], action; T = T, AT = ON_BFACES, regions = regions, name = "RHS bnd data bestapprox")
+            assemble!(b, RHS_bnd)
+
+            append!(BAdofs, bdofs)
         end
         Base.unique!(BAdofs)
 
         @debug "BA-DBnd = $BADirichletBoundaryRegions (ndofs = $(length(BAdofs)))"
 
-        bonus_quadorder::Int = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
-        Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
-        b::Array{T,1} = zeros(T,FE.ndofs)
+        ## assemble matrix
         A = FEMatrix{T}(FE; name = "mass matrix bnd")
-
         if Dboperator == Identity
-            for region in BADirichletBoundaryRegions
-                action = fdot_action(O.data4bregion[region])
-                set_time!(O.data4bregion[region], time)
-                set_time!(action, time)
-                RHS_bnd = DiscreteLinearForm([Dboperator], [FE], action; T = T, AT = ON_BFACES, regions = [region], name = "RHS bnd data bestapprox")
-                assemble!(b, RHS_bnd)
-            end
             L2ProductBnd = DiscreteSymmetricBilinearForm([Dboperator, Dboperator], [FE, FE]; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "LHS bnd data bestapprox")    
             assemble!(A[1],L2ProductBnd)
         elseif Dboperator == NormalFlux
-            for region in BADirichletBoundaryRegions
-                action = fdotn_action(O.data4bregion[region], FE.xgrid; bfaces = true)
-                set_time!(O.data4bregion[region], time)
-                set_time!(action, time)
-                RHS_bnd = DiscreteLinearForm([Dboperator], [FE], action; T = T, AT = ON_BFACES, regions = [region], name = "RHS bnd data bestapprox")
-                assemble!(b, RHS_bnd)
-            end
             L2ProductBnd = DiscreteSymmetricBilinearForm([Dboperator, Dboperator], [FE, FE]; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "LHS bnd data NormalFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
         elseif Dboperator == TangentFlux && xdim == 2 # Hcurl on 2D domains
-            for region in BADirichletBoundaryRegions
-                action = fdott2d_action(O.data4bregion[region], FE.xgrid; bfaces = true)
-                set_time!(O.data4bregion[region], time)
-                set_time!(action, time)
-                RHS_bnd = DiscreteLinearForm([Dboperator], [FE], action; T = T, AT = ON_BFACES, regions = [region], name = "RHS bnd data bestapprox")
-                assemble!(b, RHS_bnd)
-            end
             L2ProductBnd = DiscreteSymmetricBilinearForm([Dboperator, Dboperator], [FE, FE]; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "LHS bnd data TangentFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
         elseif Dboperator == TangentFlux && xdim == 3 # Hcurl on 3D domains, does not work properly yet
-            @warn "Hcurl boundary data in 3D may not work properly yet"
-            for region in BADirichletBoundaryRegions
-                action = fdott23_action(O.data4bregion[region], FE.xgrid; bedges = true)
-                set_time!(O.data4bregion[region], time)
-                set_time!(action, time)
-                RHS_bnd = DiscreteLinearForm([Dboperator], [FE], action; T = T, AT = ON_BFACES, regions = [region], name = "RHS bnd data bestapprox")
-                assemble!(b, RHS_bnd)
-            end
             L2ProductBnd = DiscreteSymmetricBilinearForm([Dboperator, Dboperator], [FE, FE]; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "LHS bnd data TangentFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
         end    
+
+        # TODO: remove dofs that do not match mask
+        for j in exclude_dofs
+            _addnz(A.entries,j,j,fixed_penalty,1)
+            b[j,1] = 0
+        end
 
         # fix already set dofs by other boundary conditions
         for j in fixed_dofs
@@ -318,56 +313,48 @@ function boundarydata!(
         end
     end
 
-    # INTERPOLATION DIRICHLET BOUNDARY
+    # CORRECTING INTERPOLATION DIRICHLET BOUNDARY
     for id = 1 : length(OtherData)
-        CorrectDirichletBoundaryRegions = get(O.regions4boundarytype,CorrectDirichletBoundary{id},[])
-        if length(CorrectDirichletBoundaryRegions) > 0
-            ## generate a copy of the TargetData and interpolate the OtherData[id]
-            TargetCopy = deepcopy(Target)
-            interpolate!(TargetCopy, OtherData[id])
+        CorrectDirichletBoundaryRegions = []
+        for j = 1 : length(O)
+            if BoundaryDataType(O[j]) == CorrectDirichletBoundary{id}
+                regions = O[j].bregions
+                append!(CorrectDirichletBoundaryRegions, regions)
 
-            # find Dirichlet dofs
-            for r = 1 : length(CorrectDirichletBoundaryRegions)
-                bregion = CorrectDirichletBoundaryRegions[r]
-                data_exact = O.data4bregion[bregion]
+                ## generate a copy of the TargetData and interpolate the OtherData[id]
+                TargetCopy = deepcopy(Target)
+                interpolate!(TargetCopy, OtherData[id])
+
+                # find Dirichlet dofs
+                ifaces = O[j].ifaces
+                ibfaces = O[j].ibfaces
+                bdofs = O[j].bdofs
                 if skip_enumerations == false
-                    while length(O.ifaces4bregion) < r
-                        push!(O.ifaces4bregion,[])
-                        push!(O.ibfaces4bregion,[])
+                    if skip_enumerations == false
+                        for bface = 1 : nbfaces
+                            if xBFaceRegions[bface] in regions
+                                append!(ifaces,xBFaceFaces[bface])
+                                append!(ibfaces,bface)
+                                for dof = 1 : num_targets(xBFaceDofs,bface)
+                                    append!(bdofs, xBFaceDofs[dof,bface])
+                                end
+                            end
+                        end    
+                        bdofs = Base.unique(bdofs)
+                        append!(fixed_dofs,bdofs)
+                        fixed_dofs = Base.unique(fixed_dofs)
                     end
-                    O.ifaces4bregion[r] = []
-                    O.ibfaces4bregion[r] = []
-                    ifaces = O.ifaces4bregion[r]
-                    ibfaces = O.ibfaces4bregion[r]
-                    bregiondofs = []
-                    for bface = 1 : nbfaces
-                        if xBFaceRegions[bface] == CorrectDirichletBoundaryRegions[r]
-                            append!(ifaces,xBFaceFaces[bface])
-                            append!(ibfaces,bface)
-                            append!(bregiondofs,xBFaceDofs[:,bface])
-                        end
-                    end    
-                    bregiondofs = Base.unique(bregiondofs)
-                    append!(fixed_dofs,bregiondofs)
-                else
-                    bregiondofs = []
-                    ifaces::Array{Int,1} = O.ifaces4bregion[r]
-                    ibfaces::Array{Int,1} = O.ibfaces4bregion[r]
-                    for bface in ibfaces
-                        append!(bregiondofs,xBFaceDofs[:,bface])
-                    end    
-                    bregiondofs = Base.unique(bregiondofs)
                 end
-                bregion::Int = CorrectDirichletBoundaryRegions[r]
                 if length(ifaces) > 0
-                    interpolate!(Target, ON_BFACES, data_exact; items = ibfaces, time = time)
+                    interpolate!(Target, ON_BFACES, O[j].data; items = ibfaces, time = time)
                     ## subtract interpolation of OtherData
-                    for dof in bregiondofs
+                    for dof in bdofs
                         Target[dof] -= TargetCopy[dof]
                     end
                 end
-            end   
-    
+            end
+        end
+        if length(CorrectDirichletBoundaryRegions) > 0
             @debug "Corr-DBnd = $CorrectDirichletBoundaryRegions"# (ndofs = $(length(fixed_dofs)))"
         end
     end
