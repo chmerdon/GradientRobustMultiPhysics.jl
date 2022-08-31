@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>103 : Burger&#39;s Equation 1D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li class="is-active"><a class="tocitem" href>103 : Burger&#39;s Equation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li><li><a class="tocitem" href="../ExampleA11_NavierStokesFixpointIterations/">A11 : Navier-Stokes Fixed-point iterations</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>103 : Burger&#39;s Equation 1D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>103 : Burger&#39;s Equation 1D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example103_BurgersEquation1D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Burger&#39;s-Equation-1D"><a class="docs-heading-anchor" href="#:-Burger&#39;s-Equation-1D">103 : Burger&#39;s Equation 1D</a><a id=":-Burger&#39;s-Equation-1D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Burger&#39;s-Equation-1D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example103_BurgersEquation1D.jl">source code</a>)</p><p>This example solves the Burger&#39;s equation</p><p class="math-container">\[\begin{aligned}
+u_t - \mu \Delta u + \mathrm{div} f(u) &amp; = 0
+\end{aligned}\]</p><p>with periodic boundary conditions.</p><pre><code class="language-julia hljs">module Example103_BurgersEquation1D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+
+const f = (result, u) -&gt; (result[1] = u[1]^2/2;) # kernel for nonlinearity
+const u0 = DataFunction((result,x) -&gt; (result[1] = abs(x[1]) &lt; 0.5 ? 1 : 0), [1, 1]; dependencies = &quot;X&quot;, bonus_quadorder = 4)     # initial height
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, ν = 1e-2, h = 0.02, T = 2, order = 2, τ = 5//100, Plotter = nothing)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # load mesh and exact solution
+    xgrid = simplexgrid(-2:h:2)
+
+    # set finite element types [surface height, velocity]
+    FEType = H1Pk{1,1,order}
+
+    # generate empty PDEDescription for three unknowns (h, u)
+    Problem = PDEDescription(&quot;Burger&#39;s Equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;Burger&#39;s Equation&quot;)
+    add_operator!(Problem, 1, NonlinearForm(Gradient, [Identity], [1], f, [1,1]; name = &quot;(f(#A),∇#T)&quot;, newton = true, bonus_quadorder = 2))
+    add_operator!(Problem, [1,1], LaplaceOperator(ν))
+    add_constraint!(Problem, CombineDofs(1, 1, [1],[num_nodes(xgrid)]))
+    @show Problem
+
+    # prepare solution vector and interpolate u0
+    Solution = FEVector(&quot;u_h&quot;, FESpace{FEType}(xgrid))
+    interpolate!(Solution[1], u0)
+
+    # init plotter and plot u0
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,1), clear = true, resolution = (800,800))
+    scalarplot!(p[1,1], xgrid, nodevalues_view(Solution[1])[1], flimits = (-0.75,2), levels = 0, title = &quot;u_h (t = 0)&quot;)
+
+    # configure time-dependent solver
+    TCS = TimeControlSolver(Problem, Solution, BackwardEuler;
+                                        timedependent_equations = [1],
+                                        maxiterations = 10,
+                                        show_iteration_details = true,
+                                        T_time = typeof(τ))
+
+    # advance in time
+    function do_each_timestep(kwargs...)
+        scalarplot!(p[1,1], xgrid, nodevalues_view(Solution[1])[1], flimits = (-0.75,2), levels = 0, title = &quot;u_h (t = $(Float64(TCS.ctime)))&quot;)
+    end
+    advance_until_time!(TCS, τ, T; do_after_each_timestep = do_each_timestep)
+end
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example103_BurgersEquation1D.main()
+Problem = 
+PDE-DESCRIPTION
+===============
+  system name = Burger&#39;s Equation
+
+      id    | unknown name / variables [#A, #T] / equation name
+     [1]    | u / [&quot;u&quot;, &quot;v&quot;] / Burger&#39;s Equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | (f(u),∇v) [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+            | 0.01 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | none
+
+   BoundaryOperators[1] : 
+
+  GlobalConstraints[1] : CombineDofs[1,1] (ndofs = 1) 
+
+┌ Info: ----- Preparing time control solver for Burger&#39;s Equation using BackwardEuler -----
+└ 	Equation (1.1) Burger&#39;s Equation for u (discretised by (H1Pk{1,1,2}, ndofs = 401), timedependent = yes
+[ Info: Advancing in time from 0.0 until 2.0
+
+	  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |  RUNTIME  |   CHANGE        
+	        |            |  (total)   |    (total)     |    (s)    |      u     
+	     1  | 5.0000e-02 | 3.8711e-15 | 4.7811e-15 (5) | 4.418e+00 | 1.6858e+00 
+	     2  | 1.0000e-01 | 3.6075e-15 | 4.4222e-15 (4) | 1.055e-02 | 9.6901e-01 
+	     3  | 1.5000e-01 | 3.6199e-15 | 4.8008e-15 (4) | 9.803e-03 | 8.3550e-01 
+	     4  | 2.0000e-01 | 3.3424e-15 | 4.2526e-15 (4) | 9.774e-03 | 7.7077e-01 
+	     5  | 2.5000e-01 | 3.8023e-15 | 4.8554e-15 (4) | 9.666e-03 | 7.3115e-01 
+	     6  | 3.0000e-01 | 3.3673e-15 | 4.2314e-15 (4) | 9.760e-03 | 7.0408e-01 
+	     7  | 3.5000e-01 | 2.9728e-15 | 4.5496e-15 (4) | 9.689e-03 | 6.8433e-01 
+	     8  | 4.0000e-01 | 3.3836e-15 | 4.0647e-15 (4) | 9.693e-03 | 6.6922e-01 
+	     9  | 4.5000e-01 | 3.5836e-15 | 3.9938e-15 (4) | 9.680e-03 | 6.5721e-01 
+	    10  | 5.0000e-01 | 3.4735e-15 | 4.3820e-15 (4) | 9.657e-03 | 6.4734e-01 
+	    11  | 5.5000e-01 | 3.0711e-15 | 4.0727e-15 (4) | 9.703e-03 | 6.3894e-01 
+	    12  | 6.0000e-01 | 3.0625e-15 | 3.9003e-15 (4) | 9.674e-03 | 6.3155e-01 
+	    13  | 6.5000e-01 | 4.1015e-15 | 4.8949e-15 (4) | 9.707e-03 | 6.2482e-01 
+	    14  | 7.0000e-01 | 3.0456e-15 | 4.0611e-15 (4) | 9.706e-03 | 6.1852e-01 
+	    15  | 7.5000e-01 | 3.0786e-15 | 3.3494e-15 (4) | 9.644e-03 | 6.1243e-01 
+	    16  | 8.0000e-01 | 3.7808e-15 | 4.1913e-15 (4) | 9.666e-03 | 6.0641e-01 
+	    17  | 8.5000e-01 | 3.6327e-15 | 4.4604e-15 (4) | 9.647e-03 | 6.0036e-01 
+	    18  | 9.0000e-01 | 3.1218e-15 | 4.2946e-15 (4) | 9.648e-03 | 5.9421e-01 
+	    19  | 9.5000e-01 | 3.1072e-15 | 3.9349e-15 (4) | 9.689e-03 | 5.8789e-01 
+	    20  | 1.0000e+00 | 3.0553e-15 | 4.0800e-15 (4) | 9.717e-03 | 5.8139e-01 
+	    21  | 1.0500e+00 | 3.4026e-15 | 4.1061e-15 (4) | 9.679e-03 | 5.7468e-01 
+	    22  | 1.1000e+00 | 3.2476e-15 | 3.6185e-15 (4) | 9.656e-03 | 5.6776e-01 
+	    23  | 1.1500e+00 | 3.0377e-15 | 3.6290e-15 (4) | 9.628e-03 | 5.6065e-01 
+	    24  | 1.2000e+00 | 3.1685e-15 | 3.6315e-15 (4) | 9.655e-03 | 5.5336e-01 
+	    25  | 1.2500e+00 | 3.3851e-15 | 3.9251e-15 (4) | 9.645e-03 | 5.4590e-01 
+	    26  | 1.3000e+00 | 3.6280e-15 | 3.6529e-15 (4) | 9.691e-03 | 5.3831e-01 
+	    27  | 1.3500e+00 | 2.7354e-15 | 3.5357e-15 (4) | 9.643e-03 | 5.3061e-01 
+	    28  | 1.4000e+00 | 3.1538e-15 | 3.4567e-15 (4) | 9.692e-03 | 5.2281e-01 
+	    29  | 1.4500e+00 | 3.0457e-15 | 3.5857e-15 (4) | 9.647e-03 | 5.1496e-01 
+	    30  | 1.5000e+00 | 3.1551e-15 | 3.9412e-15 (4) | 9.641e-03 | 5.0707e-01 
+	    31  | 1.5500e+00 | 3.1001e-15 | 3.6155e-15 (4) | 9.669e-03 | 4.9916e-01 
+	    32  | 1.6000e+00 | 3.1005e-15 | 3.7419e-15 (4) | 9.611e-03 | 4.9126e-01 
+	    33  | 1.6500e+00 | 3.0258e-15 | 3.3954e-15 (4) | 9.639e-03 | 4.8339e-01 
+	    34  | 1.7000e+00 | 2.9175e-15 | 9.2274e-11 (3) | 7.691e-03 | 4.7556e-01 
+	    35  | 1.7500e+00 | 2.8468e-15 | 7.9657e-11 (3) | 7.721e-03 | 4.6779e-01 
+	    36  | 1.8000e+00 | 3.0226e-15 | 6.9428e-11 (3) | 7.704e-03 | 4.6009e-01 
+	    37  | 1.8500e+00 | 3.0096e-15 | 6.1171e-11 (3) | 7.706e-03 | 4.5249e-01 
+	    38  | 1.9000e+00 | 2.8816e-15 | 5.4191e-11 (3) | 7.728e-03 | 4.4497e-01 
+	    39  | 1.9500e+00 | 2.9412e-15 | 4.7946e-11 (3) | 7.662e-03 | 4.3757e-01 
+	    40  | 2.0000e+00 | 2.8916e-15 | 4.2180e-11 (3) | 7.761e-03 | 4.3027e-01 </code></pre><p><img src="../../images/Example103_BurgersEquation1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example102_RobinBoundaryCondition1D/">« 102 : Robin-Boundary Conditions 1D</a><a class="docs-footer-nextpage" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Wednesday 31 August 2022 18:13">Wednesday 31 August 2022</span>. Using Julia version 1.8.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
