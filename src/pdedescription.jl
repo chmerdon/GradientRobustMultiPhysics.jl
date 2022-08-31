@@ -359,30 +359,17 @@ function Base.show(io::IO, PDE::PDEDescription)
 
     println(io, "")
     for j=1:length(PDE.BoundaryOperators)
-        print(io, "   BoundaryOperator[$j] : ")
-        try
-            if length(PDE.BoundaryOperators[j].regions4boundarytype[BestapproxDirichletBoundary]) > 0
-                print(io, "BestapproxDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[BestapproxDirichletBoundary])\n                         ")
+        print(io, "   BoundaryOperators[$j] : ")
+        for k = 1 : length(PDE.BoundaryOperators[j])
+            O = PDE.BoundaryOperators[j][k]
+            print(io, "$(BoundaryDataType(O)) (bregions = $(O.bregions)")
+            if prod(O.mask) == 0
+                print(io, ", mask = $(O.mask)")
             end
-        catch
-        end
-        try
-            if length(PDE.BoundaryOperators[j].regions4boundarytype[InterpolateDirichletBoundary]) > 0
-                print(io, "InterpolateDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[InterpolateDirichletBoundary])\n                         ")
+            if typeof(O.data) <: AbstractUserDataType
+                print(io, ", data = $(O.data.name)")
             end
-        catch
-        end
-        try
-            if length(PDE.BoundaryOperators[j].regions4boundarytype[HomogeneousDirichletBoundary]) > 0
-                print(io, "HomogeneousDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[HomogeneousDirichletBoundary])\n                          ")
-            end
-        catch
-        end
-        try
-            if length(PDE.BoundaryOperators[j].regions4boundarytype[CorrectDirichletBoundary]) > 0
-                print(io, "CorrectDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[CorrectDirichletBoundary])\n                         ")
-            end
-        catch
+            println(io,")")
         end
         println(io, "")
     end

@@ -103,22 +103,50 @@ function boundarydata!(
             ifaces = O[j].ifaces
             ibfaces = O[j].ibfaces
             bdofs = O[j].bdofs
+            mask = O[j].mask
             if skip_enumerations == false
-                for bface = 1 : nbfaces
-                    if xBFaceRegions[bface] in regions
-                        append!(ifaces,xBFaceFaces[bface])
-                        append!(ibfaces,bface)
-                        for dof = 1 : num_targets(xBFaceDofs,bface)
-                            append!(bdofs, xBFaceDofs[dof,bface])
+                bdofs = []
+                if any(mask .== 0)
+                    # only some components are Dirichlet
+                    @assert ncomponents == length(mask)
+                    @assert FEType <: AbstractH1FiniteElement && !(FEType <: AbstractH1FiniteElementWithCoefficients)
+                    @assert length(FE.xgrid[UniqueBFaceGeometries]) == 1
+                    coffsets = get_local_coffsets(FEType, ON_BFACES, FE.xgrid[UniqueBFaceGeometries][1])
+                    dofmask = []
+                    for j = 1 : length(mask)
+                        if mask[j] == 1
+                            for dof = coffsets[j]+1 : coffsets[j+1]
+                                push!(dofmask,dof)
+                            end
                         end
                     end
-                end    
+                    for bface = 1 : nbfaces
+                        if xBFaceRegions[bface] in regions
+                            append!(ifaces,xBFaceFaces[bface])
+                            append!(ibfaces,bface)
+                            for dof in dofmask
+                                append!(bdofs, xBFaceDofs[dof,bface])
+                            end
+                        end    
+                    end    
+                else
+                    for bface = 1 : nbfaces
+                        if xBFaceRegions[bface] in regions
+                            append!(ifaces,xBFaceFaces[bface])
+                            append!(ibfaces,bface)
+                            for dof = 1 : num_targets(xBFaceDofs,bface)
+                                append!(bdofs, xBFaceDofs[dof,bface])
+                            end
+                        end
+                    end    
+                end   
                 bdofs = Base.unique(bdofs)
                 append!(fixed_dofs,bdofs)
                 fixed_dofs = Base.unique(fixed_dofs)
             end
             if length(ifaces) > 0
-                if FE.broken == true
+                if FE.broken == true || any(mask .== 0)
+                    @show mask
                     # face interpolation expects continuous dofmaps
                     # quick and dirty fix: use face interpolation and remap dofs to broken dofs
                     FESc = FESpace{FEType}(FE.xgrid)
@@ -127,11 +155,28 @@ function boundarydata!(
                     xBFaceDofsc = FESc[BFaceDofs]
                     dof::Int = 0
                     dofc::Int = 0
-                    for bface in ibfaces
-                        for k = 1 : num_targets(xBFaceDofs,bface)
-                            dof = xBFaceDofs[k,bface]
-                            dofc = xBFaceDofsc[k,bface]
-                            Target[dof] = Targetc.entries[dofc]
+                    if any(mask .== 0)
+                        for j = 1 : length(mask)
+                            if mask[j] == 1
+                                for dof = coffsets[j]+1 : coffsets[j+1]
+                                    push!(dofmask,dof)
+                                end
+                            end
+                        end
+                        for bface = 1 : nbfaces
+                            for k in dofmask
+                                dof = xBFaceDofs[k,bface]
+                                dofc = xBFaceDofsc[k,bface]
+                                Target[dof] = Targetc.entries[dofc]
+                            end
+                        end    
+                    else
+                        for bface in ibfaces
+                            for k = 1 : num_targets(xBFaceDofs,bface)
+                                dof = xBFaceDofs[k,bface]
+                                dofc = xBFaceDofsc[k,bface]
+                                Target[dof] = Targetc.entries[dofc]
+                            end
                         end
                     end
                 else
@@ -160,22 +205,47 @@ function boundarydata!(
             bdofs = O[j].bdofs
             if skip_enumerations == false
                 bdofs = []
-                for bface = 1 : nbfaces
-                    if xBFaceRegions[bface] in regions
-                        for dof = 1 : num_targets(xBFaceDofs,bface)
-                            append!(bdofs, xBFaceDofs[dof,bface])
+                mask = O[j].mask
+                if any(mask .== 0)
+                    # only some components are Dirichlet
+                    @assert ncomponents == length(mask)
+                    @assert FEType <: AbstractH1FiniteElement && !(FEType <: AbstractH1FiniteElementWithCoefficients)
+                    @assert length(FE.xgrid[UniqueBFaceGeometries]) == 1
+                    coffsets = get_local_coffsets(FEType, ON_BFACES, FE.xgrid[UniqueBFaceGeometries][1])
+                    dofmask = []
+                    for j = 1 : length(mask)
+                        if mask[j] == 1
+                            for dof = coffsets[j]+1 : coffsets[j+1]
+                                push!(dofmask,dof)
+                            end
                         end
+                    end
+                    for bface = 1 : nbfaces
+                        if xBFaceRegions[bface] in regions
+                            for dof in dofmask
+                                append!(bdofs, xBFaceDofs[dof,bface])
+                            end
+                        end    
                     end    
-                end    
+                else
+                    for bface = 1 : nbfaces
+                        if xBFaceRegions[bface] in regions
+                            for dof = 1 : num_targets(xBFaceDofs,bface)
+                                append!(bdofs, xBFaceDofs[dof,bface])
+                            end
+                        end    
+                    end    
+                end   
                 bdofs = Base.unique(bdofs)
                 append!(fixed_dofs,bdofs)
                 fixed_dofs = Base.unique(fixed_dofs)
             end
 
             # set homdofs to zero
+
             for j in bdofs
                 Target[j] = 0
-            end    
+            end
         end
     end
     if length(HomDirichletBoundaryOperators) > 0
