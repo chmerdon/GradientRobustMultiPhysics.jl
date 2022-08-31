@@ -271,9 +271,12 @@ function boundarydata!(
         # find Dirichlet dofs
         BAdofs::Array{Ti,1} = zeros(Ti,0)
         exclude_dofs = zeros(Ti,0)
-        for j = 1 : length(O)
+        for j in BADirichletBoundaryOperators
             bdofs = O[j].bdofs
             mask = O[j].mask
+            if any(mask .== 0)
+                @warn "mask for BestapproximationDirichletBoundary not available (ignoring mask)"
+            end
             regions = O[j].bregions
             for bface = 1 : nbfaces
                 if xBFaceRegions[bface] in regions
