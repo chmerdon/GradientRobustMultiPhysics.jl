@@ -69,8 +69,8 @@ function main(; verbosity = 0, order = 1, reflevel = 2, T = 0.65, timestep = 1//
 
     ## this function is called after each timestep
     plot_step_count = Int(ceil(plot_step/timestep))
-    function do_after_each_timestep(step, statistics)
-        if mod(step,plot_step_count) == 0
+    function do_after_each_timestep(sys)
+        if mod(sys.cstep,plot_step_count) == 0
             scalarplot!(p[1,1], xgrid, node_views[1], levels = 7, title = "u_h (t = $(Float64(sys.ctime)))")
             scalarplot!(p[1,2], xgrid, node_views[2], levels = 7, title = "v_h (t = $(Float64(sys.ctime)))")
         end
