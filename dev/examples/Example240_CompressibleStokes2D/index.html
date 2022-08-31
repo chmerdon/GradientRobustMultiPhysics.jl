@@ -54,14 +54,23 @@ function main(; use_gravity = true, newton = false, nlevels = 4, Plotter = nothi
     for lvl = 1 : nlevels
         if lvl &gt; 1
             xgrid = uniform_refine(xgrid)
-        end</code></pre><p>generate FESpaces and solution vector</p><pre><code class="language-julia hljs">        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
+        end
+
+        # generate FESpaces and solution vector
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
         Solution = [FEVector(FES),FEVector(FES)]
-        NDoFs[lvl] = length(Solution[1].entries)</code></pre><p>solve with and without reconstruction</p><pre><code class="language-julia hljs">        for reconstruct in [true, false]
+        NDoFs[lvl] = length(Solution[1].entries)
+
+        # solve with and without reconstruction
+        for reconstruct in [true, false]
             Target = Solution[reconstruct+1]
             setup_and_solve!(Target, xgrid; use_gravity = use_gravity, reconstruct = reconstruct, newton = newton, c = c, M = M, λ = λ, μ = μ, γ = γ)
             Results[reconstruct ? 2 : 1, lvl] = sqrt(evaluate(VeloError,Target[1]))
             Results[reconstruct ? 4 : 3, lvl] = sqrt(evaluate(VeloGradError,Target[1]))
-            Results[reconstruct ? 6 : 5, lvl] = sqrt(evaluate(DensityError,Target[2]))</code></pre><p>check error in mass constraint</p><pre><code class="language-julia hljs">            Md = sum(Target[2][:] .* xgrid[CellVolumes])
+            Results[reconstruct ? 6 : 5, lvl] = sqrt(evaluate(DensityError,Target[2]))
+
+            # check error in mass constraint
+            Md = sum(Target[2][:] .* xgrid[CellVolumes])
             println(&quot;\tmass_error = $M - $Md = $(abs(M-Md))&quot;)
         end
     end
@@ -164,7 +173,7 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (2.2) continuity equation for ϱ (discretised by (L2P0{1} (broken), ndofs = 30), timedependent = yes
 [ Info: Advancing in time until stationarity...
 [ Info: stationarity detected after 243 timesteps
-	mass_error = 0.8902625 - 0.8902625000000012 = 1.2212453270876722e-15
+	mass_error = 0.8902625 - 0.8902625000000008 = 8.881784197001252e-16
 ┌ Info: ----- Preparing time control solver for compressible Stokes problem using BackwardEuler -----
 │ 	Equation (1.1) momentum equation for v (discretised by (H1BR{2}, ndofs = 362), timedependent = no
 └ 	Equation (2.2) continuity equation for ϱ (discretised by (L2P0{1} (broken), ndofs = 120), timedependent = yes
@@ -181,14 +190,14 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 │ 	Equation (1.1) momentum equation for v (discretised by (H1BR{2}, ndofs = 1322), timedependent = no
 └ 	Equation (2.2) continuity equation for ϱ (discretised by (L2P0{1} (broken), ndofs = 480), timedependent = yes
 [ Info: Advancing in time until stationarity...
-[ Info: stationarity detected after 249 timesteps
-	mass_error = 0.8902625 - 0.890262499999991 = 8.992806499463768e-15
+[ Info: stationarity detected after 250 timesteps
+	mass_error = 0.8902625 - 0.8902624999999909 = 9.103828801926284e-15
 ┌ Info: ----- Preparing time control solver for compressible Stokes problem using BackwardEuler -----
 │ 	Equation (1.1) momentum equation for v (discretised by (H1BR{2}, ndofs = 1322), timedependent = no
 └ 	Equation (2.2) continuity equation for ϱ (discretised by (L2P0{1} (broken), ndofs = 480), timedependent = yes
 [ Info: Advancing in time until stationarity...
 [ Info: stationarity detected after 248 timesteps
-	mass_error = 0.8902625 - 0.8902624999999906 = 9.325873406851315e-15
+	mass_error = 0.8902625 - 0.8902624999999902 = 9.769962616701378e-15
 ┌ Info: ----- Preparing time control solver for compressible Stokes problem using BackwardEuler -----
 │ 	Equation (1.1) momentum equation for v (discretised by (H1BR{2}, ndofs = 5042), timedependent = no
 └ 	Equation (2.2) continuity equation for ϱ (discretised by (L2P0{1} (broken), ndofs = 1920), timedependent = yes
@@ -200,7 +209,7 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (2.2) continuity equation for ϱ (discretised by (L2P0{1} (broken), ndofs = 1920), timedependent = yes
 [ Info: Advancing in time until stationarity...
 [ Info: stationarity detected after 255 timesteps
-	mass_error = 0.8902625 - 0.890262499999943 = 5.695444116327053e-14
+	mass_error = 0.8902625 - 0.8902624999999429 = 5.706546346573305e-14
 
     ndof    |  ||u-u_h|| (BR)    order |  ||u-u_h|| (BR+)   order |
 ============|==========================|==========================|
@@ -221,4 +230,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
        137  |     6.248e-03      0.00  |     5.640e-03      0.00  |
        482  |     2.947e-03      1.19  |     2.820e-03      1.10  |
       1802  |     1.448e-03      1.08  |     1.410e-03      1.05  |
-      6962  |     7.198e-04      1.03  |     7.050e-04      1.03  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 21:21">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      6962  |     7.198e-04      1.03  |     7.050e-04      1.03  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Wednesday 31 August 2022 17:00">Wednesday 31 August 2022</span>. Using Julia version 1.8.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

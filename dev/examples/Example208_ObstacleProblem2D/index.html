@@ -64,8 +64,8 @@ PDE-DESCRIPTION
   RHS block | PDEOperator(s)
      [1]    | (Constant([-1]), id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
 
-   BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1, 2, 3, 4]
-                          
+   BoundaryOperators[1] : HomogeneousDirichletBoundary (bregions = [1, 2, 3, 4])
+
 
 
 Solution = 
@@ -79,21 +79,21 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 5.64e+00/6.10e-06/5.64e+00
-	      1   | 1.320230e-15 | 1.741413e+00 | 8.32e-02/2.71e-02/1.11e-01
-	      2   | 1.192998e-15 | 6.073690e-02 | 7.04e-02/2.97e-02/1.01e-01
-	      3   | 9.549872e-16 | 4.050710e-02 | 7.18e-02/2.21e-02/9.46e-02
-	      4   | 7.578113e-16 | 2.865242e-02 | 1.01e-01/2.27e-02/1.24e-01
-	      5   | 5.441027e-16 | 1.847692e-02 | 7.33e-02/2.29e-02/9.70e-02
-	      6   | 5.136840e-16 | 9.456218e-03 | 7.01e-02/2.37e-02/9.44e-02
-	      7   | 4.951823e-16 | 2.891193e-03 | 6.94e-02/2.14e-02/9.14e-02
-	      8   | 4.789991e-16 | 3.887883e-04 | 7.14e-02/2.22e-02/9.43e-02
-	      9   | 4.824588e-16 | 4.824588e-16 | 7.11e-02/2.24e-02/9.42e-02
-	    total |                             | 6.32e+00/2.14e-01/6.54e+00
+	    init  |                             | 7.70e+00/5.10e-06/7.70e+00
+	      1   | 1.314931e-15 | 1.741413e+00 | 9.75e-02/3.14e-02/1.30e-01
+	      2   | 1.187627e-15 | 6.073690e-02 | 8.53e-02/3.29e-02/1.19e-01
+	      3   | 9.722818e-16 | 4.050710e-02 | 8.50e-02/2.49e-02/1.11e-01
+	      4   | 7.430041e-16 | 2.865242e-02 | 8.53e-02/2.75e-02/1.14e-01
+	      5   | 5.469307e-16 | 1.847692e-02 | 1.14e-01/2.56e-02/1.40e-01
+	      6   | 5.072397e-16 | 9.456218e-03 | 8.45e-02/2.39e-02/1.09e-01
+	      7   | 4.917188e-16 | 2.891193e-03 | 8.44e-02/2.53e-02/1.10e-01
+	      8   | 4.917739e-16 | 3.887883e-04 | 8.44e-02/2.50e-02/1.10e-01
+	      9   | 4.856275e-16 | 4.856274e-16 | 8.43e-02/2.53e-02/1.10e-01
+	    total |                             | 8.51e+00/2.42e-01/8.76e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 2.1523e+00 	| 2.7520e+06 	| 2.7520e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 3.4161e+00 	| 5.9639e+06 	| 7.0557e+07 	| eps^{-1} ((u-χ)_, v) [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 6.7504e-01 	| 7.6189e+05 	| 7.6189e+05 	| (Constant([-1]), id(v))</code></pre><p><img src="../../images/Example208_ObstacleProblem2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example207_NonlinearElasticityBimetal2D/">« 207 : Nonlinear Elasticity Bimetal 2D</a><a class="docs-footer-nextpage" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Tuesday 16 August 2022 21:21">Tuesday 16 August 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 2.4691e+00 	| 2.7520e+06 	| 2.7520e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 5.2523e+00 	| 5.9639e+06 	| 6.8871e+07 	| eps^{-1} ((u-χ)_, v) [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 6.9276e-01 	| 7.6189e+05 	| 7.6189e+05 	| (Constant([-1]), id(v))</code></pre><p><img src="../../images/Example208_ObstacleProblem2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example207_NonlinearElasticityBimetal2D/">« 207 : Nonlinear Elasticity Bimetal 2D</a><a class="docs-footer-nextpage" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Wednesday 31 August 2022 17:00">Wednesday 31 August 2022</span>. Using Julia version 1.8.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
