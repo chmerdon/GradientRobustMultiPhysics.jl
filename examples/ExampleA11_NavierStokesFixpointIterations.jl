@@ -60,7 +60,7 @@ function main(;
     u, f = get_flowdata(μ)
 
     ## problem description
-    Problem = PDEDescription("Oseen Equations")
+    Problem = PDEDescription("Navier-Stokes Equations")
     add_unknown!(Problem; equation_name = "momentum equation", unknown_name = "u")
     add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "p", algebraic_constraint = true)
     add_operator!(Problem, [1,1], LaplaceOperator(μ))

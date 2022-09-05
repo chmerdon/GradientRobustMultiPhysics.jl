@@ -58,6 +58,78 @@ struct CombineDofs{T} <: AbstractGlobalConstraint
     when_assemble::Type{<:AbstractAssemblyTrigger}
 end 
 
+
+
+"""
+````
+function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; factor_vectordofs = "auto")
+````
+
+computes the dofs that have to be coupled for periodic boundary conditions on the given xgrid for boundary regions b1, b2.
+The is_opposite function evaluates if two provided face midpoints are on opposite sides to each other (the mesh xgrid should be appropriate).
+For vector-valued FETypes the user can provide factor_vectordofs to incorporate a sign change if needed.
+This is automatically done for all Hdiv-conforming elements and (for the normal-weighted face bubbles of) the Bernardi-Raugel element H1BR. 
+
+"""
+function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; factor_vectordofs = "auto")
+    if factor_vectordofs == "auto"
+        if eltype(FES) <: AbstractHdivFiniteElement || eltype(FES) <: H1BR
+            factor_vectordofs = -1
+        end
+    end
+    xBFaceRegions = xgrid[BFaceRegions]
+    xBFaceNodes = xgrid[BFaceNodes]
+    xCoordinates = xgrid[Coordinates]
+    nbfaces = size(xBFaceNodes,2)
+    xdim = size(xCoordinates,1)
+    xBFaceMidPoints = zeros(Float64,xdim,nbfaces)
+    for bface = 1 : nbfaces, j = 1 : xdim, bn = 1 : 2
+        xBFaceMidPoints[j,bface] += xCoordinates[j,xBFaceNodes[bn,bface]] / xdim
+    end
+    xBFaceDofs = FES[BFaceDofs]
+    dofsX, dofsY, factors = Int[], Int[], Int[]
+    counterface = 0
+    nfb = 0
+    ncomponents = get_ncomponents(eltype(FES))
+    coffsets = get_local_coffsets(eltype(FES), ON_BFACES, Edge1D)
+    for bface = 1 : nbfaces
+        counterface = 0
+        if xBFaceRegions[bface] == b1
+            for bface2 = 1 : nbfaces
+                if xBFaceRegions[bface2] == b2
+                    if is_opposite(view(xBFaceMidPoints,:,bface), view(xBFaceMidPoints,:,bface2))
+                        counterface = bface2
+                        break
+                    end
+                end
+            end
+        end
+        if counterface > 0
+            nfb = num_targets(xBFaceDofs, bface)
+            # couple first two node dofs in opposite order due to orientation
+            for c = 1 : ncomponents
+                push!(dofsX, xBFaceDofs[coffsets[c]+1,bface])
+                push!(dofsY, xBFaceDofs[coffsets[c]+2,counterface]) 
+                push!(dofsX, xBFaceDofs[coffsets[c]+2,bface])
+                push!(dofsY, xBFaceDofs[coffsets[c]+1,counterface])
+                nfbc = coffsets[c+1] - coffsets[c]
+                for dof = 1 : nfbc-2
+                    push!(dofsX, xBFaceDofs[coffsets[c]+2+dof,bface])
+                    push!(dofsY, xBFaceDofs[coffsets[c]+1+nfbc-dof,counterface]) # couple face dofs in opposite order due to orientation
+                end
+                append!(factors, ones(nfbc))
+            end
+            for dof = coffsets[end]+1:nfb
+                push!(dofsX, xBFaceDofs[dof,bface])
+                push!(dofsY, xBFaceDofs[nfb-coffsets[end]+dof-1,counterface]) # couple face dofs in opposite order due to orientation#
+                push!(factors, factor_vectordofs)
+            end
+        end
+    end
+    return dofsX, dofsY, factors
+end
+
+
 """
 ````
 function CombineDofs(idX::Int,idY::Int,dofsX::Array{Int,1},dofsY::Array{Int,1})
@@ -102,8 +174,15 @@ function apply_constraint!(
 
     fixed_dofs = []
 
+
     c = Constraint.component
     c2 = Constraint.componentY
+
+    if current_equations != "all"
+        c = findfirst(isequal(c), current_equations)
+        c2 = findfirst(isequal(c2), current_equations)
+    end
+
     dofsX = Constraint.dofsX
     dofsY = Constraint.dofsY
     factors::Array{T} = Constraint.factors
@@ -117,18 +196,17 @@ function apply_constraint!(
     sourcerow::Int = 0
     targetcol::Int = 0
     sourcecol::Int = 0
-    diffY = A[c,c].offsetY - A[c2,c2].offsetY
     val::Float64 = 0
     for gdof = 1 : length(Constraint.dofsX)
         # copy source row (for dofY) to target row (for dofX)
         targetrow = dofsX[gdof] + A[c,c].offsetX
         sourcerow = A[c2,c2].offsetX + dofsY[gdof]
-        for col = 1 : size(A[c2,c2],2)
-            sourcecol = col + A[c2,c2].offsetY
-            targetcol = sourcecol + diffY
+        for col = 1 : size(A.entries,2)
+            sourcecol = col #+ A[c2,c2].offsetY
+            targetcol = sourcecol + A[c,c].offsetY
             val = AE[sourcerow,sourcecol]
             if abs(val) > 1e-14
-                _addnz(AE, targetrow,targetcol, factors[gdof] * val,1)
+                _addnz(AE, targetrow, targetcol, factors[gdof] * val,1)
                 AE[sourcerow,sourcecol] = 0
             end
         end

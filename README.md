@@ -54,7 +54,7 @@ add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
 
 # discretise = choose FEVector with appropriate FESpaces
 FEType = H1P2{1,2} # quadratic element with 1 component in 2D
-Solution = FEVector("u_h",FESpace{FEType}(xgrid))
+Solution = FEVector(FESpace{FEType}(xgrid); name = "u_h")
 
 # inspect problem and Solution vector structure
 @show Problem Solution

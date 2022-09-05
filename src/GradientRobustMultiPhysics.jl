@@ -58,6 +58,7 @@ include("finiteelements.jl")
 export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs, BEdgeDofs
 export AbstractFiniteElement
 export FESpace, FESpaces
+export get_periodic_coupling_info
 
 export AbstractH1FiniteElement
 export H1BUBBLE, L2P0, H1P1, H1P2, H1P2B, H1MINI, H1CR, H1P3, H1Pk

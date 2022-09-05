@@ -18,6 +18,21 @@ struct FEVectorBlock{T,Tv,Ti,FEType,APT} <: AbstractArray{T,1}
     entries::Array{T,1} # shares with parent object
 end
 
+
+function Base.show(io::IO, FEB::FEVectorBlock; tol = 1e-14)
+    @printf(io, "\n");
+    for j=1:FEB.offset+1:FEB.last_index
+        if FEB.entries[j] > tol
+            @printf(io, "[%d] = +%.1e", j, FEB.entries[j]);
+        elseif FEB.entries[j] < -tol
+            @printf(io, "[%d] %.1e", j, FEB.entries[j]);
+        else
+            @printf(io, "[%d] ********", j );
+        end
+        @printf(io, "\n");
+    end    
+end
+
 """
 $(TYPEDEF)
 

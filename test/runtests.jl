@@ -798,6 +798,10 @@ function run_examples()
         println("\n2D NSE FIXED-POINT-ITERATIONS")
         include("../examples/ExampleA11_NavierStokesFixpointIterations.jl")
         @test eval(Meta.parse("ExampleA11_NavierStokesFixpointIterations.test()")) < 1e-12
+
+        println("\n2D NSE PERIODIC BOUNDARY DATA")
+        include("../examples/ExampleA12_NavierStokesPeriodic.jl")
+        @test eval(Meta.parse("ExampleA12_NavierStokesPeriodic.test()")) < 1e-14
     end
 end
 

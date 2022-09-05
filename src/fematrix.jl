@@ -22,6 +22,24 @@ struct FEMatrixBlock{TvM,TiM,TvG,TiG,FETypeX,FETypeY,APTX,APTY} <: AbstractArray
     entries::AbstractSparseMatrix{TvM,TiM} # shares with parent object
 end
 
+
+function Base.show(io::IO, FEB::FEMatrixBlock; tol = 1e-14)
+    @printf(io, "\n");
+    for j=1:FEB.offsetX+1:FEB.last_indexX
+        for k=1:FEB.offsetY+1:FEB.last_indexY
+            if FEB.entries[j,k] > tol
+                @printf(io, " +%.1e",FEB.entries[j,k]);
+            elseif FEB.entries[j,k] < -tol
+                @printf(io, " %.1e",FEB.entries[j,k]);
+            else
+                @printf(io, " ********");
+            end
+        end
+        @printf(io, "\n");
+    end    
+end
+
+
 """
 $(TYPEDEF)
 
