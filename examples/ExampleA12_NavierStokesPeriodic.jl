@@ -6,15 +6,13 @@
 This example computes the solution ``u`` of the Navier-Stokes problem
 ```math
 \begin{aligned}
--\mu \Delta u + \nabla p & = \lambda μ\int_0^1 v_1(1,y) dy \quad \text{in } \Omega
+-\mu \Delta u + \nabla p & = \lambda \mu \int_0^1 v_1(1,y) dy \quad \text{in } \Omega
 \end{aligned}
 ```
 with some given ``\lambda`` on the unit square domain ``\Omega`` and periodic boundary conditions left and right.
 
-The resulting flow is a Hagen-Poiseuille flow and ``\lambda``scales the pressure difference between the left and right boundary.
-The problem is tested with the Taylor--Hood element of the specified order. For oder = 1 the Bernardi--Raugel element is used
-(where the normal-weighted face bubbles at the boundary require a different factor in the coupling due to the changed orientation
-of the normal vector.)
+The resulting flow is a Hagen-Poiseuille flow and ``\lambda`` scales the pressure difference between the left and right boundary.
+The problem is tested with the Taylor--Hood element of the specified order. For order = 1 the Bernardi--Raugel element is used.
 
 =#
 

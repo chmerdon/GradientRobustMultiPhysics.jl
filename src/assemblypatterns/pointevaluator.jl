@@ -98,6 +98,7 @@ function evaluate!(
     coeffs::Array{T,1} = FEB.entries
     basisvals::Array{T,3} = FEBE.cvals
     xItemDofs::DofMapTypes{Ti} = PE.xItemDofs
+    xItemRegions = FEB.FES.xgrid[CellRegions]
 
     fill!(result,0)
     if !(ACT <: NoAction)
@@ -108,7 +109,7 @@ function evaluate!(
         if is_itemdependent(action)
             action.item[1] = item
             action.item[2] = item
-            action.item[3] = 0 # todo
+            action.item[3] = xItemRegions[item]
         end
         # apply action to FEVector and accumulate
         if is_xdependent(action)
