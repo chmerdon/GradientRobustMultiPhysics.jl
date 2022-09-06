@@ -148,7 +148,9 @@ function apply_constraint!(
     b::FEVector,
     Constraint::FixedIntegralMean,
     Target::FEVector;
-    current_equations = "all")
+    current_equations = "all",
+    lhs_mask = nothing,
+    rhs_mask = nothing)
 
     c = Constraint.component
     @logmsg DeepInfo "Ensuring fixed integral mean for component $c..."
@@ -170,6 +172,8 @@ function apply_constraint!(
     b::FEVector,
     Constraint::CombineDofs{T},
     Target::FEVector;
+    lhs_mask = nothing,
+    rhs_mask = nothing,
     current_equations = "all") where {T,Tv,Ti}
 
     fixed_dofs = []
@@ -189,9 +193,6 @@ function apply_constraint!(
     @logmsg DeepInfo "Combining dofs of component $c and $c2..."
     
     AE::ExtendableSparseMatrix{Tv,Ti} = A.entries
-    AM::SparseMatrixCSC{Tv,Ti} = A.entries.cscmatrix
-    Avals::Array{Tv,1} = AM.nzval
-    rows::Array{Ti,1} = rowvals(AM)
     targetrow::Int = 0
     sourcerow::Int = 0
     targetcol::Int = 0
@@ -201,32 +202,43 @@ function apply_constraint!(
         # copy source row (for dofY) to target row (for dofX)
         targetrow = dofsX[gdof] + A[c,c].offsetX
         sourcerow = A[c2,c2].offsetX + dofsY[gdof]
-        for col = 1 : size(A.entries,2)
-            sourcecol = col #+ A[c2,c2].offsetY
-            targetcol = sourcecol + A[c,c].offsetY
-            val = AE[sourcerow,sourcecol]
-            if abs(val) > 1e-14
-                _addnz(AE, targetrow, targetcol, factors[gdof] * val,1)
-                AE[sourcerow,sourcecol] = 0
+        for b = 1 : nbcols(A)
+            cblock = A[c,b]
+            if lhs_mask === nothing || lhs_mask[c,b]
+                for sourcecol = cblock.offsetY+1 : cblock.last_indexY
+                    targetcol = sourcecol - A[c2,c2].offsetY + A[c,c].offsetY
+                    val = AE[sourcerow,sourcecol]
+                    if abs(val) > 1e-14
+                        _addnz(AE, targetrow, targetcol, factors[gdof] * val,1)
+                        AE[sourcerow,sourcecol] = 0
+                    end
+                end
             end
         end
 
         # replace source row (of dofY) with equation for coupling the two dofs
-        sourcecol = A[c2,c2].offsetY + dofsY[gdof]
+        sourcecol = dofsY[gdof] + A[c2,c2].offsetY
         targetcol = dofsX[gdof] + A[c,c].offsetY
-        targetrow = dofsX[gdof] + A[c,c].offsetX
         sourcerow = A[c2,c2].offsetX + dofsY[gdof]
-        _addnz(AE, sourcerow, targetcol, 1,1)
-        _addnz(AE, sourcerow, sourcecol, -factors[gdof],1)
+        if lhs_mask === nothing || lhs_mask[c2,c] 
+            _addnz(AE, sourcerow, targetcol, 1,1)
+        end
+        if lhs_mask === nothing || lhs_mask[c2,c2]
+            _addnz(AE, sourcerow, sourcecol, -factors[gdof],1)
+        end
     end
 
     # fix one of the dofs
     for gdof = 1 : length(Constraint.dofsX)
-        targetrow = b[c].offset + dofsX[gdof]
         sourcerow = b[c2].offset + dofsY[gdof]
-        b.entries[targetrow] += b.entries[sourcerow]
+        targetrow = b[c].offset + dofsX[gdof]
+        if rhs_mask === nothing || rhs_mask[c]
+            b.entries[targetrow] += b.entries[sourcerow]
+        end
+        if rhs_mask === nothing || rhs_mask[c2]
+            b.entries[sourcerow] = 0
+        end
         #Target.entries[sourcerow] = 0
-        b.entries[sourcerow] = 0
         #push!(fixed_dofs,sourcerow)
     end
     flush!(A.entries)
@@ -302,7 +314,9 @@ function apply_constraint!(
     b::FEVector,
     Constraint::FixedDofs,
     Target::FEVector;
-    current_equations = "all")
+    current_equations = "all",
+    lhs_erased = nothing,
+    rhs_erased = nothing)
 
     c = Constraint.component
     @logmsg DeepInfo "Ensuring fixed dofs for component $c..."

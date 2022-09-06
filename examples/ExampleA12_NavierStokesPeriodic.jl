@@ -6,7 +6,7 @@
 This example computes the solution ``u`` of the Navier-Stokes problem
 ```math
 \begin{aligned}
--\mu \Delta u + \nabla p & = \lambda \int_0^1 v_1(1,y) dy \quad \text{in } \Omega
+-\mu \Delta u + \nabla p & = \lambda μ\int_0^1 v_1(1,y) dy \quad \text{in } \Omega
 \end{aligned}
 ```
 with some given ``\lambda`` on the unit square domain ``\Omega`` and periodic boundary conditions left and right.
@@ -25,7 +25,7 @@ using ExtendableGrids
 using GridVisualize
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, μ = 1, order = 2, periodic = true, nrefinements = 5, λ = 2, Plotter = nothing)
+function main(; verbosity = 0, μ = 1, order = 2, periodic = true, nonlinear = true, timedependent = true, nrefinements = 5, λ = 2, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -48,8 +48,11 @@ function main(; verbosity = 0, μ = 1, order = 2, periodic = true, nrefinements 
     Problem = PDEDescription("Navier-Stokes Equations")
     add_unknown!(Problem; equation_name = "momentum equation", unknown_name = "u")
     add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "p", algebraic_constraint = true)
-    add_operator!(Problem, [1,1], LaplaceOperator(μ))
+    add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
+    if nonlinear
+        add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, 2, 2))
+    end
 
     ## discretise = choose FEVector with appropriate FESpaces
     if order == 1
@@ -66,18 +69,26 @@ function main(; verbosity = 0, μ = 1, order = 2, periodic = true, nrefinements 
     if periodic
         dofsX, dofsY, factors = get_periodic_coupling_info(FES[1], xgrid, 2, 4, (f1,f2) -> abs(f1[2] - f2[2]) < 1e-14)
         add_constraint!(Problem, CombineDofs(1, 1, dofsX, dofsY, factors))
-        add_rhsdata!(Problem, 1, LinearForm(NormalFlux, DataFunction([λ]); regions = [2], AT = ON_BFACES))
+        add_rhsdata!(Problem, 1, LinearForm(NormalFlux, DataFunction([λ*μ]); regions = [2], AT = ON_BFACES))
         add_boundarydata!(Problem, 1, [1,3], HomogeneousDirichletBoundary)
     else
         add_boundarydata!(Problem, 1, [1,2,3,4], InterpolateDirichletBoundary; data = u)
     end
     add_constraint!(Problem, FixedIntegralMean(2, 0.0))
 
-    ## show problem and Solution structure
-    @show Problem Solution
+    ## show problem
+    @show Problem
 
-    ## solve for chosen Solution vector
-    solve!(Solution, Problem; show_statistics = true)
+    if timedependent
+        # solve time-dependent (flow is stationary, but just to see if periodic conditions still work in this context)
+        interpolate!(Solution[1], u)
+        sys = TimeControlSolver(Problem, Solution, BackwardEuler; timedependent_equations = [1])
+        @show sys
+        advance_until_time!(sys, 1e-1, 1)
+    else
+        ## solve stationary
+        solve!(Solution, Problem; show_statistics = true)
+    end
 
     ## calculate L2 error
     L2ErrorV = L2ErrorIntegrator(u, Identity)

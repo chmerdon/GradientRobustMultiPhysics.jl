@@ -970,12 +970,12 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         end
 
         # REASSEMBLE NONLINEAR PARTS
-        time_reassembly = @elapsed assemble!(A, b, PDE, SC, Target; time = time, equations = 1:size(PDE.RHSOperators,1), min_trigger = AssemblyAlways)
+        time_reassembly = @elapsed lhs_erased, rhs_erased = assemble!(A, b, PDE, SC, Target; time = time, equations = 1:size(PDE.RHSOperators,1), min_trigger = AssemblyAlways)
 
         # PREPARE GLOBALCONSTRAINTS
         flush!(A.entries)
         for j = 1 : length(PDE.GlobalConstraints)
-            additional_fixed_dofs = apply_constraint!(A,b,PDE.GlobalConstraints[j],Target)
+            additional_fixed_dofs = apply_constraint!(A,b,PDE.GlobalConstraints[j],Target; lhs_mask = lhs_erased, rhs_mask = rhs_erased)
             append!(fixed_dofs,additional_fixed_dofs)
         end
 
@@ -1143,6 +1143,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
     overall_time = time_total
     overall_solver_time = time_solver
     overall_assembly_time = assembly_time
+    lhs_erased, rhs_erased = nothing, nothing 
 
     for iteration = 1 : maxiterations
 
@@ -1155,7 +1156,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
             # are missing in the subiteration
             for j = 1 : length(PDE.GlobalConstraints)
                 if PDE.GlobalConstraints[j].component in subiterations[s]
-                   additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; current_equations = subiterations[s])
+                   additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; lhs_mask = lhs_erased, rhs_mask = rhs_erased, current_equations = subiterations[s])
                    append!(fixed_dofs, additional_fixed_dofs)
                 end
             end
@@ -1239,7 +1240,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
             # REASSEMBLE PARTS FOR NEXT SUBITERATION
             time_reassembly += @elapsed begin
                 next_eq = (s == nsubiterations) ? 1 : s+1
-                assemble!(A[next_eq],b[next_eq],PDE,SC,Target; time = time, equations = subiterations[next_eq], min_trigger = AssemblyEachTimeStep)
+                lhs_erased, rhs_erased = assemble!(A[next_eq],b[next_eq],PDE,SC,Target; time = time, equations = subiterations[next_eq], min_trigger = AssemblyEachTimeStep)
             end
         end
 

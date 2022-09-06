@@ -81,6 +81,22 @@ Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int) = FEB.entries[FEB.offsetX+i,FEB.
 Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any) = FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
 Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = setindex!(FEB.entries,v,FEB.offsetX+i,FEB.offsetY+j)
 
+
+"""
+$(TYPEDSIGNATURES)
+
+Gives the number of FEMatrixBlocks in each column.
+"""
+nbrows(::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) where {TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal} = nbrow
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Gives the number of FEMatrixBlocks in each row.
+"""
+nbcols(::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) where {TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal} = nbcol
+
 """
 $(TYPEDSIGNATURES)
 

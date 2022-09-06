@@ -36,6 +36,33 @@ mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule
     statistics::Array{T,2}                  # statistics of last timestep
 end
 
+TimeIntegrationRule(::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}) where {T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule} = TIR
+
+"""
+$(TYPEDSIGNATURES)
+
+Custom `show` function for `TimeControlSolver` that prints in particular the configuration of the time derivative and the solver configuration
+"""
+function Base.show(io::IO, TCS::TimeControlSolver)
+    println(io, "\nTIME-CONTROL-SOLVER")
+    println(io, "===============")
+    println(io, "  PDE system name = $(TCS.PDE.name)")
+    println(io, "       space_dofs = $(length(TCS.X.entries)) (fixed = $(length(TCS.fixed_dofs)))")
+    println(io, "            ctime = $(TCS.ctime)")
+    println(io, "            cstep = $(TCS.cstep)")
+    println(io, "        time_rule = $(TimeIntegrationRule(TCS))")
+    println(io, "    last_timestep = $(TCS.last_timestep)\n")
+
+    if TCS.massmatrix_assembler == assemble_massmatrix4subiteration!
+        println(io, " time_derivatives = AUTOMATIC")
+        println(io, "     dt_variables = $(TCS.which)\n")
+    else
+        println(io, " time_derivatives = MANUAL (mass matrices provided by user)\n")
+
+    end
+    show(io, TCS.SC)
+end
+
 
 
 function assemble_massmatrix4subiteration!(TCS::TimeControlSolver{T,Tt,Tv,Ti}, i::Int; force::Bool = false) where {T,Tt,Tv,Ti}
@@ -503,7 +530,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 # PREPARE GLOBALCONSTRAINTS
                 for j = 1 : length(PDE.GlobalConstraints)
                     if PDE.GlobalConstraints[j].component in subiterations[s]
-                        additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],x[s]; current_equations = subiterations[s])
+                        additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],x[s]; lhs_mask = lhs_erased, rhs_mask = rhs_erased, current_equations = subiterations[s])
                         append!(fixed_dofs, additional_fixed_dofs)
                     end
                 end
