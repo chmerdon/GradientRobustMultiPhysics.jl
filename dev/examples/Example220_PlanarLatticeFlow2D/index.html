@@ -140,25 +140,25 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.78e+01/5.50e-06/4.78e+01
-	      1   | 4.121651e-17 | 8.045259e-02 | 7.56e-01/2.06e-01/2.87e+00
-	      2   | 8.680445e-17 | 1.024548e-02 | 8.30e-01/2.66e-01/1.10e+00
-	      3   | 7.695339e-17 | 4.138344e-03 | 7.91e-01/1.62e-01/9.58e-01
-	      4   | 7.677282e-17 | 7.867024e-04 | 7.60e-01/1.58e-01/9.23e-01
-	      5   | 7.466889e-17 | 1.935933e-05 | 7.71e-01/1.67e-01/9.43e-01
-	      6   | 7.494593e-17 | 6.645766e-08 | 7.94e-01/1.68e-01/9.66e-01
-	      7   | 7.499460e-17 | 3.700342e-13 | 8.59e-01/1.57e-01/1.02e+00
-	    total |                             | 5.33e+01/1.28e+00/5.84e+01
+	    init  |                             | 3.29e+01/6.40e-06/3.30e+01
+	      1   | 4.200883e-17 | 8.045259e-02 | 5.86e-01/1.56e-01/2.12e+00
+	      2   | 8.899377e-17 | 1.024548e-02 | 5.59e-01/1.34e-01/6.96e-01
+	      3   | 7.593313e-17 | 4.138344e-03 | 5.57e-01/1.13e-01/6.73e-01
+	      4   | 7.544783e-17 | 7.867024e-04 | 5.60e-01/1.14e-01/6.78e-01
+	      5   | 7.486533e-17 | 1.935933e-05 | 6.00e-01/1.19e-01/7.23e-01
+	      6   | 7.428203e-17 | 6.645766e-08 | 8.91e-01/1.16e-01/1.01e+00
+	      7   | 7.488973e-17 | 3.700329e-13 | 8.35e-01/1.15e-01/9.57e-01
+	    total |                             | 3.75e+01/8.66e-01/4.11e+01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 5.7778e+00 	| 1.2027e+07 	| 1.2027e+07 	| 0.0002 (∇v,∇w)
-│ 	LHS[1,1][2] 	| 4.6077e+00 	| 4.5888e+05 	| 8.7723e+06 	| ((id(v) ⋅ ∇) v, id(w)) [Newton] [∂v]
-│ 	LHS[1,2][1] 	| 3.8316e+00 	| 6.2102e+06 	| 6.2102e+06 	| -(p, div(w))
-└ 	RHS[1,][1] 	| 9.4312e+00 	| 1.3950e+08 	| 1.2536e+09 	| (f, id(w))
-|| u - u_h || = 0.31044598969524106
-|| p - p_h || = 0.19225996887573946
+│ 	LHS[1,1][1] 	| 4.0306e+00 	| 1.2027e+07 	| 1.2027e+07 	| 0.0002 (∇v,∇w)
+│ 	LHS[1,1][2] 	| 3.3556e+00 	| 4.5888e+05 	| 8.7724e+06 	| ((id(v) ⋅ ∇) v, id(w)) [Newton] [∂v]
+│ 	LHS[1,2][1] 	| 2.8319e+00 	| 6.2060e+06 	| 6.2060e+06 	| -(p, div(w))
+└ 	RHS[1,][1] 	| 7.2789e+00 	| 1.3950e+08 	| 1.2574e+09 	| (f, id(w))
+|| u - u_h || = 0.3104459896952422
+|| p - p_h || = 0.19225996887573987
 Problem = 
 PDE-DESCRIPTION
 ===============
@@ -224,19 +224,19 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 2.55e+00/3.90e-06/2.55e+00
-	      1   | 4.228977e-17 | 9.171721e-02 | 7.78e-01/2.54e-01/1.04e+00
-	      2   | 1.051718e-16 | 1.199596e-05 | 7.96e-01/1.93e-01/9.93e-01
-	      3   | 1.040599e-16 | 6.220656e-08 | 7.75e-01/1.99e-01/9.79e-01
-	      4   | 1.047924e-16 | 2.059037e-14 | 7.79e-01/1.96e-01/9.80e-01
-	    total |                             | 5.68e+00/8.41e-01/6.55e+00
+	    init  |                             | 1.53e+00/4.30e-06/1.53e+00
+	      1   | 4.156078e-17 | 9.171721e-02 | 5.47e-01/1.47e-01/7.33e-01
+	      2   | 1.040467e-16 | 1.199596e-05 | 5.46e-01/1.60e-01/7.09e-01
+	      3   | 1.036627e-16 | 6.220656e-08 | 5.42e-01/1.33e-01/6.79e-01
+	      4   | 1.035189e-16 | 2.059400e-14 | 5.38e-01/1.14e-01/6.56e-01
+	    total |                             | 3.70e+00/5.54e-01/4.31e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 1.0106e-01 	| 7.1589e+06 	| 7.1589e+06 	| 0.0002 (∇v,∇w)
-│ 	LHS[1,1][2] 	| 1.3070e+00 	| 5.1624e+05 	| 6.3997e+06 	| ((R(v) ⋅ ∇) v, R(w)) [Newton] [∂v]
-│ 	LHS[1,2][1] 	| 2.9354e-02 	| 2.0148e+06 	| 2.0148e+06 	| -(p, div(w))
-└ 	RHS[1,][1] 	| 4.2270e+00 	| 1.3956e+08 	| 7.0749e+08 	| (f, R(w))
-|| u - u_h || = 0.0062843340681256925
-|| p - p_h || = 0.016720063839268287</code></pre><p><img src="../../images/Example220_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Friday 9 September 2022 16:36">Friday 9 September 2022</span>. Using Julia version 1.8.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 7.7355e-02 	| 7.1589e+06 	| 7.1589e+06 	| 0.0002 (∇v,∇w)
+│ 	LHS[1,1][2] 	| 9.7299e-01 	| 5.1624e+05 	| 6.7488e+06 	| ((R(v) ⋅ ∇) v, R(w)) [Newton] [∂v]
+│ 	LHS[1,2][1] 	| 2.0618e-02 	| 2.0148e+06 	| 2.0148e+06 	| -(p, div(w))
+└ 	RHS[1,][1] 	| 2.6207e+00 	| 1.3956e+08 	| 7.0749e+08 	| (f, R(w))
+|| u - u_h || = 0.006284334068125118
+|| p - p_h || = 0.01672006383926797</code></pre><p><img src="../../images/Example220_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Friday 9 September 2022 16:45">Friday 9 September 2022</span>. Using Julia version 1.8.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
