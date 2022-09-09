@@ -450,7 +450,7 @@ function init_broken_dofmap!(FES::FESpace{Tv,Ti,FEType,APT}, DM::Union{Type{BFac
                 iEG = findfirst(isequal(cEG), cellEG)
                 ccellpattern = dofmap4cellEG[iEG].segments
 
-                ## get local nodes/faces/edges dofs for gobal face f
+                ## get local nodes/faces/edges dofs for global face f
                 if need_nodes
                     ncellnodes = num_targets(xCellNodes,cell)
                     nfacenodes = num_targets(xFaceNodes,face)
@@ -587,3 +587,4 @@ function init_dofmap!(FES::FESpace, DM::Type{<:DofMap})
         init_dofmap_from_pattern!(FES, DM)
     end
 end
+

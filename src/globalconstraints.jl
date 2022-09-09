@@ -72,28 +72,56 @@ This is automatically done for all Hdiv-conforming elements and (for the normal-
 
 """
 function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; factor_vectordofs = "auto")
+    FEType = eltype(FES)
     if factor_vectordofs == "auto"
-        if eltype(FES) <: AbstractHdivFiniteElement || eltype(FES) <: H1BR
+        if FEType <: AbstractHdivFiniteElement || FEType <: H1BR
             factor_vectordofs = -1
+        else
+            factor_vectordofs = 1
         end
     end
+
+    @assert FEType <: AbstractH1FiniteElement "not yet working for non H1-conforming elements"
     xBFaceRegions = xgrid[BFaceRegions]
     xBFaceNodes = xgrid[BFaceNodes]
     xCoordinates = xgrid[Coordinates]
     nbfaces = size(xBFaceNodes,2)
+    nnodes = num_nodes(xgrid)
+    nnodes4bface = size(xBFaceNodes,1)
+    EG = xgrid[UniqueBFaceGeometries][1]
     xdim = size(xCoordinates,1)
+    nedges4bface = xdim == 3 ? num_faces(EG) : 0
     xBFaceMidPoints = zeros(Float64,xdim,nbfaces)
-    for bface = 1 : nbfaces, j = 1 : xdim, bn = 1 : 2
-        xBFaceMidPoints[j,bface] += xCoordinates[j,xBFaceNodes[bn,bface]] / xdim
+    for bface = 1 : nbfaces, j = 1 : xdim, bn = 1 : nnodes4bface 
+        xBFaceMidPoints[j,bface] += xCoordinates[j,xBFaceNodes[bn,bface]] / nnodes4bface 
     end
+    if xdim == 3
+        xEdgeMidPoint = zeros(Float64,xdim)
+        xEdgeMidPoint2 = zeros(Float64,xdim)
+        xEdgeNodes = xgrid[EdgeNodes]
+        if FEType <: H1P1
+            nedgedofs = 0
+        elseif FEType <: H1P2
+            nedgedofs = 1
+        elseif FEType <: H1P3
+            nedgedofs = 2
+        else
+            @warn "get_periodic_coupling_info not yet working for non H1-conforming elements"
+        end
+    end
+    @assert FEType <: AbstractH1FiniteElement "get_periodic_coupling_info not yet working for non H1-conforming elements"
     xBFaceDofs = FES[BFaceDofs]
     dofsX, dofsY, factors = Int[], Int[], Int[]
     counterface = 0
     nfb = 0
-    ncomponents = get_ncomponents(eltype(FES))
-    coffsets = get_local_coffsets(eltype(FES), ON_BFACES, Edge1D)
+    partners = zeros(Int, xdim)
+    ncomponents = get_ncomponents(FEType)
+    coffsets = get_local_coffsets(FEType, ON_BFACES, EG)
+    nedgedofs = 0
+    
     for bface = 1 : nbfaces
         counterface = 0
+        nfb = num_targets(xBFaceDofs, bface)
         if xBFaceRegions[bface] == b1
             for bface2 = 1 : nbfaces
                 if xBFaceRegions[bface2] == b2
@@ -105,27 +133,71 @@ function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; f
             end
         end
         if counterface > 0
-            nfb = num_targets(xBFaceDofs, bface)
+
             # couple first two node dofs in opposite order due to orientation
             for c = 1 : ncomponents
-                push!(dofsX, xBFaceDofs[coffsets[c]+1,bface])
-                push!(dofsY, xBFaceDofs[coffsets[c]+2,counterface]) 
-                push!(dofsX, xBFaceDofs[coffsets[c]+2,bface])
-                push!(dofsY, xBFaceDofs[coffsets[c]+1,counterface])
-                nfbc = coffsets[c+1] - coffsets[c]
-                for dof = 1 : nfbc-2
-                    push!(dofsX, xBFaceDofs[coffsets[c]+2+dof,bface])
-                    push!(dofsY, xBFaceDofs[coffsets[c]+1+nfbc-dof,counterface]) # couple face dofs in opposite order due to orientation
+                nfbc = coffsets[c+1] - coffsets[c] # total dof count for this component
+
+                # couple nodes
+                for nb = 1 : nnodes4bface 
+                    ## find node partner on other side that evaluates true in is_ooposite function
+                    for nc = 1 : nnodes4bface 
+                        if is_opposite(view(xCoordinates,:,xBFaceDofs[nb,bface]), view(xCoordinates,:,xBFaceDofs[nc,counterface]))
+                            partners[nb] = nc
+                            break
+                        end 
+                    end
+                    ## couple node dofs (to be skipped for e.g. Hdiv, Hcurl elements)
+                    push!(dofsX, xBFaceDofs[coffsets[c]+nb,bface])
+                    push!(dofsY, xBFaceDofs[coffsets[c]+partners[nb],counterface])
+                end
+                # @info "matching face $bface (nodes = $(xBFaceNodes[:,bface]), dofs = $(xBFaceDofs[:,bface])) with face $counterface (nodes = $(xBFaceNodes[:,counterface]), dofs = $(xBFaceDofs[:,counterface])) with partner node order $partners"
+            
+                ## couple edges
+                if nedges4bface > 0 && FEType <: H1P2 || FEType <: H1P3
+                    # todo: for H1P3 edge orientation place a role !!!
+                    for nb = 1 : nedges4bface 
+                        fill!(xEdgeMidPoint,0)
+                        for j = 1 : xdim, k = 1 : 2
+                            xEdgeMidPoint[j] += xCoordinates[j,xEdgeNodes[k,xBFaceDofs[nnodes4bface+(nb-1)*nedgedofs+1,bface]-nnodes]] / 2 
+                        end
+                        ## find edge partner on other side that evaluates true at edge midpoint in is_ooposite function
+                        for nc = 1 : nnodes4bface 
+                            fill!(xEdgeMidPoint2,0)
+                            for j = 1 : xdim, k = 1 : 2
+                                xEdgeMidPoint2[j] += xCoordinates[j,xEdgeNodes[k,xBFaceDofs[nnodes4bface+(nc-1)*nedgedofs+1,counterface]-nnodes]] / 2
+                            end
+                            if is_opposite(xEdgeMidPoint, xEdgeMidPoint2)
+                                partners[nb] = nc
+                                break
+                            end 
+                        end
+
+                        ## couple edge dofs (local orientation information is needed for more than one dof on each edge !!! )
+                        for k = 1 : nedgedofs
+                            push!(dofsX, xBFaceDofs[coffsets[c]+nnodes4bface+nb+(k-1)*nedgedofs,bface])
+                            push!(dofsY, xBFaceDofs[coffsets[c]+nnodes4bface+partners[nb]+(k-1)*nedgedofs,counterface])
+                        end
+                    end
+                end
+
+                ## couple face dofs (interior dofs of bface)
+                for nb = 1 : nfbc-nnodes4bface-nedges4bface*nedgedofs
+                    push!(dofsX, xBFaceDofs[coffsets[c]+nnodes4bface+nedges4bface*nedgedofs+nb,bface])
+                    push!(dofsY, xBFaceDofs[coffsets[c]+nnodes4bface+nfbc-nnodes4bface-nedges4bface*nedgedofs + 1 - nb,counterface]) # couple face dofs in opposite order due to orientation (works in 2D at least)
                 end
                 append!(factors, ones(nfbc))
             end
+            
+            ## couple remaining dofs (should be vector dofs)
             for dof = coffsets[end]+1:nfb
                 push!(dofsX, xBFaceDofs[dof,bface])
-                push!(dofsY, xBFaceDofs[nfb-coffsets[end]+dof-1,counterface]) # couple face dofs in opposite order due to orientation#
+                push!(dofsY, xBFaceDofs[nfb-coffsets[end]+dof-1,counterface]) # couple face dofs in opposite order due to orientation (works in 2D at least, e.g. for Bernardi--Raugel)
                 push!(factors, factor_vectordofs)
             end
         end
     end
+
     return dofsX, dofsY, factors
 end
 
