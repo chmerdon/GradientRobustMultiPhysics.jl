@@ -387,8 +387,8 @@ function apply_constraint!(
     Constraint::FixedDofs,
     Target::FEVector;
     current_equations = "all",
-    lhs_erased = nothing,
-    rhs_erased = nothing)
+    lhs_mask = nothing,
+    rhs_mask = nothing)
 
     c = Constraint.component
     @logmsg DeepInfo "Ensuring fixed dofs for component $c..."
