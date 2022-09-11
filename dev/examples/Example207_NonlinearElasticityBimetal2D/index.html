@@ -60,6 +60,7 @@ function main(;
     scale = [20,500],       # scale of the bimetal, i.e. [thickness, width]
     nref = 0,               # refinement level
     order = 2,              # finite element order
+    periodic = false,       # use periodic boundary conditions?
     verbosity = 0,          # steers talkativeness
     Plotter = nothing)
 
@@ -82,15 +83,37 @@ function main(;
     Problem = PDEDescription(&quot;nonlinear elasticity problem&quot;)
     add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;displacement equation&quot;)
     add_operator!(Problem, 1, nonlin_operator)
-    add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary)
-    @show Problem
 
     # create finite element space and solution vector
     FES = FESpace{H1Pk{2,2,order}}(xgrid)
     Solution = FEVector(FES)
 
+    if periodic
+        # periodic boundary conditions
+        # 1) couple dofs left (bregion 1) and right (bregion 3) in y-direction
+        dofsX, dofsY, factors = get_periodic_coupling_info(FES, xgrid, 1, 3, (f1,f2) -&gt; abs(f1[2] - f2[2]) &lt; 1e-14; factor_components = [0,1])
+        add_constraint!(Problem, CombineDofs(1, 1, dofsX, dofsY, factors))
+        # 2) find and fix point at [0, scale[1]]
+        xCoordinates = xgrid[Coordinates]
+        closest::Int = 0
+        dist::Float64 = 0
+        mindist::Float64 = 1e30
+        for j = 1 : num_nodes(xgrid)
+            dist = xCoordinates[1,j]^2 + (xCoordinates[2,j] - scale[1])^2
+            if dist &lt; mindist
+                mindist = dist
+                closest = j
+            end
+        end
+        @show closest mindist scale
+        add_constraint!(Problem, FixedDofs(1, [closest], [0.0]))
+    else
+        add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = [1,0])
+    end
+    @show Problem
+
     # solve
-    solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9, show_statistics = true)
+    solve!(Solution, Problem; maxiterations = 20, target_residual = 1e-9, show_statistics = true)
 
     # displace mesh and plot
     p = GridVisualizer(; Plotter = Plotter, layout = (3,1), clear = true, resolution = (1000,1500))
@@ -99,28 +122,31 @@ function main(;
     for j = 1 : num_nodes(xgrid)
         strain!(view(strain_nodevals,:,j), view(grad_nodevals,:,j))
     end
-    scalarplot!(p[1,1], xgrid, view(strain_nodevals,1,:), levels = 3, colorbarticks = 7, xlimits = [0, scale[2]+10], ylimits = [-30, scale[1]], title = &quot;ϵ(u)_xx + displacement&quot;)
-    scalarplot!(p[2,1], xgrid, view(strain_nodevals,2,:), levels = 1, colorbarticks = 7, xlimits = [0, scale[2]+10], ylimits = [-30, scale[1]], title = &quot;ϵ(u)_yy + displacement&quot;)
+    scalarplot!(p[1,1], xgrid, view(strain_nodevals,1,:), levels = 3, colorbarticks = 7, xlimits = [-scale[2]/2-10, scale[2]/2+10], ylimits = [-30, scale[1] + 20], title = &quot;ϵ(u)_xx + displacement&quot;)
+    scalarplot!(p[2,1], xgrid, view(strain_nodevals,2,:), levels = 1, colorbarticks = 7, xlimits = [-scale[2]/2-10, scale[2]/2+10], ylimits = [-30, scale[1] + 20], title = &quot;ϵ(u)_yy + displacement&quot;)
     vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = [50,25], clear = false)
     vectorplot!(p[2,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = [50,25], clear = false)
     displace_mesh!(xgrid, Solution[1])
     gridplot!(p[3,1], xgrid, linewidth = 1, title = &quot;displaced mesh&quot;)
 end
 
-
+# grid
 function bimetal_strip2D(; scale = [1,1], n = 2, anisotropy_factor::Int = Int(ceil(scale[2]/(2*scale[1]))))
-    X=linspace(0, scale[2], (n+1)*anisotropy_factor)
+    X=linspace(-scale[2]/2, 0, (n+1)*anisotropy_factor)
+    X2=linspace(0, scale[2]/2, (n+1)*anisotropy_factor)
+    append!(X, X2[2:end])
     Y=linspace(0, scale[1], 2*n+1)
     xgrid=simplexgrid(X,Y)
-    cellmask!(xgrid, [0.0,0.0], [scale[2],scale[1]/2], 1)
-    cellmask!(xgrid, [0.0,scale[1]/2], [scale[2],scale[1]], 2)
-    bfacemask!(xgrid, [0.0,0.0], [0.0,scale[1]/2], 1)
-    bfacemask!(xgrid, [0.0,scale[1]/2], [0.0,scale[1]], 2)
-    bfacemask!(xgrid, [0.0,0.0], [scale[2],0.0], 2)
-    bfacemask!(xgrid, [scale[2],0.0], [scale[2],scale[1]], 2)
-    bfacemask!(xgrid, [0.0,scale[1]], [scale[2],scale[1]], 2)
+    cellmask!(xgrid, [-scale[2]/2,0.0], [scale[2]/2,scale[1]/2], 1)
+    cellmask!(xgrid, [-scale[2]/2,scale[1]/2], [scale[2]/2,scale[1]], 2)
+    bfacemask!(xgrid, [-scale[2]/2,0.0], [-scale[2]/2,scale[1]/2], 1)
+    bfacemask!(xgrid, [-scale[2]/2,scale[1]/2], [-scale[2]/2,scale[1]], 1)
+    bfacemask!(xgrid, [-scale[2]/2,0.0], [scale[2]/2,0.0], 2)
+    bfacemask!(xgrid, [-scale[2]/2,scale[1]], [scale[2]/2,scale[1]], 2)
+    bfacemask!(xgrid, [scale[2]/2,0.0], [scale[2]/2,scale[1]], 3)
     return xgrid
 end
+
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example207_NonlinearElasticityBimetal2D.main()
 Problem = 
 PDE-DESCRIPTION
@@ -136,28 +162,28 @@ PDE-DESCRIPTION
   RHS block | PDEOperator(s)
      [1]    | none
 
-   BoundaryOperators[1] : HomogeneousDirichletBoundary (bregions = [1])
+   BoundaryOperators[1] : HomogeneousDirichletBoundary (bregions = [1], mask = [1, 0])
 
 
 
 ┌ Info: ========== Solving nonlinear elasticity problem ==========
-└ 	Equation (1.1) displacement equation for u (discretised by H1Pk{2,2,2}, ndofs = 1386)
+└ 	Equation (1.1) displacement equation for u (discretised by H1Pk{2,2,2}, ndofs = 2754)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.47e+01/5.30e-06/1.47e+01
-	      1   | 1.630069e-11 | 1.112791e+03 | 1.65e-02/4.72e-03/2.14e-02
-	      2   | 4.343214e-11 | 5.028207e+02 | 1.63e-02/4.74e-03/2.11e-02
-	      3   | 3.474177e-11 | 2.556105e+02 | 1.62e-02/4.15e-03/2.05e-02
-	      4   | 1.758754e-11 | 9.907406e+01 | 1.62e-02/3.77e-02/5.41e-02
-	      5   | 1.102541e-11 | 2.609879e+01 | 1.65e-02/4.39e-03/2.11e-02
-	      6   | 9.006901e-12 | 3.177219e+00 | 1.67e-02/4.32e-03/2.12e-02
-	      7   | 7.906344e-12 | 7.589101e-02 | 1.70e-02/4.37e-03/2.16e-02
-	      8   | 7.798492e-12 | 6.283940e-05 | 1.67e-02/4.25e-03/2.11e-02
-	      9   | 8.164547e-12 | 6.582629e-11 | 1.65e-02/4.11e-03/2.08e-02
-	    total |                             | 1.49e+01/7.28e-02/1.50e+01
+	    init  |                             | 1.05e+01/5.30e-06/1.05e+01
+	      1   | 1.183704e-11 | 8.095793e+02 | 3.97e-02/1.17e-02/5.17e-02
+	      2   | 2.213921e-10 | 3.652374e+02 | 3.89e-02/1.24e-02/5.16e-02
+	      3   | 4.854124e-11 | 1.886010e+02 | 3.97e-02/9.84e-03/4.98e-02
+	      4   | 1.649359e-10 | 7.392770e+01 | 4.26e-02/1.06e-02/5.36e-02
+	      5   | 1.093974e-11 | 1.995633e+01 | 3.86e-02/1.04e-02/4.93e-02
+	      6   | 1.283481e-11 | 2.545117e+00 | 3.84e-02/9.70e-03/4.84e-02
+	      7   | 1.430823e-11 | 6.654167e-02 | 3.87e-02/1.00e-02/4.90e-02
+	      8   | 7.381605e-12 | 6.496666e-05 | 3.84e-02/1.03e-02/4.90e-02
+	      9   | 3.454472e-11 | 9.680097e-11 | 4.06e-02/9.88e-03/5.08e-02
+	    total |                             | 1.08e+01/9.50e-02/1.09e+01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-└ 	LHS[1,1][1] 	| 6.4286e+00 	| 3.9398e+05 	| 2.4752e+07 	| C(ϵ(u)-ϵT):∇v [AD-Newton] [∂u]</code></pre><p><img src="../../images/Example207_NonlinearElasticityBimetal2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example206_NonlinearPoissonTransient2D/">« 206 : Nonlinear Poisson Transient 2D</a><a class="docs-footer-nextpage" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Friday 9 September 2022 16:44">Friday 9 September 2022</span>. Using Julia version 1.8.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+└ 	LHS[1,1][1] 	| 6.4687e+00 	| 7.9573e+05 	| 2.9411e+07 	| C(ϵ(u)-ϵT):∇v [AD-Newton] [∂u]</code></pre><p><img src="../../images/Example207_NonlinearElasticityBimetal2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example206_NonlinearPoissonTransient2D/">« 206 : Nonlinear Poisson Transient 2D</a><a class="docs-footer-nextpage" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Sunday 11 September 2022 13:07">Sunday 11 September 2022</span>. Using Julia version 1.8.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
