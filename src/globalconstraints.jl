@@ -71,8 +71,17 @@ For vector-valued FETypes the user can provide factor_vectordofs to incorporate 
 This is automatically done for all Hdiv-conforming elements and (for the normal-weighted face bubbles of) the Bernardi-Raugel element H1BR. 
 
 """
-function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; factor_vectordofs = "auto")
+function get_periodic_coupling_info(
+    FES::FESpace,
+    xgrid::ExtendableGrid,
+    b1,
+    b2,
+    is_opposite::Function;
+    factor_vectordofs = "auto",
+    factor_components = "auto")
+
     FEType = eltype(FES)
+    ncomponents = get_ncomponents(FEType)
     if factor_vectordofs == "auto"
         if FEType <: AbstractHdivFiniteElement || FEType <: H1BR
             factor_vectordofs = -1
@@ -80,10 +89,15 @@ function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; f
             factor_vectordofs = 1
         end
     end
+    if factor_components == "auto"
+        factor_components = ones(Int, ncomponents)
+    end
+
 
     @assert FEType <: AbstractH1FiniteElement "not yet working for non H1-conforming elements"
     xBFaceRegions = xgrid[BFaceRegions]
     xBFaceNodes = xgrid[BFaceNodes]
+    xBFaceFaces = xgrid[BFaceFaces]
     xCoordinates = xgrid[Coordinates]
     nbfaces = size(xBFaceNodes,2)
     nnodes = num_nodes(xgrid)
@@ -99,6 +113,7 @@ function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; f
         xEdgeMidPoint = zeros(Float64,xdim)
         xEdgeMidPoint2 = zeros(Float64,xdim)
         xEdgeNodes = xgrid[EdgeNodes]
+        xFaceEdges = xgrid[FaceEdges]
         if FEType <: H1P1
             nedgedofs = 0
         elseif FEType <: H1P2
@@ -115,7 +130,6 @@ function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; f
     counterface = 0
     nfb = 0
     partners = zeros(Int, xdim)
-    ncomponents = get_ncomponents(FEType)
     coffsets = get_local_coffsets(FEType, ON_BFACES, EG)
     nedgedofs = 0
     
@@ -136,6 +150,9 @@ function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; f
 
             # couple first two node dofs in opposite order due to orientation
             for c = 1 : ncomponents
+                if factor_components[c] == 0
+                    continue
+                end
                 nfbc = coffsets[c+1] - coffsets[c] # total dof count for this component
 
                 # couple nodes
@@ -159,13 +176,13 @@ function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; f
                     for nb = 1 : nedges4bface 
                         fill!(xEdgeMidPoint,0)
                         for j = 1 : xdim, k = 1 : 2
-                            xEdgeMidPoint[j] += xCoordinates[j,xEdgeNodes[k,xBFaceDofs[nnodes4bface+(nb-1)*nedgedofs+1,bface]-nnodes]] / 2 
+                            xEdgeMidPoint[j] += xCoordinates[j,xEdgeNodes[k,xFaceEdges[nb,xBFaceFaces[bface]]]] / 2 
                         end
-                        ## find edge partner on other side that evaluates true at edge midpoint in is_ooposite function
+                        ## find edge partner on other side that evaluates true at edge midpoint in is_opposite function
                         for nc = 1 : nnodes4bface 
                             fill!(xEdgeMidPoint2,0)
                             for j = 1 : xdim, k = 1 : 2
-                                xEdgeMidPoint2[j] += xCoordinates[j,xEdgeNodes[k,xBFaceDofs[nnodes4bface+(nc-1)*nedgedofs+1,counterface]-nnodes]] / 2
+                                xEdgeMidPoint2[j] += xCoordinates[j,xEdgeNodes[k,xFaceEdges[nc,xBFaceFaces[counterface]]]] / 2
                             end
                             if is_opposite(xEdgeMidPoint, xEdgeMidPoint2)
                                 partners[nb] = nc
@@ -186,7 +203,7 @@ function get_periodic_coupling_info(FES, xgrid, b1, b2, is_opposite::Function; f
                     push!(dofsX, xBFaceDofs[coffsets[c]+nnodes4bface+nedges4bface*nedgedofs+nb,bface])
                     push!(dofsY, xBFaceDofs[coffsets[c]+nnodes4bface+nfbc-nnodes4bface-nedges4bface*nedgedofs + 1 - nb,counterface]) # couple face dofs in opposite order due to orientation (works in 2D at least)
                 end
-                append!(factors, ones(nfbc))
+                append!(factors, ones(nfbc) * factor_components[c])
             end
             
             ## couple remaining dofs (should be vector dofs)

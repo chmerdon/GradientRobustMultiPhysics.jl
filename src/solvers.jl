@@ -1244,6 +1244,18 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
             end
         end
 
+        # PREPARE GLOBALCONSTRAINTS
+        # known bug: this will only work if no components in front of the constrained component(s)
+        # are missing in the subiteration
+        for s = 1 : nsubiterations
+            for j = 1 : length(PDE.GlobalConstraints)
+                if PDE.GlobalConstraints[j].component in subiterations[s]
+                additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; lhs_mask = lhs_erased, rhs_mask = rhs_erased, current_equations = subiterations[s])
+                append!(fixed_dofs, additional_fixed_dofs)
+                end
+            end
+        end
+
         # CHECK NONLINEAR RESIDUAL
         for s = 1 : nsubiterations
             fill!(residual[s].entries,0)

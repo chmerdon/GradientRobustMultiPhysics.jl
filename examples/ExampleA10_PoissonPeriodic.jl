@@ -84,7 +84,6 @@ function main(; verbosity = 0, μ = 1, order = 2, dim = 2, nrefinements = 5 - di
 
     ## solve for chosen Solution vector
     solve!(Solution, Problem; show_statistics = true)
-    @show norm(Solution.entries)
 
     ## plot solution (for e.g. Plotter = PyPlot)
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))

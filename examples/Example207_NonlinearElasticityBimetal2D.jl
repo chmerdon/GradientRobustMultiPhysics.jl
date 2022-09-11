@@ -75,6 +75,7 @@ function main(;
     scale = [20,500],       # scale of the bimetal, i.e. [thickness, width]
     nref = 0,               # refinement level
     order = 2,              # finite element order
+    periodic = false,       # use periodic boundary conditions?
     verbosity = 0,          # steers talkativeness
     Plotter = nothing)
 
@@ -97,15 +98,37 @@ function main(;
     Problem = PDEDescription("nonlinear elasticity problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "displacement equation")
     add_operator!(Problem, 1, nonlin_operator)
-    add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary)
-    @show Problem
 
     ## create finite element space and solution vector
     FES = FESpace{H1Pk{2,2,order}}(xgrid)
     Solution = FEVector(FES)
 
+    if periodic
+        ## periodic boundary conditions
+        ## 1) couple dofs left (bregion 1) and right (bregion 3) in y-direction
+        dofsX, dofsY, factors = get_periodic_coupling_info(FES, xgrid, 1, 3, (f1,f2) -> abs(f1[2] - f2[2]) < 1e-14; factor_components = [0,1])
+        add_constraint!(Problem, CombineDofs(1, 1, dofsX, dofsY, factors))
+        ## 2) find and fix point at [0, scale[1]]
+        xCoordinates = xgrid[Coordinates]
+        closest::Int = 0
+        dist::Float64 = 0
+        mindist::Float64 = 1e30
+        for j = 1 : num_nodes(xgrid)
+            dist = xCoordinates[1,j]^2 + (xCoordinates[2,j] - scale[1])^2 
+            if dist < mindist
+                mindist = dist
+                closest = j
+            end
+        end
+        @show closest mindist scale
+        add_constraint!(Problem, FixedDofs(1, [closest], [0.0]))
+    else
+        add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = [1,0])
+    end
+    @show Problem
+
     ## solve
-    solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9, show_statistics = true)
+    solve!(Solution, Problem; maxiterations = 20, target_residual = 1e-9, show_statistics = true)
 
     ## displace mesh and plot
     p = GridVisualizer(; Plotter = Plotter, layout = (3,1), clear = true, resolution = (1000,1500))
@@ -114,26 +137,29 @@ function main(;
     for j = 1 : num_nodes(xgrid)
         strain!(view(strain_nodevals,:,j), view(grad_nodevals,:,j))
     end
-    scalarplot!(p[1,1], xgrid, view(strain_nodevals,1,:), levels = 3, colorbarticks = 7, xlimits = [0, scale[2]+10], ylimits = [-30, scale[1]], title = "ϵ(u)_xx + displacement")
-    scalarplot!(p[2,1], xgrid, view(strain_nodevals,2,:), levels = 1, colorbarticks = 7, xlimits = [0, scale[2]+10], ylimits = [-30, scale[1]], title = "ϵ(u)_yy + displacement")
+    scalarplot!(p[1,1], xgrid, view(strain_nodevals,1,:), levels = 3, colorbarticks = 7, xlimits = [-scale[2]/2-10, scale[2]/2+10], ylimits = [-30, scale[1] + 20], title = "ϵ(u)_xx + displacement")
+    scalarplot!(p[2,1], xgrid, view(strain_nodevals,2,:), levels = 1, colorbarticks = 7, xlimits = [-scale[2]/2-10, scale[2]/2+10], ylimits = [-30, scale[1] + 20], title = "ϵ(u)_yy + displacement")
     vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = [50,25], clear = false)
     vectorplot!(p[2,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = [50,25], clear = false)
     displace_mesh!(xgrid, Solution[1])
     gridplot!(p[3,1], xgrid, linewidth = 1, title = "displaced mesh")
 end
 
-
+## grid
 function bimetal_strip2D(; scale = [1,1], n = 2, anisotropy_factor::Int = Int(ceil(scale[2]/(2*scale[1]))))
-    X=linspace(0, scale[2], (n+1)*anisotropy_factor)
+    X=linspace(-scale[2]/2, 0, (n+1)*anisotropy_factor)
+    X2=linspace(0, scale[2]/2, (n+1)*anisotropy_factor)
+    append!(X, X2[2:end]) 
     Y=linspace(0, scale[1], 2*n+1)
     xgrid=simplexgrid(X,Y)
-    cellmask!(xgrid, [0.0,0.0], [scale[2],scale[1]/2], 1)
-    cellmask!(xgrid, [0.0,scale[1]/2], [scale[2],scale[1]], 2)
-    bfacemask!(xgrid, [0.0,0.0], [0.0,scale[1]/2], 1)
-    bfacemask!(xgrid, [0.0,scale[1]/2], [0.0,scale[1]], 2)
-    bfacemask!(xgrid, [0.0,0.0], [scale[2],0.0], 2)
-    bfacemask!(xgrid, [scale[2],0.0], [scale[2],scale[1]], 2)
-    bfacemask!(xgrid, [0.0,scale[1]], [scale[2],scale[1]], 2)
+    cellmask!(xgrid, [-scale[2]/2,0.0], [scale[2]/2,scale[1]/2], 1)
+    cellmask!(xgrid, [-scale[2]/2,scale[1]/2], [scale[2]/2,scale[1]], 2)
+    bfacemask!(xgrid, [-scale[2]/2,0.0], [-scale[2]/2,scale[1]/2], 1)
+    bfacemask!(xgrid, [-scale[2]/2,scale[1]/2], [-scale[2]/2,scale[1]], 1)
+    bfacemask!(xgrid, [-scale[2]/2,0.0], [scale[2]/2,0.0], 2)
+    bfacemask!(xgrid, [-scale[2]/2,scale[1]], [scale[2]/2,scale[1]], 2)
+    bfacemask!(xgrid, [scale[2]/2,0.0], [scale[2]/2,scale[1]], 3)
     return xgrid
 end
+
 end

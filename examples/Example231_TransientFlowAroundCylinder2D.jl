@@ -108,14 +108,14 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
 
     ## this function is called after each timestep
     plot_step_count = Int(ceil(plot_step/timestep[1]))
-    function do_after_each_timestep(step, statistics)
-        if step == 0
+    function do_after_each_timestep(TCS)
+        if TCS.cstep == 0
             @printf("|    DRAG        LIFT")
         else
             drag = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunctionD[1],TestFunctionD[1]])
             lift = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunctionL[1],TestFunctionL[1]])
             @printf("| %.4e  %.4e", drag, lift)
-            if mod(step,plot_step_count) == 0 && (step > 1) && Plotter !== nothing
+            if mod(TCS.cstep,plot_step_count) == 0 && (TCS.cstep > 1) && Plotter !== nothing
                 interpolate!(UpscaledSolution[1], Solution[1], use_cellparents = true)
                 scalarplot!(vis, xgrid_plot, view(UpscaledSolution.entries,1:nnodes_plot), Plotter = Plotter, title = "ux (T = $(Float64(TCS.ctime)))")
             end
