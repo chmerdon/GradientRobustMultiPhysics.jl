@@ -349,7 +349,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
             if update_matrix # update matrix
                 fill!(A[s].entries.cscmatrix.nzval,0)
                 fill!(b[s].entries,0)
-                assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
+                lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
 
                 ## update mass matrix and add time derivative
                 TCS.massmatrix_assembler(TCS, s; force = false)
@@ -365,7 +365,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 flush!(A[s].entries)
             else # only update rhs
                 fill!(b[s].entries,0)
-                assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
+                lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
 
                 ## add time derivative
                 for k = 1 : nsubitblocks
@@ -404,7 +404,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 ## assembly new right-hand side and matrix and add to system
                 fill!(b[s].entries,0)
                 fill!(A[s].entries.cscmatrix.nzval,0)
-                assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
+                lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
                 rhs[s].entries .+= b[s].entries
                 add!(S[s],A[s])
                 
@@ -418,7 +418,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
 
                 ## assembly of new right-hand side 
                 fill!(b[s].entries,0)
-                assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
+                lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
                 rhs[s].entries .+= b[s].entries
                 
                 ## update and add time derivative to system matrix and right-hand side
@@ -439,7 +439,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
         # PREPARE GLOBALCONSTRAINTS
         for j = 1 : length(PDE.GlobalConstraints)
             if PDE.GlobalConstraints[j].component in subiterations[s]
-                additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],x[s]; current_equations = subiterations[s])
+                additional_fixed_dofs = apply_constraint!(S[s],rhs[s],PDE.GlobalConstraints[j],x[s]; lhs_mask = lhs_erased, rhs_mask = rhs_erased, current_equations = subiterations[s])
                 append!(fixed_dofs, additional_fixed_dofs)
             end
         end
