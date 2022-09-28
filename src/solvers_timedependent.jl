@@ -414,6 +414,8 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 rhs[s].entries .+= (2.0/timestep) * AM[s].entries * LastIterate.entries
 
                 flush!(S[s].entries)
+                lhs_erased .= true
+                rhs_erased .= true
             else # S[s] stays the same, only update rhs[s]
 
                 ## assembly of new right-hand side 
@@ -424,6 +426,8 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 ## update and add time derivative to system matrix and right-hand side
                 TCS.massmatrix_assembler(TCS, s; force = false)
                 rhs[s].entries .+= (2.0/timestep) * AM[s].entries * LastIterate.entries
+                lhs_erased .= false
+                rhs_erased .= true
             end
 
         end
@@ -525,6 +529,8 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                     # add new matrix A
                     add!(S[s],A[s])
                     rhs[s].entries .+= b[s].entries
+                    lhs_erased .= false
+                    rhs_erased .= false
                 end
                 
                 # PREPARE GLOBALCONSTRAINTS
