@@ -444,7 +444,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
         for j = 1 : length(PDE.GlobalConstraints)
             if PDE.GlobalConstraints[j].component in subiterations[s]
                 additional_fixed_dofs = apply_constraint!(S[s],rhs[s],PDE.GlobalConstraints[j],x[s]; lhs_mask = lhs_erased, rhs_mask = rhs_erased, current_equations = subiterations[s])
-                append!(fixed_dofs, additional_fixed_dofs)
+                #append!(fixed_dofs, additional_fixed_dofs)
             end
         end
 
@@ -536,13 +536,13 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 # PREPARE GLOBALCONSTRAINTS
                 for j = 1 : length(PDE.GlobalConstraints)
                     if PDE.GlobalConstraints[j].component in subiterations[s]
-                        additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],x[s]; lhs_mask = lhs_erased, rhs_mask = rhs_erased, current_equations = subiterations[s])
-                        append!(fixed_dofs, additional_fixed_dofs)
+                        additional_fixed_dofs = apply_constraint!(S[s],rhs[s],PDE.GlobalConstraints[j],x[s]; lhs_mask = lhs_erased, rhs_mask = rhs_erased, current_equations = subiterations[s])
+                        #append!(fixed_dofs, additional_fixed_dofs)
                     end
                 end
 
                 # CHECK NONLINEAR RESIDUAL
-                if sum(lhs_erased[:]) + sum(rhs_erased) > 0
+                if (true) #sum(lhs_erased[:]) + sum(rhs_erased) > 0
                     mul!(res[s].entries,S[s].entries,x[s].entries)
                     res[s].entries .-= rhs[s].entries
                     for dof in fixed_dofs
