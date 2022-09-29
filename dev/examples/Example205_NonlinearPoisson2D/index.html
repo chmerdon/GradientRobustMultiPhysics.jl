@@ -173,103 +173,103 @@ PDE-DESCRIPTION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.49e+01/5.60e-06/1.50e+01
-	      1   | 1.269078e-16 | 1.879348e-01 | 4.48e-04/9.98e-05/3.78e-03
-	      2   | 2.932914e-16 | 2.427676e-03 | 2.45e-04/8.14e-05/3.53e-04
-	      3   | 5.452333e-16 | 3.580510e-07 | 4.10e-04/4.75e-05/4.83e-04
-	      4   | 4.875561e-16 | 8.307288e-15 | 2.27e-04/4.55e-05/2.98e-04
-	    total |                             | 1.49e+01/2.80e-04/1.50e+01
+	    init  |                             | 1.34e+01/5.70e-06/1.35e+01
+	      1   | 1.269078e-16 | 1.879348e-01 | 4.12e-04/8.80e-05/3.92e-03
+	      2   | 3.001623e-16 | 2.427676e-03 | 2.31e-04/7.16e-05/3.36e-04
+	      3   | 5.349815e-16 | 3.580510e-07 | 1.79e-04/3.32e-05/2.34e-04
+	      4   | 4.407290e-16 | 8.309824e-15 | 1.69e-04/2.78e-05/2.12e-04
+	    total |                             | 1.34e+01/2.26e-04/1.35e+01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 3.8352e+00 	| 3.8912e+04 	| 1.2213e+08 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 4.5098e+00 	| 3.8240e+08 	| 3.8240e+08 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 3.4503e+00 	| 3.8912e+04 	| 1.2213e+08 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 4.0528e+00 	| 3.8198e+08 	| 3.8198e+08 	| (f, id(v))
 ┌ Info: ========== Solving nonlinear Poisson problem ==========
 └ 	Equation (1.1) nonlinear Poisson equation for u (discretised by H1P1{1}, ndofs = 41)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 9.34e-03/4.00e-06/9.49e-03
-	      1   | 4.538003e-16 | 1.552235e-01 | 7.44e-04/1.79e-04/5.45e-03
-	      2   | 1.771399e-15 | 1.898915e-03 | 6.72e-04/1.70e-04/8.82e-04
-	      3   | 9.690669e-16 | 4.461316e-07 | 7.75e-04/1.21e-04/9.34e-04
-	      4   | 1.032833e-15 | 2.554088e-14 | 6.63e-04/1.02e-04/8.04e-04
-	    total |                             | 1.22e-02/5.76e-04/1.76e-02
+	    init  |                             | 7.21e-03/4.20e-06/7.36e-03
+	      1   | 4.537630e-16 | 1.552235e-01 | 6.99e-04/1.82e-04/6.16e-03
+	      2   | 1.758119e-15 | 1.898915e-03 | 6.11e-04/1.52e-04/8.07e-04
+	      3   | 7.085260e-16 | 4.461316e-07 | 5.60e-04/1.19e-04/7.13e-04
+	      4   | 1.089739e-15 | 2.409941e-14 | 5.59e-04/7.76e-05/6.65e-04
+	    total |                             | 9.64e-03/5.36e-04/1.57e-02
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 3.5650e-03 	| 1.5565e+05 	| 8.0698e+05 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 7.2444e-03 	| 1.6865e+06 	| 1.6865e+06 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 3.2557e-03 	| 1.5565e+05 	| 8.0698e+05 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 5.0364e-03 	| 1.6865e+06 	| 1.6865e+06 	| (f, id(v))
 ┌ Info: ========== Solving nonlinear Poisson problem ==========
 └ 	Equation (1.1) nonlinear Poisson equation for u (discretised by H1P1{1}, ndofs = 145)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 3.05e-02/3.20e-06/3.07e-02
-	      1   | 1.437705e-15 | 9.834582e-02 | 2.43e-03/5.35e-04/3.03e-03
-	      2   | 1.814618e-15 | 1.307935e-03 | 2.51e-03/5.66e-04/3.14e-03
-	      3   | 1.661108e-15 | 4.214647e-07 | 2.49e-03/4.33e-04/2.98e-03
-	      4   | 1.776040e-15 | 2.974894e-14 | 2.45e-03/3.92e-04/2.91e-03
-	    total |                             | 4.04e-02/1.93e-03/4.27e-02
+	    init  |                             | 2.23e-02/3.00e-06/2.25e-02
+	      1   | 1.450778e-15 | 9.834582e-02 | 2.18e-03/4.78e-04/2.74e-03
+	      2   | 1.816377e-15 | 1.307935e-03 | 2.20e-03/5.56e-04/2.82e-03
+	      3   | 2.923012e-15 | 4.214647e-07 | 2.25e-03/4.26e-04/2.73e-03
+	      4   | 2.485271e-15 | 2.958230e-14 | 2.15e-03/4.22e-04/2.63e-03
+	    total |                             | 3.11e-02/1.88e-03/3.34e-02
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 1.2453e-02 	| 6.2259e+05 	| 3.1966e+06 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 2.6562e-02 	| 6.7461e+06 	| 6.7461e+06 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 1.1051e-02 	| 6.2259e+05 	| 3.1966e+06 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 1.8465e-02 	| 6.7461e+06 	| 6.7461e+06 	| (f, id(v))
 ┌ Info: ========== Solving nonlinear Poisson problem ==========
 └ 	Equation (1.1) nonlinear Poisson equation for u (discretised by H1P1{1}, ndofs = 545)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.55e-01/4.60e-06/1.55e-01
-	      1   | 2.152053e-15 | 5.522608e-02 | 9.73e-03/1.67e-03/1.15e-02
-	      2   | 5.221398e-15 | 8.487585e-04 | 9.46e-03/1.98e-03/1.16e-02
-	      3   | 4.413236e-15 | 2.555420e-07 | 9.44e-03/1.54e-03/1.11e-02
-	      4   | 4.092736e-15 | 2.285996e-14 | 9.29e-03/1.42e-03/1.08e-02
-	    total |                             | 1.93e-01/6.61e-03/2.00e-01
+	    init  |                             | 8.51e-02/4.50e-06/8.53e-02
+	      1   | 2.380169e-15 | 5.522608e-02 | 8.89e-03/1.59e-03/1.06e-02
+	      2   | 3.898846e-15 | 8.487585e-04 | 8.37e-03/1.91e-03/1.04e-02
+	      3   | 4.623345e-15 | 2.555420e-07 | 8.27e-03/1.58e-03/1.00e-02
+	      4   | 4.053220e-15 | 2.213701e-14 | 9.25e-03/1.44e-03/1.08e-02
+	    total |                             | 1.20e-01/6.52e-03/1.27e-01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 4.8245e-02 	| 2.5560e+06 	| 1.2980e+07 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 1.4226e-01 	| 2.7084e+07 	| 2.7084e+07 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 4.3851e-02 	| 2.5560e+06 	| 1.2980e+07 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 7.3552e-02 	| 2.7083e+07 	| 2.7083e+07 	| (f, id(v))
 ┌ Info: ========== Solving nonlinear Poisson problem ==========
 └ 	Equation (1.1) nonlinear Poisson equation for u (discretised by H1P1{1}, ndofs = 2113)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 5.36e-01/4.80e-06/5.37e-01
-	      1   | 4.792341e-15 | 2.924738e-02 | 3.92e-02/6.58e-03/4.60e-02
-	      2   | 9.360987e-15 | 4.905172e-04 | 6.58e-02/7.74e-03/7.38e-02
-	      3   | 9.285219e-15 | 1.346748e-07 | 3.64e-02/6.09e-03/4.29e-02
-	      4   | 9.029598e-15 | 1.947135e-14 | 3.88e-02/6.19e-03/4.53e-02
-	    total |                             | 7.16e-01/2.66e-02/7.45e-01
+	    init  |                             | 4.31e-01/5.40e-06/4.32e-01
+	      1   | 4.754373e-15 | 2.924738e-02 | 3.37e-02/6.31e-03/4.03e-02
+	      2   | 9.424038e-15 | 4.905172e-04 | 3.41e-02/6.88e-03/4.12e-02
+	      3   | 9.233540e-15 | 1.346748e-07 | 3.81e-02/5.57e-03/4.40e-02
+	      4   | 8.530379e-15 | 1.924893e-14 | 3.87e-02/5.62e-03/4.47e-02
+	    total |                             | 5.76e-01/2.44e-02/6.02e-01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 2.1973e-01 	| 1.0420e+07 	| 5.2630e+07 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 4.9175e-01 	| 1.0863e+08 	| 1.0863e+08 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 1.7781e-01 	| 1.0420e+07 	| 5.2630e+07 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 3.9360e-01 	| 1.0863e+08 	| 1.0863e+08 	| (f, id(v))
 ┌ Info: ========== Solving nonlinear Poisson problem ==========
 └ 	Equation (1.1) nonlinear Poisson equation for u (discretised by H1P1{1}, ndofs = 8321)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 2.07e+00/4.40e-06/2.07e+00
-	      1   | 9.837625e-15 | 1.504798e-02 | 1.53e-01/4.73e-02/2.01e-01
-	      2   | 1.890480e-14 | 2.640269e-04 | 1.81e-01/3.46e-02/2.17e-01
-	      3   | 1.928821e-14 | 6.824838e-08 | 1.58e-01/2.85e-02/1.87e-01
-	      4   | 1.841764e-14 | 3.189304e-14 | 1.75e-01/2.94e-02/2.05e-01
-	    total |                             | 2.74e+00/1.40e-01/2.88e+00
+	    init  |                             | 1.57e+00/6.30e-06/1.63e+00
+	      1   | 9.616239e-15 | 1.504798e-02 | 1.34e-01/2.45e-02/1.60e-01
+	      2   | 1.891301e-14 | 2.640269e-04 | 1.55e-01/3.15e-02/1.87e-01
+	      3   | 1.854112e-14 | 6.824838e-08 | 1.54e-01/2.65e-02/1.81e-01
+	      4   | 1.868992e-14 | 3.240329e-14 | 1.88e-01/2.67e-02/2.16e-01
+	    total |                             | 2.20e+00/1.09e-01/2.37e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 8.2063e-01 	| 4.1878e+07 	| 2.1149e+08 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
-└ 	RHS[1,][1] 	| 1.9070e+00 	| 4.3480e+08 	| 4.3480e+08 	| (f, id(v))
+│ 	LHS[1,1][1] 	| 7.8358e-01 	| 4.1878e+07 	| 2.1149e+08 	| ((1+u^2) ∇u, ∇v) [AD-Newton] [∂u]
+└ 	RHS[1,][1] 	| 1.4026e+00 	| 4.3480e+08 	| 4.3480e+08 	| (f, id(v))
 
     ndofs   |   || u - u_h ||    order | || ∇(u - u_h) ||   order |
 ============|==========================|==========================|
@@ -278,4 +278,4 @@ PDE-DESCRIPTION
        145  |     4.147e-04      2.19  |     3.609e-02      1.10  |
        545  |     1.037e-04      2.09  |     1.804e-02      1.05  |
       2113  |     2.592e-05      2.05  |     9.021e-03      1.02  |
-      8321  |     6.481e-06      2.02  |     4.511e-03      1.01  |</code></pre><p><img src="../../images/Example205_NonlinearPoisson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example204_ReactionConvectionDiffusionSUPG2D/">« 204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a class="docs-footer-nextpage" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Wednesday 28 September 2022 08:36">Wednesday 28 September 2022</span>. Using Julia version 1.8.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      8321  |     6.481e-06      2.02  |     4.511e-03      1.01  |</code></pre><p><img src="../../images/Example205_NonlinearPoisson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example204_ReactionConvectionDiffusionSUPG2D/">« 204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a class="docs-footer-nextpage" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Thursday 29 September 2022 10:47">Thursday 29 September 2022</span>. Using Julia version 1.8.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
