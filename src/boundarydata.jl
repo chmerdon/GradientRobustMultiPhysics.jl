@@ -99,10 +99,10 @@ function boundarydata!(
         if BoundaryDataType(O[j]) == InterpolateDirichletBoundary
             append!(InterDirichletBoundaryRegions, O[j].bregions)
             push!(InterDirichletBoundaryOperators,j)
-            regions = O[j].bregions
-            ifaces = O[j].ifaces
-            ibfaces = O[j].ibfaces
-            bdofs = O[j].bdofs
+            regions::Array{Int,1} = O[j].bregions
+            ifaces::Array{Int,1} = O[j].ifaces
+            ibfaces::Array{Int,1} = O[j].ibfaces
+            bdofs::Array{Int,1} = O[j].bdofs
             mask = O[j].mask
             if skip_enumerations == false
                 bdofs = []
@@ -201,8 +201,8 @@ function boundarydata!(
             push!(HomDirichletBoundaryOperators,j)
 
             # find Dirichlet dofs
-            regions = O[j].bregions
-            bdofs = O[j].bdofs
+            regions::Array{Int,1} = O[j].bregions
+            bdofs::Array{Int,1} = O[j].bdofs
             if skip_enumerations == false
                 bdofs = []
                 mask = O[j].mask
@@ -272,7 +272,7 @@ function boundarydata!(
         BAdofs::Array{Ti,1} = zeros(Ti,0)
         exclude_dofs = zeros(Ti,0)
         for j in BADirichletBoundaryOperators
-            bdofs = O[j].bdofs
+            bdofs::Array{Int,1} = O[j].bdofs
             mask = O[j].mask
             if any(mask .== 0)
                 @warn "mask for BestapproximationDirichletBoundary not available (ignoring mask)"
@@ -391,7 +391,7 @@ function boundarydata!(
         CorrectDirichletBoundaryRegions = []
         for j = 1 : length(O)
             if BoundaryDataType(O[j]) == CorrectDirichletBoundary{id}
-                regions = O[j].bregions
+                regions::Array{Int,1} = O[j].bregions
                 append!(CorrectDirichletBoundaryRegions, regions)
 
                 ## generate a copy of the TargetData and interpolate the OtherData[id]
@@ -399,9 +399,9 @@ function boundarydata!(
                 interpolate!(TargetCopy, OtherData[id])
 
                 # find Dirichlet dofs
-                ifaces = O[j].ifaces
-                ibfaces = O[j].ibfaces
-                bdofs = O[j].bdofs
+                ifaces::Array{Int,1} = O[j].ifaces
+                ibfaces::Array{Int,1} = O[j].ibfaces
+                bdofs::Array{Int,1} = O[j].bdofs
                 if skip_enumerations == false
                     if skip_enumerations == false
                         for bface = 1 : nbfaces
