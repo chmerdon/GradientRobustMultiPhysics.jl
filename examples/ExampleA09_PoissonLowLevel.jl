@@ -53,6 +53,7 @@ function main(; verbosity = 0, order = 2, μ = 1, nrefinements = 3, Plotter = no
     @info "preparing cell volumes"
     @time cellvolumes = xgrid[CellVolumes]
 
+    @info "ndofs = $(length(SolutionLow.entries))"
     @time solve_poisson_lowlevel!(SolutionLow; μ = μ)
     @time solve_poisson_midlevel!(SolutionMid; μ = μ)
     @time solve_poisson_highlevel!(SolutionHigh; μ = μ)
@@ -67,54 +68,41 @@ function main(; verbosity = 0, order = 2, μ = 1, nrefinements = 3, Plotter = no
     vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(SolutionLow[1], Gradient)), spacing = 0.1, clear = false)
 end
 
-function solve_poisson_lowlevel!(Solution; μ = 1)
-    @info "\nLOW - start\n=============="
 
-    ## init FEspace, matrix and right-hand side vector
-    @info "LOW - assembly preparations"
-    @time begin
-        FES = Solution[1].FES
-        xgrid = FES.xgrid
-        A = FEMatrix(FES, FES)
-        b = FEVector(FES)
-        FEType = eltype(FES)
+function assemble_Laplacian!(A::ExtendableSparseMatrix, FES; μ = 1)
 
-        ## quadrature formula
-        qf = QuadratureRule{Float64,Triangle2D}(2*(get_polynomialorder(FEType, Triangle2D)-1))
-        weights::Vector{Float64} = qf.w
-        nweights::Int = length(weights)
+    xgrid = FES.xgrid
+    EG = xgrid[UniqueCellGeometries][1]
+    FEType = eltype(FES)
 
-        ## dofmap
-        CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
-        ndofs4cell::Int = get_ndofs(ON_CELLS, FEType, Triangle2D)
-        dof_j::Int, dof_k::Int = 0, 0
+    ## quadrature formula
+    qf = QuadratureRule{Float64, EG}(2*(get_polynomialorder(FEType, EG)-1))
+    weights::Vector{Float64} = qf.w
+    nweights::Int = length(weights)
 
-        ## FE basis evaluator
-        FEBasis_id::FEEvaluator{Float64} = FEEvaluator(FES, Identity, qf)
-        FEBasis_∇::FEEvaluator{Float64} = FEEvaluator(FES, Gradient, qf)
-        idvals::Array{Float64,3} = FEBasis_id.cvals
-        ∇vals::Array{Float64,3} = FEBasis_∇.cvals
-        L2G::L2GTransformer{Float64, Int32, Triangle2D} = FEBasis_∇.L2G
+    ## dofmap
+    CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
+    ndofs4cell::Int = get_ndofs(ON_CELLS, FEType, EG)
+    dof_j::Int, dof_k::Int = 0, 0
 
-        ## local matrix and vector structures
-        Aloc = zeros(Float64, ndofs4cell, ndofs4cell)
-        bloc = zeros(Float64, ndofs4cell)
+    ## FE basis evaluator
+    FEBasis_∇::FEEvaluator{Float64} = FEEvaluator(FES, Gradient, qf)
+    ∇vals::Array{Float64,3} = FEBasis_∇.cvals
+   
+    ## local matrix and vector structures
+    Aloc = zeros(Float64, ndofs4cell, ndofs4cell)
 
-        ## ASSEMBLY LOOP
-        ncells::Int = num_cells(xgrid)
-        x::Vector{Float64} = zeros(Float64, 2)
-        cellvolumes = xgrid[CellVolumes]
-    end
-    @info "LOW - assembly loop"
+    ## ASSEMBLY LOOP
+    ncells::Int = num_cells(xgrid)
+    cellvolumes = xgrid[CellVolumes]
+
     @time for cell = 1 : ncells
 
         ## update FE basis evaluators
         FEBasis_∇.citem[] = cell
         update_basis!(FEBasis_∇) 
 
-        for j = 1 : ndofs4cell
-
-            ## left hand side μ(∇v_j, ∇v_k)   
+        for j = 1 : ndofs4cell  
             for k = j : ndofs4cell
                 temp = 0
                 for qp = 1 : nweights
@@ -122,13 +110,71 @@ function solve_poisson_lowlevel!(Solution; μ = 1)
                 end
                 Aloc[j,k] = temp
             end
+        end
 
+        Aloc .*= cellvolumes[cell]
+
+        for j = 1 : ndofs4cell
+            dof_j = CellDofs[j, cell]
+            for k = j : ndofs4cell
+                dof_k = CellDofs[k, cell]
+                if abs(Aloc[j,k]) > 1e-14
+                    # write into matrix, may cause allocations
+                    rawupdateindex!(A, +, Aloc[j,k], dof_j, dof_k) 
+                    if k > j
+                        rawupdateindex!(A, +, Aloc[j,k], dof_k, dof_j)
+                    end
+                end
+            end
+        end
+
+        fill!(Aloc, 0)
+    end
+    flush!(A)
+end
+
+function assemble_rhs!(b::AbstractVector, FES::FESpace; f = nothing)
+
+    if f === nothing
+        fill!(b, 0)
+        return 
+    end
+
+    xgrid = FES.xgrid
+    # EG = xgrid[UniqueCellGeometries][1]
+    EG = Triangle2D
+    FEType = eltype(FES)
+
+    ## quadrature formula
+    qf = QuadratureRule{Float64, EG}(2*(get_polynomialorder(FEType, EG)-1))
+    weights::Vector{Float64} = qf.w
+    xref = qf.xref
+    nweights::Int = length(weights)
+
+    ## dofmap
+    CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
+    ndofs4cell::Int = get_ndofs(ON_CELLS, FEType, EG)
+
+    ## FE basis evaluator
+    FEBasis_id::FEEvaluator{Float64} = FEEvaluator(FES, Identity, qf)
+    idvals::Array{Float64,3} = FEBasis_id.cvals
+    L2G::L2GTransformer{Float64, Int32, EG} = L2GTransformer(EG, xgrid, ON_CELLS)
+
+    ## ASSEMBLY LOOP
+    bloc = zeros(Float64, ndofs4cell)
+    ncells::Int = num_cells(xgrid)
+    dof_j::Int = 0
+    x::Vector{Float64} = zeros(Float64, 2)
+    cellvolumes = xgrid[CellVolumes]
+
+    @time for cell = 1 : ncells
+        for j = 1 : ndofs4cell
             ## right-hand side
             temp = 0
             for qp = 1 : nweights
                 ## get global x for quadrature point
                 update_trafo!(L2G, cell)
-                eval_trafo!(x, L2G, FEBasis_∇.xref[qp])
+                eval_trafo!(x, L2G, xref[qp])
 
                 ## (f, v_j)
                 temp += weights[qp] * idvals[1, j, qp] * fdata(x)[1]
@@ -136,27 +182,29 @@ function solve_poisson_lowlevel!(Solution; μ = 1)
             bloc[j] = temp
         end
 
-        Aloc .*= cellvolumes[cell]
-        bloc .*= cellvolumes[cell]
-
         for j = 1 : ndofs4cell
             dof_j = CellDofs[j, cell]
-            b.entries[dof_j] += bloc[j]
-            for k = j : ndofs4cell
-                dof_k = CellDofs[k, cell]
-                if abs(Aloc[j,k]) > 1e-14
-                    # write into matrix, may cause allocations
-                    rawupdateindex!(A.entries, +, Aloc[j,k], dof_j, dof_k) 
-                    if k > j
-                        rawupdateindex!(A.entries, +, Aloc[j,k], dof_k, dof_j)
-                    end
-                end
-            end
+            b[dof_j] += bloc[j] * cellvolumes[cell]
         end
 
-        fill!(Aloc, 0)
         fill!(bloc, 0)
     end
+end
+
+function solve_poisson_lowlevel!(Solution; μ = 1)
+    @info "\nLOW - start\n=============="
+
+    ## init FEspace, matrix and right-hand side vector
+    @info "LOW - assembly"
+    @time begin
+        FES = Solution[1].FES
+        A = FEMatrix(FES, FES)
+        b = FEVector(FES)
+        assemble_Laplacian!(A.entries, FES; μ = μ)
+        assemble_rhs!(b.entries, FES; f = f)
+    end
+
+    
 
     ## fix boundary dofs
     @info "LOW - boundary data"
