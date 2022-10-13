@@ -38,6 +38,7 @@ function main(; verbosity = 0, order = 2, μ = 1, nrefinements = 3, Plotter = no
     @info &quot;preparing cell volumes&quot;
     @time cellvolumes = xgrid[CellVolumes]
 
+    @info &quot;ndofs = $(length(SolutionLow.entries))&quot;
     @time solve_poisson_lowlevel!(SolutionLow; μ = μ)
     @time solve_poisson_midlevel!(SolutionMid; μ = μ)
     @time solve_poisson_highlevel!(SolutionHigh; μ = μ)
@@ -52,45 +53,34 @@ function main(; verbosity = 0, order = 2, μ = 1, nrefinements = 3, Plotter = no
     vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(SolutionLow[1], Gradient)), spacing = 0.1, clear = false)
 end
 
-function solve_poisson_lowlevel!(Solution; μ = 1)
-    @info &quot;\nLOW - start\n==============&quot;
 
-    # init FEspace, matrix and right-hand side vector
-    @info &quot;LOW - assembly preparations&quot;
-    @time begin
-        FES = Solution[1].FES
-        xgrid = FES.xgrid
-        A = FEMatrix(FES, FES)
-        b = FEVector(FES)
-        FEType = eltype(FES)
+function assemble_Laplacian!(A::ExtendableSparseMatrix, FES; μ = 1)
 
-        # quadrature formula
-        qf = QuadratureRule{Float64,Triangle2D}(2*(get_polynomialorder(FEType, Triangle2D)-1))
-        weights::Vector{Float64} = qf.w
-        nweights::Int = length(weights)
+    xgrid = FES.xgrid
+    EG = xgrid[UniqueCellGeometries][1]
+    FEType = eltype(FES)
 
-        # dofmap
-        CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
-        ndofs4cell::Int = get_ndofs(ON_CELLS, FEType, Triangle2D)
-        dof_j::Int, dof_k::Int = 0, 0
+    # quadrature formula
+    qf = QuadratureRule{Float64, EG}(2*(get_polynomialorder(FEType, EG)-1))
+    weights::Vector{Float64} = qf.w
+    nweights::Int = length(weights)
 
-        # FE basis evaluator
-        FEBasis_id::FEEvaluator{Float64} = FEEvaluator(FES, Identity, qf)
-        FEBasis_∇::FEEvaluator{Float64} = FEEvaluator(FES, Gradient, qf)
-        idvals::Array{Float64,3} = FEBasis_id.cvals
-        ∇vals::Array{Float64,3} = FEBasis_∇.cvals
-        L2G::L2GTransformer{Float64, Int32, Triangle2D} = FEBasis_∇.L2G
+    # dofmap
+    CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
+    ndofs4cell::Int = get_ndofs(ON_CELLS, FEType, EG)
+    dof_j::Int, dof_k::Int = 0, 0
 
-        # local matrix and vector structures
-        Aloc = zeros(Float64, ndofs4cell, ndofs4cell)
-        bloc = zeros(Float64, ndofs4cell)
+    # FE basis evaluator
+    FEBasis_∇::FEEvaluator{Float64} = FEEvaluator(FES, Gradient, qf)
+    ∇vals::Array{Float64,3} = FEBasis_∇.cvals
 
-        # ASSEMBLY LOOP
-        ncells::Int = num_cells(xgrid)
-        x::Vector{Float64} = zeros(Float64, 2)
-        cellvolumes = xgrid[CellVolumes]
-    end
-    @info &quot;LOW - assembly loop&quot;
+    # local matrix and vector structures
+    Aloc = zeros(Float64, ndofs4cell, ndofs4cell)
+
+    # ASSEMBLY LOOP
+    ncells::Int = num_cells(xgrid)
+    cellvolumes = xgrid[CellVolumes]
+
     @time for cell = 1 : ncells
 
         # update FE basis evaluators
@@ -98,8 +88,6 @@ function solve_poisson_lowlevel!(Solution; μ = 1)
         update_basis!(FEBasis_∇)
 
         for j = 1 : ndofs4cell
-
-            # left hand side μ(∇v_j, ∇v_k)
             for k = j : ndofs4cell
                 temp = 0
                 for qp = 1 : nweights
@@ -107,13 +95,67 @@ function solve_poisson_lowlevel!(Solution; μ = 1)
                 end
                 Aloc[j,k] = temp
             end
+        end
 
+        Aloc .*= cellvolumes[cell]
+
+        for j = 1 : ndofs4cell
+            dof_j = CellDofs[j, cell]
+            for k = j : ndofs4cell
+                dof_k = CellDofs[k, cell]
+                if abs(Aloc[j,k]) &gt; 1e-14</code></pre><p>write into matrix, may cause allocations</p><pre><code class="language-julia hljs">                    rawupdateindex!(A, +, Aloc[j,k], dof_j, dof_k)
+                    if k &gt; j
+                        rawupdateindex!(A, +, Aloc[j,k], dof_k, dof_j)
+                    end
+                end
+            end
+        end
+
+        fill!(Aloc, 0)
+    end
+    flush!(A)
+end
+
+function assemble_rhs!(b::AbstractVector, FES::FESpace; f = nothing)
+
+    if f === nothing
+        fill!(b, 0)
+        return
+    end
+
+    xgrid = FES.xgrid</code></pre><p>EG = xgrid[UniqueCellGeometries][1]</p><pre><code class="language-julia hljs">    EG = Triangle2D
+    FEType = eltype(FES)
+
+    # quadrature formula
+    qf = QuadratureRule{Float64, EG}(2*(get_polynomialorder(FEType, EG)-1))
+    weights::Vector{Float64} = qf.w
+    xref = qf.xref
+    nweights::Int = length(weights)
+
+    # dofmap
+    CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
+    ndofs4cell::Int = get_ndofs(ON_CELLS, FEType, EG)
+
+    # FE basis evaluator
+    FEBasis_id::FEEvaluator{Float64} = FEEvaluator(FES, Identity, qf)
+    idvals::Array{Float64,3} = FEBasis_id.cvals
+    L2G::L2GTransformer{Float64, Int32, EG} = L2GTransformer(EG, xgrid, ON_CELLS)
+
+    # ASSEMBLY LOOP
+    bloc = zeros(Float64, ndofs4cell)
+    ncells::Int = num_cells(xgrid)
+    dof_j::Int = 0
+    x::Vector{Float64} = zeros(Float64, 2)
+    cellvolumes = xgrid[CellVolumes]
+
+    @time for cell = 1 : ncells
+        for j = 1 : ndofs4cell
             # right-hand side
             temp = 0
             for qp = 1 : nweights
                 # get global x for quadrature point
                 update_trafo!(L2G, cell)
-                eval_trafo!(x, L2G, FEBasis_∇.xref[qp])
+                eval_trafo!(x, L2G, xref[qp])
 
                 # (f, v_j)
                 temp += weights[qp] * idvals[1, j, qp] * fdata(x)[1]
@@ -121,25 +163,29 @@ function solve_poisson_lowlevel!(Solution; μ = 1)
             bloc[j] = temp
         end
 
-        Aloc .*= cellvolumes[cell]
-        bloc .*= cellvolumes[cell]
-
         for j = 1 : ndofs4cell
             dof_j = CellDofs[j, cell]
-            b.entries[dof_j] += bloc[j]
-            for k = j : ndofs4cell
-                dof_k = CellDofs[k, cell]
-                if abs(Aloc[j,k]) &gt; 1e-14</code></pre><p>write into matrix, may cause allocations</p><pre><code class="language-julia hljs">                    rawupdateindex!(A.entries, +, Aloc[j,k], dof_j, dof_k)
-                    if k &gt; j
-                        rawupdateindex!(A.entries, +, Aloc[j,k], dof_k, dof_j)
-                    end
-                end
-            end
+            b[dof_j] += bloc[j] * cellvolumes[cell]
         end
 
-        fill!(Aloc, 0)
         fill!(bloc, 0)
     end
+end
+
+function solve_poisson_lowlevel!(Solution; μ = 1)
+    @info &quot;\nLOW - start\n==============&quot;
+
+    # init FEspace, matrix and right-hand side vector
+    @info &quot;LOW - assembly&quot;
+    @time begin
+        FES = Solution[1].FES
+        A = FEMatrix(FES, FES)
+        b = FEVector(FES)
+        assemble_Laplacian!(A.entries, FES; μ = μ)
+        assemble_rhs!(b.entries, FES; f = f)
+    end
+
+
 
     # fix boundary dofs
     @info &quot;LOW - boundary data&quot;
@@ -218,54 +264,55 @@ end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA09_PoissonLowLevel.main()
 [ Info: preparing celldofs
-  0.002537 seconds (53 allocations: 19.711 KiB, 94.79% compilation time)
+  0.003354 seconds (53 allocations: 19.711 KiB, 94.88% compilation time)
 [ Info: preparing bfacedofs
-  0.003709 seconds (74 allocations: 9.977 KiB, 96.86% compilation time)
+  0.005007 seconds (74 allocations: 9.977 KiB, 96.92% compilation time)
 [ Info: preparing cell volumes
-  0.000076 seconds (257 allocations: 6.125 KiB)
+  0.000101 seconds (257 allocations: 6.125 KiB)
+[ Info: ndofs = 545
 ┌ Info: 
 │ LOW - start
 └ ==============
-[ Info: LOW - assembly preparations
-  0.049059 seconds (226.08 k allocations: 13.709 MiB, 95.56% compilation time)
-[ Info: LOW - assembly loop
-  0.000717 seconds (10 allocations: 143.500 KiB)
+[ Info: LOW - assembly
+  0.000667 seconds (10 allocations: 143.500 KiB)
+  0.000066 seconds
+  0.547827 seconds (952.64 k allocations: 53.994 MiB, 99.28% compilation time)
 [ Info: LOW - boundary data
-  0.000050 seconds (6 allocations: 53.359 KiB)
+  0.000010 seconds
 [ Info: LOW - solve
-  0.000500 seconds (61 allocations: 384.297 KiB)
+  0.000673 seconds (61 allocations: 384.297 KiB)
 [ Info: LOW - end
-  0.339639 seconds (245.22 k allocations: 14.914 MiB, 98.92% compilation time)
+  0.645854 seconds (957.62 k allocations: 54.554 MiB, 99.25% compilation time)
 ┌ Info: 
 │ MID - start
 └ ==============
 [ Info: MID - assembly preparations
-  0.000030 seconds (29 allocations: 10.555 KiB)
+  0.000035 seconds (29 allocations: 10.555 KiB)
 [ Info: MID - assembly A
-  0.247863 seconds (1.00 M allocations: 54.465 MiB, 99.19% compilation time)
+  0.350028 seconds (1.01 M allocations: 54.910 MiB, 16.57% gc time, 99.22% compilation time)
 [ Info: MID - assembly b
-  0.945372 seconds (1.27 M allocations: 70.134 MiB, 5.72% gc time, 99.83% compilation time)
+  1.134704 seconds (1.29 M allocations: 70.935 MiB, 99.84% compilation time)
 [ Info: MID - boundary data
-  0.919851 seconds (1.01 M allocations: 55.499 MiB, 99.99% compilation time)
+  1.169944 seconds (1.01 M allocations: 55.343 MiB, 99.99% compilation time)
 [ Info: MID - solve
-  0.000529 seconds (61 allocations: 384.297 KiB)
+  0.000679 seconds (61 allocations: 384.297 KiB)
 [ Info: MID - end
-  2.239115 seconds (3.30 M allocations: 180.909 MiB, 2.42% gc time, 99.79% compilation time)
+  2.817198 seconds (3.32 M allocations: 182.000 MiB, 2.06% gc time, 99.80% compilation time)
 ┌ Info: 
 │ HIGH - start
 └ ==============
 [ Info: HIGH - problem description
-  0.000057 seconds (72 allocations: 4.242 KiB)
+  0.000063 seconds (72 allocations: 4.242 KiB)
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 545)
-[ Info: assembly/solver time = 0.466518713/0.001443682 (s)
+[ Info: assembly/solver time = 0.600157734/0.001691698 (s)
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 2.0372e-03 	| 1.4694e+05 	| 1.4694e+05 	| (∇u,∇v)
-└ 	RHS[1,][1] 	| 4.6219e-01 	| 0.0000e+00 	| 0.0000e+00 	| (user action, id(v))
+│ 	LHS[1,1][1] 	| 2.6057e-03 	| 1.4694e+05 	| 1.4694e+05 	| (∇u,∇v)
+└ 	RHS[1,][1] 	| 5.9478e-01 	| 0.0000e+00 	| 0.0000e+00 	| (user action, id(v))
 [ Info: overall residual = 6.671979675388975e-16
 [ Info: HIGH - end
-  0.546282 seconds (354.15 k allocations: 19.271 MiB, 97.76% compilation time)
+  0.703942 seconds (354.28 k allocations: 19.277 MiB, 97.95% compilation time)
 norm(SolutionLow.entries - SolutionHigh.entries) = 6.1738193750004125e-15
-norm(SolutionLow.entries - SolutionMid.entries) = 0.0</code></pre><p><img src="../../images/ExampleA09_PoissonLowLevel_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA08_BasisPlotter/">« A08 : Basis-Plotter</a><a class="docs-footer-nextpage" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Tuesday 11 October 2022 13:56">Tuesday 11 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+norm(SolutionLow.entries - SolutionMid.entries) = 0.0</code></pre><p><img src="../../images/ExampleA09_PoissonLowLevel_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA08_BasisPlotter/">« A08 : Basis-Plotter</a><a class="docs-footer-nextpage" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Thursday 13 October 2022 11:20">Thursday 13 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
