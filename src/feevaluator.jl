@@ -318,6 +318,46 @@ function relocate_xref!(FEB::SingleFEEvaluator{<:Real,<:Real,<:Integer,operator,
     return nothing
 end
 
+## relocates evaluation points (needs mutable FEB) used by segment integrator/point evaluator
+function relocate_xref!(FEB::SingleFEEvaluator{<:Real,<:Real,<:Integer,operator,FEType}, new_xref) where {FEType, operator}
+    if length(new_xref) == length(FEB.xref[1])
+        for j = 1 : length(FEB.xref[1])
+            FEB.xref[1][j] = new_xref[j]
+        end
+    else
+        for j = 1 : length(FEB.xref)
+            FEB.xref[j] = new_xref[j]
+        end
+    end
+    if FEB.derivorder == 0
+        # evaluate basis functions at quadrature point
+        if length(new_xref) == length(FEB.xref[1])
+            for j = 1 : length(FEB.xref)
+                FEB.refbasis(FEB.refbasisvals[j], new_xref)
+            end
+        else
+            for j = 1 : length(FEB.xref)
+                FEB.refbasis(FEB.refbasisvals[j], new_xref[j])
+            end
+        end
+        if FEType <: AbstractH1FiniteElement # also reset cvals for operator evals that stay the same for all cells
+            if operator <: Identity || operator <: IdentityDisc
+                for j = 1 : size(FEB.refbasisvals[1],1), k = 1 : size(FEB.refbasisvals[1],2)
+                    FEB.cvals[k,j,1] = FEB.refbasisvals[1][j,k]
+                end
+            elseif operator <: IdentityComponent
+                for j = 1 : size(FEB.refbasisvals[1],1)
+                    FEB.cvals[1,j,1] = FEB.refbasisvals[1][j,operator.parameters[1]]
+                end
+            end
+        end
+    elseif FEB.derivorder > 0
+        _prepare_derivatives(FEB.refbasisderivvals, FEB.refbasis, FEB.xref, FEB.derivorder, size(FEB.refbasisvals[1],1), length(FEB.offsets); Dcfg = FEB.Dcfg, Dresult = FEB.Dresult)
+    end
+    FEB.citem[] = 0 # reset citem to allows recomputation if FEB.cvals (if multiple consecutive relocations are done in the same cell)
+    return nothing
+end
+
 ## general call to update subset
 function _update_subset!(FEBE::FEEvaluator)
     subset = FEBE.current_subset
