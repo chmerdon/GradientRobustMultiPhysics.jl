@@ -82,25 +82,25 @@ BestapproxDirichletBoundary (bregions = [3], data = Constant([1, 0]))
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.28e+01/4.50e-06/1.28e+01
-	      1   | 2.276961e-17 | 8.063241e-03 | 3.17e-01/3.29e-01/1.49e+00
-	      2   | 2.404188e-17 | 4.186558e-03 | 3.18e-01/3.50e-01/6.72e-01
-	      3   | 3.048264e-17 | 2.062310e-03 | 3.15e-01/2.68e-01/5.88e-01
-	      4   | 2.849790e-17 | 6.651686e-04 | 3.18e-01/2.95e-01/6.18e-01
-	      5   | 2.870802e-17 | 5.562696e-04 | 3.16e-01/2.71e-01/5.91e-01
-	      6   | 2.986927e-17 | 3.504737e-04 | 3.16e-01/2.70e-01/5.91e-01
-	      7   | 2.960763e-17 | 3.225783e-04 | 3.18e-01/3.63e-01/6.87e-01
-	      8   | 2.916040e-17 | 1.990759e-04 | 3.16e-01/2.74e-01/5.97e-01
-	      9   | 2.879931e-17 | 8.282842e-05 | 3.16e-01/6.26e-01/9.50e-01
-	    total |                             | 1.57e+01/3.05e+00/2.05e+01
+	    init  |                             | 1.21e+01/5.40e-06/1.22e+01
+	      1   | 2.276961e-17 | 8.063241e-03 | 3.22e-01/3.80e-01/1.51e+00
+	      2   | 2.404188e-17 | 4.186558e-03 | 3.13e-01/3.30e-01/6.47e-01
+	      3   | 3.048264e-17 | 2.062310e-03 | 3.13e-01/5.71e-01/8.88e-01
+	      4   | 2.849790e-17 | 6.651686e-04 | 3.13e-01/2.72e-01/5.89e-01
+	      5   | 2.870802e-17 | 5.562696e-04 | 3.13e-01/5.19e-01/8.37e-01
+	      6   | 2.986927e-17 | 3.504737e-04 | 3.13e-01/2.67e-01/5.86e-01
+	      7   | 2.960763e-17 | 3.225783e-04 | 3.13e-01/2.67e-01/5.87e-01
+	      8   | 2.916040e-17 | 1.990759e-04 | 3.13e-01/2.76e-01/5.96e-01
+	      9   | 2.879931e-17 | 8.282842e-05 | 3.13e-01/2.67e-01/5.88e-01
+	    total |                             | 1.50e+01/3.15e+00/1.98e+01
 
-[ Info: anderson acceleration took 0.030564569000000003s
+[ Info: anderson acceleration took 0.030109549s
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 4.1926e+00 	| 2.8680e+05 	| 9.8191e+06 	| 0.0005 (∇u,∇v)
-│ 	LHS[1,1][2] 	| 3.9966e+00 	| 4.5888e+05 	| 9.1935e+06 	| ((id(u) ⋅ ∇) u, id(v))
-└ 	LHS[1,2][1] 	| 1.6115e+00 	| 7.0853e+06 	| 7.0853e+06 	| -(p, div(v))
+│ 	LHS[1,1][1] 	| 3.9578e+00 	| 2.8680e+05 	| 9.8191e+06 	| 0.0005 (∇u,∇v)
+│ 	LHS[1,1][2] 	| 3.8358e+00 	| 4.5888e+05 	| 9.1935e+06 	| ((id(u) ⋅ ∇) u, id(v))
+└ 	LHS[1,2][1] 	| 1.5470e+00 	| 7.0686e+06 	| 7.0686e+06 	| -(p, div(v))
 Problem = 
 PDE-DESCRIPTION
 ===============
@@ -134,16 +134,16 @@ BestapproxDirichletBoundary (bregions = [3], data = Constant([1, 0]))
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 2.94e+00/4.00e-06/2.95e+00
-	      1   | 2.878462e-17 | 8.735238e-07 | 2.20e-01/6.25e-01/8.56e-01
-	      2   | 2.906058e-17 | 4.117803e-10 | 2.20e-01/2.66e-01/4.91e-01
-	      3   | 2.954587e-17 | 6.577763e-16 | 2.21e-01/2.79e-01/5.06e-01
-	    total |                             | 3.60e+00/1.17e+00/4.81e+00
+	    init  |                             | 2.81e+00/4.00e-06/2.81e+00
+	      1   | 2.878462e-17 | 8.735238e-07 | 2.19e-01/3.27e-01/5.60e-01
+	      2   | 2.906058e-17 | 4.117803e-10 | 2.18e-01/2.72e-01/4.94e-01
+	      3   | 2.954587e-17 | 6.577763e-16 | 2.20e-01/2.68e-01/4.93e-01
+	    total |                             | 3.46e+00/8.67e-01/4.37e+00
 
-[ Info: anderson acceleration took 0.008190891s
+[ Info: anderson acceleration took 0.007936506999999999s
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 1.3330e+00 	| 3.2504e+06 	| 3.2504e+06 	| 0.0005 (∇u,∇v)
-│ 	LHS[1,1][2] 	| 1.1799e+00 	| 4.5888e+05 	| 1.7090e+07 	| ((id(u) ⋅ ∇) u, id(v)) [Newton] [∂u]
-└ 	LHS[1,2][1] 	| 1.0763e+00 	| 2.8301e+06 	| 2.8301e+06 	| -(p, div(v))</code></pre><p><img src="../../images/Example225_NavierStokesAnderson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example224_StokesSVRTEnrichment/">« 224 : Stokes <span>$SV + RT enrichment$</span></a><a class="docs-footer-nextpage" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Thursday 13 October 2022 11:20">Thursday 13 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 1.2522e+00 	| 3.2504e+06 	| 3.2504e+06 	| 0.0005 (∇u,∇v)
+│ 	LHS[1,1][2] 	| 1.1781e+00 	| 4.5888e+05 	| 1.7090e+07 	| ((id(u) ⋅ ∇) u, id(v)) [Newton] [∂u]
+└ 	LHS[1,2][1] 	| 1.0235e+00 	| 2.8301e+06 	| 2.8301e+06 	| -(p, div(v))</code></pre><p><img src="../../images/Example225_NavierStokesAnderson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example224_StokesSVRTEnrichment/">« 224 : Stokes <span>$SV + RT enrichment$</span></a><a class="docs-footer-nextpage" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Friday 14 October 2022 15:47">Friday 14 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
