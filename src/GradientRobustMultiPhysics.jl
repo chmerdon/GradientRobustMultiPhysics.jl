@@ -56,6 +56,7 @@ export OperatorPair, OperatorTriple
 
 include("finiteelements.jl")
 export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs, BEdgeDofs
+export DofMapTypes
 export AbstractFiniteElement
 export FESpace, FESpaces
 export get_periodic_coupling_info

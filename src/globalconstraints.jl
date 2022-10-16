@@ -263,6 +263,7 @@ function apply_constraint!(
     Target::FEVector;
     lhs_mask = nothing,
     rhs_mask = nothing,
+    only_rhs = false,
     current_equations = "all") where {T,Tv,Ti}
 
     fixed_dofs = []
@@ -279,45 +280,46 @@ function apply_constraint!(
     dofsX = Constraint.dofsX
     dofsY = Constraint.dofsY
     factors::Array{T} = Constraint.factors
-    @logmsg DeepInfo "Combining dofs of component $c and $c2..."
-    
-    AE::ExtendableSparseMatrix{Tv,Ti} = A.entries
-    targetrow::Int = 0
-    sourcerow::Int = 0
-    targetcol::Int = 0
-    sourcecol::Int = 0
-    val::Float64 = 0
-    for gdof = 1 : length(Constraint.dofsX)
-        # copy source row (for dofY) to target row (for dofX)
-        targetrow = dofsX[gdof] + A[c,c].offsetX
-        sourcerow = A[c2,c2].offsetX + dofsY[gdof]
-        for b = 1 : nbcols(A)
-            cblock = A[c,b]
-            if lhs_mask === nothing || lhs_mask[c,b]
-                for sourcecol = cblock.offsetY+1 : cblock.last_indexY
-                    targetcol = sourcecol - A[c2,c2].offsetY + A[c,c].offsetY
-                    val = AE[sourcerow,sourcecol]
-                    if abs(val) > 1e-14
-                        _addnz(AE, targetrow, targetcol, factors[gdof] * val,1)
-                        AE[sourcerow,sourcecol] = 0
+    if !only_rhs 
+        @logmsg DeepInfo "Combining dofs of component $c and $c2..."
+        
+        AE::ExtendableSparseMatrix{Tv,Ti} = A.entries
+        targetrow::Int = 0
+        sourcerow::Int = 0
+        targetcol::Int = 0
+        sourcecol::Int = 0
+        val::Float64 = 0
+        for gdof = 1 : length(Constraint.dofsX)
+            # copy source row (for dofY) to target row (for dofX)
+            targetrow = dofsX[gdof] + A[c,c].offsetX
+            sourcerow = A[c2,c2].offsetX + dofsY[gdof]
+            for b = 1 : nbcols(A)
+                cblock = A[c,b]
+                if lhs_mask === nothing || lhs_mask[c,b]
+                    for sourcecol = cblock.offsetY+1 : cblock.last_indexY
+                        targetcol = sourcecol - A[c2,c2].offsetY + A[c,c].offsetY
+                        val = AE[sourcerow,sourcecol]
+                        if abs(val) > 1e-14
+                            _addnz(AE, targetrow, targetcol, factors[gdof] * val,1)
+                            AE[sourcerow,sourcecol] = 0
+                        end
                     end
                 end
             end
-        end
 
-        # replace source row (of dofY) with equation for coupling the two dofs
-        sourcecol = dofsY[gdof] + A[c2,c2].offsetY
-        targetcol = dofsX[gdof] + A[c,c].offsetY
-        sourcerow = A[c2,c2].offsetX + dofsY[gdof]
-        if lhs_mask === nothing || lhs_mask[c2,c] 
-            _addnz(AE, sourcerow, targetcol, 1,1)
-        end
-        if lhs_mask === nothing || lhs_mask[c2,c2]
-            _addnz(AE, sourcerow, sourcecol, -factors[gdof],1)
+            # replace source row (of dofY) with equation for coupling the two dofs
+            sourcecol = dofsY[gdof] + A[c2,c2].offsetY
+            targetcol = dofsX[gdof] + A[c,c].offsetY
+            sourcerow = A[c2,c2].offsetX + dofsY[gdof]
+            if lhs_mask === nothing || lhs_mask[c2,c] 
+                _addnz(AE, sourcerow, targetcol, 1,1)
+            end
+            if lhs_mask === nothing || lhs_mask[c2,c2]
+                _addnz(AE, sourcerow, sourcecol, -factors[gdof],1)
+            end
         end
     end
 
-    # fix one of the dofs
     for gdof = 1 : length(Constraint.dofsX)
         sourcerow = b[c2].offset + dofsY[gdof]
         targetrow = b[c].offset + dofsX[gdof]
@@ -327,8 +329,6 @@ function apply_constraint!(
         if rhs_mask === nothing || rhs_mask[c2]
             b.entries[sourcerow] = 0
         end
-        #Target.entries[sourcerow] = 0
-        #push!(fixed_dofs,sourcerow)
     end
     flush!(A.entries)
     return fixed_dofs
