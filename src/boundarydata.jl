@@ -145,8 +145,12 @@ function boundarydata!(
                 bdofs = Base.unique(bdofs)
                 append!(fixed_dofs,bdofs)
                 fixed_dofs = Base.unique(fixed_dofs)
+                O[j].ifaces = ifaces
+                O[j].ibfaces = ibfaces
+                O[j].bdofs = bdofs
             end
             if length(ifaces) > 0
+                @show "hallo"
                 if FE.broken == true || any(mask .== 0)
                     @show mask
                     # face interpolation expects continuous dofmaps
@@ -240,6 +244,7 @@ function boundarydata!(
                 bdofs = Base.unique(bdofs)
                 append!(fixed_dofs,bdofs)
                 fixed_dofs = Base.unique(fixed_dofs)
+                O[j].bdofs = bdofs
             end
 
             # set homdofs to zero
@@ -288,6 +293,7 @@ function boundarydata!(
                         end
                     end   
                 end
+                O[j].bdofs = bdofs
             end
 
             ## assemble rhs for best-approximation problem
@@ -422,6 +428,9 @@ function boundarydata!(
                     bdofs = Base.unique(bdofs)
                     append!(fixed_dofs,bdofs)
                     fixed_dofs = Base.unique(fixed_dofs)
+                    O[j].ifaces = ifaces
+                    O[j].ibfaces = ibfaces
+                    O[j].bdofs = bdofs
                 end
                 if length(ifaces) > 0
                     interpolate!(Target, ON_BFACES, O[j].data; items = ibfaces, time = time)
