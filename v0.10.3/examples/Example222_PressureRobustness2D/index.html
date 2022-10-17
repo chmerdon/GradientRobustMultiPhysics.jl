@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>222 : Pressure-robustness 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li class="is-active"><a class="tocitem" href>222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li><li><a class="tocitem" href="../ExampleA11_NavierStokesFixpointIterations/">A11 : Navier-Stokes Fixed-point iterations</a></li><li><a class="tocitem" href="../ExampleA12_NavierStokesPeriodic/">A12 : Navier-Stokes-Problem with periodic boundary</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>222 : Pressure-robustness 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>222 : Pressure-robustness 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example222_PressureRobustness2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Pressure-robustness-2D"><a class="docs-heading-anchor" href="#:-Pressure-robustness-2D">222 : Pressure-robustness 2D</a><a id=":-Pressure-robustness-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Pressure-robustness-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example222_PressureRobustness2D.jl">source code</a>)</p><p>This example studies two benchmarks for pressure-robust discretisations of the stationary     Navier-Stokes equations that seek a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> such that</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = \mathbf{f}\\
+\mathrm{div}(u) &amp; = 0
+\end{aligned}\]</p><p>with (possibly time-dependent) exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span>.</p><p>Pressure-robustness is concerned with gradient forces that may appear in the right-hand side or the material derivative and should be balanced by the pressure (as divergence-free vector fields are orthogonal on gradient fields). Here, two test problems are considered:</p><ol><li>HydrostaticTestProblem() : Stokes (without convection term) and <span>$\mathbf{f} = \nabla p$</span> such that  <span>$\mathbf{u} = 0$</span></li><li>PotentialFlowTestProblem() : Navier-Stokes with <span>$\mathbf{f} = 0$</span> and <span>$\mathbf{u} = \nabla h$</span> for some harmonic function</li></ol><p>In both test problems the errors of non-pressure-robust discretisations scale with  <span>$1/\mu$</span>, while the pressure-robust discretisation solves <span>$\mathbf{u} = 0$</span> exactly in test problem 1 and gives much better results in test problem 2.</p><pre><code class="language-julia hljs">module Example222_PressureRobustness2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+
+# problem data
+function HydrostaticTestProblem()
+    # Stokes problem with f = grad(p)
+    # u = 0,  p = x^3+y^3 - 1//2
+    function P1_pressure!(result,x)
+        result[1] = x[1]^3 + x[2]^3 - 1//2
+    end
+    u = DataFunction([0,0]; xdim = 2, name = &quot;u&quot;)
+    p = DataFunction(P1_pressure!, [1,2]; name = &quot;p&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 3)
+    f = ∇(p)
+    return p,u,∇(u),f,false
+end
+
+function PotentialFlowTestProblem()
+    # NavierStokes with f = 0
+    # u = grad(h) with h = x^3 - 3xy^2
+    # p = - |grad(h)|^2 + 14//5
+    function P2_pressure!(result,x)
+        result[1] = - 1//2 * (9*(x[1]^4 + x[2]^4) + 18*x[1]^2*x[2]^2) + 14//5
+    end
+    function P2_velo!(result,x)
+        result[1] = 3*x[1]^2 - 3*x[2]^2;
+        result[2] = -6*x[1]*x[2];
+    end
+    u = DataFunction(P2_velo!, [2,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 2)
+    p = DataFunction(P2_pressure!, [1,2]; name = &quot;p&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 4)
+    f = DataFunction([0,0]; name = &quot;f&quot;)
+    return p,u,∇(u),f,true
+end
+
+
+function solver(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, target_residual = 1e-10, maxiterations = 20, Plotter = nothing)
+
+    # load problem data and set solver parameters
+    ReconstructionOperator = FETypes[3]
+    p,u,∇u,f,nonlinear = Problem()
+
+    # setup classical (Problem) and pressure-robust scheme (Problem2)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
+    Problem2 = deepcopy(Problem)
+    Problem.name = &quot;Stokes problem (classical)&quot;
+    Problem2.name = &quot;Stokes problem (p-robust)&quot;
+
+    # assign right-hand side
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
+    add_rhsdata!(Problem2, 1, LinearForm(ReconstructionOperator, f))
+
+    # assign convection term
+    if nonlinear
+        add_operator!(Problem,[1,1], ConvectionOperator(1, Identity, 2, 2))
+        add_operator!(Problem2,[1,1], ConvectionOperator(1, ReconstructionOperator, 2, 2; test_operator = ReconstructionOperator))
+    end
+
+    # define bestapproximation problems
+    BAP_L2_u = L2BestapproximationProblem(u; bestapprox_boundary_regions = [1,2,3,4])
+    BAP_L2_p = L2BestapproximationProblem(p; bestapprox_boundary_regions = [])
+    BAP_H1_u = H1BestapproximationProblem(∇u, u; bestapprox_boundary_regions = [1,2,3,4])
+
+    # define ItemIntegrators for L2/H1 error computation
+    L2Error_u = L2ErrorIntegrator(u, Identity)
+    L2Error_p = L2ErrorIntegrator(p, Identity)
+    H1Error_u = L2ErrorIntegrator(∇u, Gradient)
+    Results = zeros(Float64, nlevels, 9)
+    NDofs = zeros(Int, nlevels)
+
+    # loop over refinement levels
+    Solution, Solution2 = nothing, nothing
+    for level = 1 : nlevels
+
+        # uniform mesh refinement
+        xgrid = uniform_refine(xgrid)
+
+        # get FESpaces
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
+
+        # solve both problems
+        Solution = solve(Problem, FES; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
+        Solution2 = solve(Problem2, FES; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
+
+        # solve bestapproximation problems
+        BA_L2_u = FEVector(&quot;Πu&quot;,FES[1])
+        BA_L2_p = FEVector(&quot;πp&quot;,FES[2])
+        BA_H1_u = FEVector(&quot;Su&quot;,FES[1])
+        solve!(BA_L2_u, BAP_L2_u)
+        solve!(BA_L2_p, BAP_L2_p)
+        solve!(BA_H1_u, BAP_H1_u)
+
+        # compute L2 and H1 errors and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2Error_u,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2Error_u,Solution2[1]))
+        Results[level,3] = sqrt(evaluate(L2Error_u,BA_L2_u[1]))
+        Results[level,4] = sqrt(evaluate(L2Error_p,Solution[2]))
+        Results[level,5] = sqrt(evaluate(L2Error_p,Solution2[2]))
+        Results[level,6] = sqrt(evaluate(L2Error_p,BA_L2_p[1]))
+        Results[level,7] = sqrt(evaluate(H1Error_u,Solution[1]))
+        Results[level,8] = sqrt(evaluate(H1Error_u,Solution2[1]))
+        Results[level,9] = sqrt(evaluate(H1Error_u,BA_H1_u[1]))
+    end
+
+    # print convergence history
+    print_convergencehistory(NDofs, Results[:,1:3]; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||u-u_c||&quot;, &quot;||u-u_r||&quot;, &quot;||u-Πu||&quot;])
+    print_convergencehistory(NDofs, Results[:,4:6]; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||p-p_c||&quot;, &quot;||p-p_r||&quot;, &quot;||p-πp||&quot;])
+    print_convergencehistory(NDofs, Results[:,7:9]; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||∇(u-u_c)||&quot;, &quot;||∇(u-u_r)||&quot;, &quot;||∇(u-Su)||&quot;])
+
+    # plot
+    p = GridVisualizer(; Plotter = Plotter, layout = (2,3), clear = true, resolution = (1500,1000))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = &quot;u_c (abs + quiver)&quot;)
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_c&quot;)
+    scalarplot!(p[2,1],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false, title = &quot;u_r (abs + quiver)&quot;)
+    scalarplot!(p[2,2],xgrid,view(nodevalues(Solution2[2]),1,:), levels = 11, title = &quot;p_r&quot;)
+    convergencehistory!(p[1,3], NDofs, Results[:,[1,7,4]]; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_c ||&quot;, &quot;|| ∇(u - u_c) ||&quot;, &quot;|| p - p_c ||&quot;])
+    convergencehistory!(p[2,3], NDofs, Results[:,[2,8,5]]; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_r ||&quot;, &quot;|| ∇(u - u_r) ||&quot;, &quot;|| p - p_r ||&quot;])
+
+    # return last L2 error of p-robust method for testing
+    return Results[end,2]
+end
+
+
+# everything is wrapped in a main function
+function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plotter = nothing)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # set problem to solve
+    if problem == 1
+        Problem = HydrostaticTestProblem
+    elseif problem == 2
+        Problem = PotentialFlowTestProblem
+    else
+        @error &quot;No problem defined for this number!&quot;
+    end
+
+    # set grid and problem parameters
+    xgrid = grid_unitsquare(Triangle2D) # initial grid
+
+    # choose finite element discretisation
+    #FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
+    FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
+    #FETypes = [H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
+
+    # run
+    solver(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, Plotter = Plotter)
+
+    return nothing
+end
+
+
+# test function that is called by test unit
+# tests if hydrostatic problem is solved exactly by pressure-robust methods
+function test(; Plotter = nothing)
+    xgrid = uniform_refine(grid_unitsquare_mixedgeometries())
+    testspaces = [[H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]
+                  ]
+    error = []
+    for FETypes in testspaces
+        push!(error, solver(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1))
+        println(&quot;FETypes = $FETypes   error = $(error[end])&quot;)
+    end
+
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D))
+    testspaces = [
+                  [H1P2B{2,2}, H1P1{1}, ReconstructionIdentity{HDIVRT1{2}}]
+                  ]
+    error = []
+    for FETypes in testspaces
+        push!(error, solver(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, Plotter = Plotter))
+        println(&quot;FETypes = $FETypes   error = $(error[end])&quot;)
+    end
+    return maximum(error)
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example222_PressureRobustness2D.main()
+┌ Info: ========== Solving Stokes problem (classical) ==========
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 54)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 16)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.314850e-16 | 3.907408e+00
+	      2   | 1.052450e-15 | 1.274009e+00
+	      3   | 1.754827e-15 | 1.579942e+00
+	      4   | 1.281053e-15 | 6.859809e-01
+	      5   | 1.454458e-15 | 4.477920e-01
+	      6   | 1.683222e-15 | 3.162627e-01
+	      7   | 1.823850e-15 | 3.153493e-01
+	      8   | 1.317148e-15 | 3.439853e-01
+	      9   | 1.277360e-15 | 2.469638e-01
+	     10   | 1.331823e-15 | 1.880776e-01
+	     11   | 1.092386e-15 | 2.331640e-01
+	     12   | 9.945640e-16 | 1.719761e-01
+	     13   | 1.420803e-15 | 1.236650e-01
+	     14   | 1.283616e-15 | 1.532406e-01
+	     15   | 1.127529e-15 | 6.657050e-02
+	     16   | 1.141009e-15 | 4.815822e-02
+	     17   | 8.908768e-16 | 3.579211e-02
+	     18   | 1.391551e-15 | 1.615671e-02
+	     19   | 1.072218e-15 | 1.255390e-02
+	     20   | 1.138280e-15 | 5.543517e-03
+┌ Warning: maxiterations reached!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1010
+
+┌ Warning: residual was larger than desired target_residual = 1.0e-10!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1413
+┌ Info: ========== Solving Stokes problem (p-robust) ==========
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 54)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 16)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.314850e-16 | 4.356218e+00
+	      2   | 1.211160e-15 | 3.427807e-01
+	      3   | 8.330386e-16 | 2.616497e-01
+	      4   | 1.148612e-15 | 2.423814e-01
+	      5   | 1.139814e-15 | 1.985077e-01
+	      6   | 1.133984e-15 | 1.334100e-01
+	      7   | 8.886731e-16 | 5.475030e-02
+	      8   | 1.116529e-15 | 2.884838e-02
+	      9   | 1.087285e-15 | 4.588907e-03
+	     10   | 1.021256e-15 | 2.626320e-03
+	     11   | 1.042799e-15 | 1.422550e-03
+	     12   | 1.945706e-15 | 7.924977e-04
+	     13   | 1.278900e-15 | 6.584443e-04
+	     14   | 8.183917e-16 | 6.852785e-04
+	     15   | 1.211504e-15 | 2.363456e-04
+	     16   | 9.694902e-16 | 1.426986e-05
+	     17   | 1.278405e-15 | 5.132736e-06
+	     18   | 1.577798e-15 | 1.535328e-06
+	     19   | 1.409727e-15 | 2.103704e-07
+	     20   | 9.725721e-16 | 6.903052e-08
+┌ Warning: maxiterations reached!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1010
+
+┌ Warning: residual was larger than desired target_residual = 1.0e-10!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1413
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation for u (discretised by H1BR{2}, ndofs = 54)
+[ Info: overall residual = 1.0250109496050049e-16
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation for p (discretised by L2P0{1} (broken), ndofs = 16)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem ==========
+└ 	Equation (1.1) H1-bestapproximation equation for u (discretised by H1BR{2}, ndofs = 54)
+[ Info: overall residual = 5.1453842086133395e-15
+┌ Info: ========== Solving Stokes problem (classical) ==========
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 186)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 64)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.754942e-16 | 2.498491e+00
+	      2   | 1.036040e-15 | 4.264672e-01
+	      3   | 1.193863e-15 | 1.466834e-01
+	      4   | 1.186031e-15 | 1.233691e-01
+	      5   | 1.415516e-15 | 2.575874e-02
+	      6   | 1.485036e-15 | 1.584287e-02
+	      7   | 1.230011e-15 | 1.023577e-02
+	      8   | 1.285138e-15 | 1.453320e-03
+	      9   | 1.163335e-15 | 5.978589e-04
+	     10   | 1.125926e-15 | 4.218207e-04
+	     11   | 1.215614e-15 | 1.503106e-04
+	     12   | 1.224335e-15 | 4.639181e-05
+	     13   | 1.240172e-15 | 7.099509e-06
+	     14   | 1.471013e-15 | 2.661706e-06
+	     15   | 1.105574e-15 | 9.314383e-07
+	     16   | 1.246112e-15 | 3.788933e-07
+	     17   | 1.087342e-15 | 2.119052e-07
+	     18   | 9.423203e-16 | 4.316282e-08
+	     19   | 8.747235e-16 | 1.071468e-08
+	     20   | 1.088186e-15 | 5.244142e-09
+┌ Warning: maxiterations reached!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1010
+
+┌ Warning: residual was larger than desired target_residual = 1.0e-10!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1413
+┌ Info: ========== Solving Stokes problem (p-robust) ==========
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 186)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 64)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.754942e-16 | 2.776075e+00
+	      2   | 1.598616e-15 | 4.423908e-02
+	      3   | 9.445666e-16 | 3.071828e-02
+	      4   | 1.247993e-15 | 3.349017e-02
+	      5   | 1.427350e-15 | 4.497733e-03
+	      6   | 9.967161e-16 | 1.488965e-03
+	      7   | 1.329920e-15 | 9.470225e-04
+	      8   | 1.039513e-15 | 3.312038e-04
+	      9   | 1.049802e-15 | 5.202048e-05
+	     10   | 1.055080e-15 | 1.296677e-05
+	     11   | 1.159217e-15 | 1.988109e-06
+	     12   | 1.056250e-15 | 5.441005e-07
+	     13   | 1.067919e-15 | 1.996136e-07
+	     14   | 1.130700e-15 | 4.121641e-08
+	     15   | 1.419218e-15 | 9.881627e-09
+	     16   | 9.170994e-16 | 3.023854e-09
+	     17   | 1.105261e-15 | 1.504866e-09
+	     18   | 1.106027e-15 | 4.526095e-10
+	     19   | 9.836996e-16 | 3.113909e-11
+
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation for u (discretised by H1BR{2}, ndofs = 186)
+[ Info: overall residual = 6.54920826833953e-17
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation for p (discretised by L2P0{1} (broken), ndofs = 64)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem ==========
+└ 	Equation (1.1) H1-bestapproximation equation for u (discretised by H1BR{2}, ndofs = 186)
+[ Info: overall residual = 7.478380510182351e-15
+┌ Info: ========== Solving Stokes problem (classical) ==========
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 690)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 256)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.929692e-16 | 1.399826e+00
+	      2   | 1.304454e-15 | 1.018196e-01
+	      3   | 1.073947e-15 | 1.753466e-02
+	      4   | 1.026098e-15 | 3.761296e-03
+	      5   | 1.077533e-15 | 6.421894e-04
+	      6   | 1.179234e-15 | 2.238335e-04
+	      7   | 1.047779e-15 | 1.034672e-04
+	      8   | 1.033151e-15 | 2.554042e-05
+	      9   | 1.164819e-15 | 1.210502e-05
+	     10   | 9.575920e-16 | 2.795871e-06
+	     11   | 1.036446e-15 | 3.545141e-07
+	     12   | 1.104044e-15 | 9.131551e-08
+	     13   | 1.016562e-15 | 2.694435e-08
+	     14   | 1.166730e-15 | 3.825650e-09
+	     15   | 9.589449e-16 | 1.085089e-09
+	     16   | 1.124221e-15 | 3.259654e-10
+	     17   | 1.045311e-15 | 7.760338e-11
+
+┌ Info: ========== Solving Stokes problem (p-robust) ==========
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 690)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 256)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.929692e-16 | 1.552312e+00
+	      2   | 1.269005e-15 | 1.953562e-03
+	      3   | 1.161780e-15 | 6.017487e-04
+	      4   | 1.204706e-15 | 2.624481e-04
+	      5   | 1.197019e-15 | 1.586135e-04
+	      6   | 1.190210e-15 | 4.238678e-05
+	      7   | 1.195871e-15 | 1.525526e-05
+	      8   | 1.222203e-15 | 6.411477e-06
+	      9   | 1.112520e-15 | 1.331816e-06
+	     10   | 1.116523e-15 | 1.827395e-07
+	     11   | 1.130454e-15 | 6.848769e-08
+	     12   | 1.170927e-15 | 2.056931e-08
+	     13   | 1.084961e-15 | 6.517358e-09
+	     14   | 1.209596e-15 | 1.560778e-09
+	     15   | 1.180698e-15 | 2.615670e-10
+	     16   | 1.323580e-15 | 5.853312e-11
+
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation for u (discretised by H1BR{2}, ndofs = 690)
+[ Info: overall residual = 3.686041872608621e-17
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation for p (discretised by L2P0{1} (broken), ndofs = 256)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem ==========
+└ 	Equation (1.1) H1-bestapproximation equation for u (discretised by H1BR{2}, ndofs = 690)
+[ Info: overall residual = 9.863757960523847e-15
+┌ Info: ========== Solving Stokes problem (classical) ==========
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 2658)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 1024)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 3.211160e-16 | 7.397901e-01
+	      2   | 1.328331e-15 | 1.830527e-02
+	      3   | 1.125155e-15 | 3.051583e-03
+	      4   | 1.075689e-15 | 5.731529e-04
+	      5   | 1.161970e-15 | 1.643458e-04
+	      6   | 1.054117e-15 | 3.841392e-05
+	      7   | 1.144389e-15 | 9.291532e-06
+	      8   | 1.134795e-15 | 1.794343e-06
+	      9   | 1.175383e-15 | 3.231484e-07
+	     10   | 1.175081e-15 | 9.050398e-08
+	     11   | 1.133366e-15 | 1.687268e-08
+	     12   | 1.116780e-15 | 3.822641e-09
+	     13   | 1.176669e-15 | 1.045798e-09
+	     14   | 1.097116e-15 | 1.989625e-10
+	     15   | 1.114348e-15 | 4.038362e-11
+
+┌ Info: ========== Solving Stokes problem (p-robust) ==========
+│ 	Equation (1.1) momentum equation for u (discretised by H1BR{2}, ndofs = 2658)
+└ 	Equation (1.2) incompressibility constraint for p (discretised by L2P0{1} (broken), ndofs = 1024)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 3.211160e-16 | 8.193835e-01
+	      2   | 1.422588e-15 | 1.666758e-04
+	      3   | 1.227437e-15 | 4.118692e-05
+	      4   | 1.147675e-15 | 1.348679e-05
+	      5   | 1.226231e-15 | 3.927236e-06
+	      6   | 1.161153e-15 | 1.255630e-06
+	      7   | 1.227143e-15 | 3.987222e-07
+	      8   | 1.171581e-15 | 7.610895e-08
+	      9   | 1.217832e-15 | 1.321940e-08
+	     10   | 1.205172e-15 | 3.357081e-09
+	     11   | 1.205719e-15 | 8.720961e-10
+	     12   | 1.162377e-15 | 1.426552e-10
+	     13   | 1.178619e-15 | 2.991991e-11
+
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation for u (discretised by H1BR{2}, ndofs = 2658)
+[ Info: overall residual = 2.0997653119037807e-17
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation for p (discretised by L2P0{1} (broken), ndofs = 1024)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem ==========
+└ 	Equation (1.1) H1-bestapproximation equation for u (discretised by H1BR{2}, ndofs = 2658)
+[ Info: overall residual = 2.1684846993878433e-14
+
+    ndofs   |     ||u-u_c||      order |     ||u-u_r||      order |     ||u-Πu||       order |
+============|==========================|==========================|==========================|
+        70  |     1.131e+00      0.00  |     6.883e-01      0.00  |     5.401e-02      0.00  |
+       250  |     6.404e-01      0.89  |     1.009e-01      3.02  |     1.276e-02      2.27  |
+       946  |     2.184e-01      1.62  |     6.151e-03      4.20  |     3.026e-03      2.16  |
+      3682  |     7.007e-02      1.67  |     9.825e-04      2.70  |     7.311e-04      2.09  |
+
+    ndofs   |     ||p-p_c||      order |     ||p-p_r||      order |     ||p-πp||       order |
+============|==========================|==========================|==========================|
+        70  |     1.595e+00      0.00  |     1.313e+00      0.00  |     1.153e+00      0.00  |
+       250  |     1.039e+00      0.67  |     5.913e-01      1.25  |     5.796e-01      1.08  |
+       946  |     4.477e-01      1.26  |     2.901e-01      1.07  |     2.900e-01      1.04  |
+      3682  |     1.939e-01      1.23  |     1.450e-01      1.02  |     1.450e-01      1.02  |
+
+    ndofs   |   ||∇(u-u_c)||     order |   ||∇(u-u_r)||     order |    ||∇(u-Su)||     order |
+============|==========================|==========================|==========================|
+        70  |     1.761e+01      0.00  |     9.635e+00      0.00  |     1.139e+00      0.00  |
+       250  |     1.462e+01      0.29  |     1.954e+00      2.51  |     5.666e-01      1.10  |
+       946  |     8.873e+00      0.75  |     3.876e-01      2.43  |     2.817e-01      1.05  |
+      3682  |     5.237e+00      0.78  |     1.511e-01      1.39  |     1.403e-01      1.03  |</code></pre><p><img src="../../images/Example222_PressureRobustness2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example221_StokesIterated2D/">« 221 : Stokes iterated penalty method 2D</a><a class="docs-footer-nextpage" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Monday 17 October 2022 20:10">Monday 17 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

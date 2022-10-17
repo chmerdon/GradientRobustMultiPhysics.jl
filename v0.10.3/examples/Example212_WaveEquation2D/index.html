@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>212 : Wave Equation 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li class="is-active"><a class="tocitem" href>212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li><li><a class="tocitem" href="../ExampleA11_NavierStokesFixpointIterations/">A11 : Navier-Stokes Fixed-point iterations</a></li><li><a class="tocitem" href="../ExampleA12_NavierStokesPeriodic/">A12 : Navier-Stokes-Problem with periodic boundary</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>212 : Wave Equation 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>212 : Wave Equation 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example212_WaveEquation2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Wave-Equation-2D"><a class="docs-heading-anchor" href="#:-Wave-Equation-2D">212 : Wave Equation 2D</a><a id=":-Wave-Equation-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Wave-Equation-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example212_WaveEquation2D.jl">source code</a>)</p><p>This example computes the transient solution of the wave equation</p><p class="math-container">\[\frac{\partial^2 u}{\partial t^2} = c \Delta u + f\]</p><p>with propagation speed <span>$c$</span> and source term <span>$f$</span>.</p><p>The equation can be rewritten into the system of two PDEs</p><p class="math-container">\[\begin{aligned}
+u_t &amp; = v\\
+v_t &amp; = c \Delta u + f.
+\end{aligned}\]</p><p>Here, we solve the equations on a circle domain with <span>$c = 1$</span> and <span>$f = 0$</span> for some given initial state and homogeneous Dirichlet boundary conditions.</p><pre><code class="language-julia hljs">module Example212_WaveEquation2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+using SimplexGridFactory
+using Triangulate
+
+const u0 = DataFunction((result,x) -&gt; (result[1] = 1 - x[1]^2 - x[2]^2), [1,2]; dependencies = &quot;X&quot;, bonus_quadorder = 2)
+const v0 = DataFunction([0.0])
+const f = DataFunction([0.0])
+const c = 1
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, order = 1, reflevel = 2, T = 0.65, timestep = 1//100, plot_step = 1//20, Plotter = nothing)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # initial grid and final time
+    xgrid = grid_circle([0,0],1.0, 2^(3+reflevel); maxvol = 4.0^-(2+reflevel))
+
+    # generate problem description and assign nonlinear operator and data
+    Problem = PDEDescription(&quot;Wave equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;2nd order to 1st order substitution&quot;)
+    add_unknown!(Problem; unknown_name = &quot;p&quot;, equation_name = &quot;wave equation&quot;)
+    add_operator!(Problem, [1,2], ReactionOperator(-1))
+    add_operator!(Problem, [2,1], LaplaceOperator(c))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
+    add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 2, [1], HomogeneousDirichletBoundary)
+
+    # generate FESpace and solution vector
+    FEType = H1Pk{1,2,order}
+    FES = FESpace{FEType}(xgrid)
+    Solution = FEVector([FES, FES])
+
+    # set initial solution
+    interpolate!(Solution[1], u0)
+
+    # prepare time-dependent solver
+    sys = TimeControlSolver(Problem, Solution, BackwardEuler; skip_update = [-1], timedependent_equations = [1,2], T_time = typeof(timestep))
+
+    # prepare plot
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    node_views = [nodevalues_view(Solution[1])[1], nodevalues_view(Solution[2])[1]]
+
+    # this function is called after each timestep
+    plot_step_count = Int(ceil(plot_step/timestep))
+    function do_after_each_timestep(sys)
+        if mod(sys.cstep,plot_step_count) == 0
+            scalarplot!(p[1,1], xgrid, node_views[1], levels = 7, title = &quot;u_h (t = $(Float64(sys.ctime)))&quot;)
+            scalarplot!(p[1,2], xgrid, node_views[2], levels = 7, title = &quot;v_h (t = $(Float64(sys.ctime)))&quot;)
+        end
+        return nothing
+    end
+
+    # use time control solver by GradientRobustMultiPhysics
+    advance_until_time!(sys, timestep, T; do_after_each_timestep = do_after_each_timestep)
+end
+
+function grid_circle(center, radius, n; maxvol = 0.1)
+	builder=SimplexGridBuilder(Generator=Triangulate)
+    points = [point!(builder, center[1]+radius*sin(t),center[2]+radius*cos(t)) for t in range(0,2π,length=n)]
+    for i=1:n-1
+        facet!(builder,points[i],points[i+1])
+    end
+    facet!(builder,points[end],points[1])
+    simplexgrid(builder,maxvolume = maxvol)
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example212_WaveEquation2D.main()
+┌ Info: ----- Preparing time control solver for Wave equation using BackwardEuler -----
+│ 	Equation (1.1) 2nd order to 1st order substitution for u (discretised by (H1Pk{1,2,1}, ndofs = 656), timedependent = yes
+└ 	Equation (1.2) wave equation for p (discretised by (H1Pk{1,2,1}, ndofs = 656), timedependent = yes
+[ Info: Advancing in time from 0.0 until 0.65
+
+	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
+	        |            |  (total)   |    (s)          u           p     
+	     1  | 1.0000e-02 | 6.4190e-15 | 2.165e+00 | 1.1819e-02  1.1819e+00 
+	     2  | 2.0000e-02 | 6.2420e-15 | 2.037e-02 | 2.2487e-02  1.0776e+00 
+	     3  | 3.0000e-02 | 6.1957e-15 | 1.831e-03 | 3.2291e-02  1.0138e+00 
+	     4  | 4.0000e-02 | 5.9783e-15 | 1.670e-03 | 4.1618e-02  9.8501e-01 
+	     5  | 5.0000e-02 | 6.5052e-15 | 1.677e-03 | 5.0719e-02  9.6744e-01 
+	     6  | 6.0000e-02 | 6.1456e-15 | 1.683e-03 | 5.9698e-02  9.5118e-01 
+	     7  | 7.0000e-02 | 6.3338e-15 | 1.648e-03 | 6.8584e-02  9.3756e-01 
+	     8  | 8.0000e-02 | 6.3753e-15 | 1.650e-03 | 7.7380e-02  9.2783e-01 
+	     9  | 9.0000e-02 | 6.3259e-15 | 1.627e-03 | 8.6082e-02  9.1989e-01 
+	    10  | 1.0000e-01 | 5.9353e-15 | 1.869e-03 | 9.4676e-02  9.1108e-01 
+	    11  | 1.1000e-01 | 5.9418e-15 | 1.632e-03 | 1.0315e-01  9.0044e-01 
+	    12  | 1.2000e-01 | 6.0772e-15 | 1.633e-03 | 1.1148e-01  8.8843e-01 
+	    13  | 1.3000e-01 | 5.4769e-15 | 1.655e-03 | 1.1968e-01  8.7591e-01 
+	    14  | 1.4000e-01 | 6.0231e-15 | 1.509e-03 | 1.2773e-01  8.6349e-01 
+	    15  | 1.5000e-01 | 5.8279e-15 | 1.677e-03 | 1.3563e-01  8.5141e-01 
+	    16  | 1.6000e-01 | 5.4941e-15 | 1.881e-03 | 1.4339e-01  8.3969e-01 
+	    17  | 1.7000e-01 | 5.7026e-15 | 1.655e-03 | 1.5101e-01  8.2821e-01 
+	    18  | 1.8000e-01 | 5.4125e-15 | 1.880e-03 | 1.5850e-01  8.1685e-01 
+	    19  | 1.9000e-01 | 5.6005e-15 | 1.668e-03 | 1.6584e-01  8.0552e-01 
+	    20  | 2.0000e-01 | 5.7824e-15 | 1.598e-03 | 1.7305e-01  7.9416e-01 
+	    21  | 2.1000e-01 | 5.7196e-15 | 1.810e-03 | 1.8011e-01  7.8276e-01 
+	    22  | 2.2000e-01 | 5.3832e-15 | 1.661e-03 | 1.8703e-01  7.7132e-01 
+	    23  | 2.3000e-01 | 5.4384e-15 | 1.673e-03 | 1.9380e-01  7.5984e-01 
+	    24  | 2.4000e-01 | 5.5919e-15 | 1.681e-03 | 2.0043e-01  7.4833e-01 
+	    25  | 2.5000e-01 | 5.6522e-15 | 1.662e-03 | 2.0692e-01  7.3680e-01 
+	    26  | 2.6000e-01 | 5.3248e-15 | 1.647e-03 | 2.1325e-01  7.2528e-01 
+	    27  | 2.7000e-01 | 5.5345e-15 | 1.649e-03 | 2.1945e-01  7.1378e-01 
+	    28  | 2.8000e-01 | 5.5996e-15 | 1.669e-03 | 2.2549e-01  7.0235e-01 
+	    29  | 2.9000e-01 | 5.4112e-15 | 1.710e-03 | 2.3138e-01  6.9100e-01 
+	    30  | 3.0000e-01 | 5.2979e-15 | 1.622e-03 | 2.3712e-01  6.7978e-01 
+	    31  | 3.1000e-01 | 5.2303e-15 | 1.643e-03 | 2.4272e-01  6.6868e-01 
+	    32  | 3.2000e-01 | 4.9371e-15 | 1.862e-03 | 2.4816e-01  6.5770e-01 
+	    33  | 3.3000e-01 | 5.2338e-15 | 1.660e-03 | 2.5345e-01  6.4686e-01 
+	    34  | 3.4000e-01 | 4.8974e-15 | 1.665e-03 | 2.5860e-01  6.3613e-01 
+	    35  | 3.5000e-01 | 5.1035e-15 | 1.838e-03 | 2.6359e-01  6.2552e-01 
+	    36  | 3.6000e-01 | 5.0597e-15 | 1.624e-03 | 2.6843e-01  6.1500e-01 
+	    37  | 3.7000e-01 | 4.4759e-15 | 1.634e-03 | 2.7312e-01  6.0458e-01 
+	    38  | 3.8000e-01 | 4.9569e-15 | 1.637e-03 | 2.7766e-01  5.9423e-01 
+	    39  | 3.9000e-01 | 4.7766e-15 | 1.630e-03 | 2.8205e-01  5.8396e-01 
+	    40  | 4.0000e-01 | 4.7911e-15 | 1.634e-03 | 2.8629e-01  5.7375e-01 
+	    41  | 4.1000e-01 | 4.2395e-15 | 1.663e-03 | 2.9038e-01  5.6361e-01 
+	    42  | 4.2000e-01 | 4.3717e-15 | 1.628e-03 | 2.9432e-01  5.5354e-01 
+	    43  | 4.3000e-01 | 4.1079e-15 | 1.640e-03 | 2.9811e-01  5.4351e-01 
+	    44  | 4.4000e-01 | 4.2179e-15 | 1.806e-03 | 3.0174e-01  5.3353e-01 
+	    45  | 4.5000e-01 | 4.1266e-15 | 1.873e-03 | 3.0522e-01  5.2358e-01 
+	    46  | 4.6000e-01 | 4.0741e-15 | 1.853e-03 | 3.0854e-01  5.1366e-01 
+	    47  | 4.7000e-01 | 3.7995e-15 | 1.628e-03 | 3.1170e-01  5.0376e-01 
+	    48  | 4.8000e-01 | 3.8925e-15 | 1.646e-03 | 3.1471e-01  4.9390e-01 
+	    49  | 4.9000e-01 | 3.7848e-15 | 1.840e-03 | 3.1756e-01  4.8410e-01 
+	    50  | 5.0000e-01 | 3.9534e-15 | 1.675e-03 | 3.2024e-01  4.7438e-01 
+	    51  | 5.1000e-01 | 3.5234e-15 | 1.643e-03 | 3.2277e-01  4.6478e-01 
+	    52  | 5.2000e-01 | 3.7755e-15 | 1.629e-03 | 3.2513e-01  4.5533e-01 
+	    53  | 5.3000e-01 | 3.4014e-15 | 1.887e-03 | 3.2732e-01  4.4609e-01 
+	    54  | 5.4000e-01 | 3.8182e-15 | 1.645e-03 | 3.2935e-01  4.3708e-01 
+	    55  | 5.5000e-01 | 3.7465e-15 | 1.851e-03 | 3.3121e-01  4.2836e-01 
+	    56  | 5.6000e-01 | 3.4825e-15 | 1.637e-03 | 3.3291e-01  4.1997e-01 
+	    57  | 5.7000e-01 | 3.5265e-15 | 1.654e-03 | 3.3444e-01  4.1195e-01 
+	    58  | 5.8000e-01 | 3.1576e-15 | 1.644e-03 | 3.3580e-01  4.0434e-01 
+	    59  | 5.9000e-01 | 3.2793e-15 | 1.846e-03 | 3.3700e-01  3.9717e-01 
+	    60  | 6.0000e-01 | 3.2031e-15 | 1.631e-03 | 3.3803e-01  3.9047e-01 
+	    61  | 6.1000e-01 | 3.2794e-15 | 1.635e-03 | 3.3889e-01  3.8423e-01 
+	    62  | 6.2000e-01 | 3.1949e-15 | 1.860e-03 | 3.3959e-01  3.7844e-01 
+	    63  | 6.3000e-01 | 3.3508e-15 | 1.641e-03 | 3.4012e-01  3.7309e-01 
+	    64  | 6.4000e-01 | 3.2204e-15 | 1.672e-03 | 3.4048e-01  3.6813e-01 
+	    65  | 6.5000e-01 | 3.0705e-15 | 1.833e-03 | 3.4067e-01  3.6355e-01 </code></pre><p><img src="../../images/Example212_WaveEquation2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_PoissonLshapeAdaptive2D/">« 210 : Poisson L-shape Adaptive Mesh Refinement</a><a class="docs-footer-nextpage" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Monday 17 October 2022 20:10">Monday 17 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
