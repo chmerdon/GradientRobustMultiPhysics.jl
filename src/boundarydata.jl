@@ -279,13 +279,13 @@ function boundarydata!(
         exclude_dofs = zeros(Ti,0)
         for j in BADirichletBoundaryOperators
             bdofs::Array{Int,1} = O[j].bdofs
+            regions = O[j].bregions
             if skip_enumerations == false
                 bdofs = []
                 mask = O[j].mask
                 if any(mask .== 0)
                     @warn "mask for BestapproximationDirichletBoundary not available (ignoring mask)"
                 end
-                regions = O[j].bregions
                 for bface = 1 : nbfaces
                     if xBFaceRegions[bface] in regions
                         for dof = 1 : num_targets(xBFaceDofs,bface)
