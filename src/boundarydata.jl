@@ -106,6 +106,8 @@ function boundarydata!(
             mask = O[j].mask
             if skip_enumerations == false
                 bdofs = []
+                ibfaces = []
+                ifaces = []
                 if any(mask .== 0)
                     # only some components are Dirichlet
                     @assert ncomponents == length(mask)
@@ -191,7 +193,6 @@ function boundarydata!(
         @debug "Int-DBnd = $InterDirichletBoundaryRegions"
     end
 
-
     # HOMOGENEOUS DIRICHLET BOUNDARY
     HomDirichletBoundaryRegions = []
     HomDirichletBoundaryOperators = []
@@ -249,7 +250,7 @@ function boundarydata!(
         end
     end
     if length(HomDirichletBoundaryOperators) > 0
-        @debug "Hom-DBnd = $HomDirichletBoundaryRegions (ndofs = $(length(hom_dofs)))"
+        @debug "Hom-DBnd = $HomDirichletBoundaryRegions"
     end
 
     # BEST-APPROXIMATION DIRICHLET BOUNDARY
@@ -273,17 +274,20 @@ function boundarydata!(
         exclude_dofs = zeros(Ti,0)
         for j in BADirichletBoundaryOperators
             bdofs::Array{Int,1} = O[j].bdofs
-            mask = O[j].mask
-            if any(mask .== 0)
-                @warn "mask for BestapproximationDirichletBoundary not available (ignoring mask)"
-            end
-            regions = O[j].bregions
-            for bface = 1 : nbfaces
-                if xBFaceRegions[bface] in regions
-                    for dof = 1 : num_targets(xBFaceDofs,bface)
-                        push!(bdofs,xBFaceDofs[dof,bface])
-                    end
-                end   
+            if skip_enumerations == false
+                bdofs = []
+                mask = O[j].mask
+                if any(mask .== 0)
+                    @warn "mask for BestapproximationDirichletBoundary not available (ignoring mask)"
+                end
+                regions = O[j].bregions
+                for bface = 1 : nbfaces
+                    if xBFaceRegions[bface] in regions
+                        for dof = 1 : num_targets(xBFaceDofs,bface)
+                            push!(bdofs,xBFaceDofs[dof,bface])
+                        end
+                    end   
+                end
             end
 
             ## assemble rhs for best-approximation problem
@@ -403,20 +407,21 @@ function boundarydata!(
                 ibfaces::Array{Int,1} = O[j].ibfaces
                 bdofs::Array{Int,1} = O[j].bdofs
                 if skip_enumerations == false
-                    if skip_enumerations == false
-                        for bface = 1 : nbfaces
-                            if xBFaceRegions[bface] in regions
-                                append!(ifaces,xBFaceFaces[bface])
-                                append!(ibfaces,bface)
-                                for dof = 1 : num_targets(xBFaceDofs,bface)
-                                    append!(bdofs, xBFaceDofs[dof,bface])
-                                end
+                    bdofs = []
+                    ibfaces = []
+                    ifaces = []
+                    for bface = 1 : nbfaces
+                        if xBFaceRegions[bface] in regions
+                            append!(ifaces,xBFaceFaces[bface])
+                            append!(ibfaces,bface)
+                            for dof = 1 : num_targets(xBFaceDofs,bface)
+                                append!(bdofs, xBFaceDofs[dof,bface])
                             end
-                        end    
-                        bdofs = Base.unique(bdofs)
-                        append!(fixed_dofs,bdofs)
-                        fixed_dofs = Base.unique(fixed_dofs)
-                    end
+                        end
+                    end    
+                    bdofs = Base.unique(bdofs)
+                    append!(fixed_dofs,bdofs)
+                    fixed_dofs = Base.unique(fixed_dofs)
                 end
                 if length(ifaces) > 0
                     interpolate!(Target, ON_BFACES, O[j].data; items = ibfaces, time = time)
