@@ -150,7 +150,6 @@ function boundarydata!(
                 O[j].bdofs = bdofs
             end
             if length(ifaces) > 0
-                @show "hallo"
                 if FE.broken == true || any(mask .== 0)
                     @show mask
                     # face interpolation expects continuous dofmaps
