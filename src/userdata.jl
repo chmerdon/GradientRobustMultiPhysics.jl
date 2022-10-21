@@ -156,12 +156,10 @@ function nodevalues(xgrid::ExtendableGrid{Tv,Ti}, UD::AbstractUserDataType; T = 
         UD.x = zeros(T,size(xCoordinates,1))
     end
     nodevals = zeros(T,UD.argsizes[1],nnodes)
+    if is_itemdependent(UD)
+        @warn "item dependence ignored in nodevalues for DataFunction"
+    end
     for j = 1 : nnodes
-        if is_itemdependent(UD)
-            UD.citem[1] = cell
-            UD.citem[2] = cell
-            UD.citem[3] = xCellRegions[cell]
-        end
         if is_xdependent(UD)
             UD.x .= view(xCoordinates,:,j)
         end

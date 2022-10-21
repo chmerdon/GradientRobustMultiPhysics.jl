@@ -483,7 +483,8 @@ function ExtendableGrids.interpolate!(
     source::FEVectorBlock{T2,Tv,Ti};
     operator = Identity,
     postprocess = NoAction(),
-    xtrafo = nothing, items = [],
+    xtrafo = nothing, 
+    items = [],
     not_in_domain_value = 1e30,
     start_cell = 1,
     only_localsearch = false,
@@ -530,9 +531,9 @@ function ExtendableGrids.interpolate!(
             end
             if xtrafo !== nothing
                 xtrafo(x_source, x)
-                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell, eps = eps)
+                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell, eps = eps, trybrute = !only_localsearch)
             else
-                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell, eps = eps)
+                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell, eps = eps, trybrute = !only_localsearch)
             end
                 evaluate!(result,PE,xref,cell)
             return nothing
@@ -542,15 +543,9 @@ function ExtendableGrids.interpolate!(
         function point_evaluation_arbitrarygrids!(result, x)
             if xtrafo !== nothing
                 xtrafo(x_source, x)
-                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell, eps = eps)
-                if cell == 0 && !only_localsearch
-                    cell = gFindBruteForce!(xref, CF, x_source)
-                end
+                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell, eps = eps, trybrute = !only_localsearch)
             else
-                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell, eps = eps)
-                if cell == 0 && !only_localsearch
-                    cell = gFindBruteForce!(xref, CF, x)
-                end
+                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell, eps = eps, trybrute = !only_localsearch)
             end
             if cell == 0
                 fill!(result, not_in_domain_value)

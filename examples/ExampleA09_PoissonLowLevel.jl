@@ -141,8 +141,7 @@ function assemble_rhs!(b::AbstractVector, FES::FESpace; f = nothing)
     end
 
     xgrid = FES.xgrid
-    # EG = xgrid[UniqueCellGeometries][1]
-    EG = Triangle2D
+    EG = xgrid[UniqueCellGeometries][1]
     FEType = eltype(FES)
 
     ## quadrature formula
@@ -161,34 +160,37 @@ function assemble_rhs!(b::AbstractVector, FES::FESpace; f = nothing)
     L2G::L2GTransformer{Float64, Int32, EG} = L2GTransformer(EG, xgrid, ON_CELLS)
 
     ## ASSEMBLY LOOP
-    bloc = zeros(Float64, ndofs4cell)
-    ncells::Int = num_cells(xgrid)
-    dof_j::Int = 0
-    x::Vector{Float64} = zeros(Float64, 2)
-    cellvolumes = xgrid[CellVolumes]
-
-    @time for cell = 1 : ncells
-        for j = 1 : ndofs4cell
-            ## right-hand side
-            temp = 0
-            for qp = 1 : nweights
-                ## get global x for quadrature point
-                update_trafo!(L2G, cell)
-                eval_trafo!(x, L2G, xref[qp])
-
-                ## (f, v_j)
-                temp += weights[qp] * idvals[1, j, qp] * fdata(x)[1]
+    function barrier(L2G::L2GTransformer{Tv,Ti,Tg,Tc}) where {Tv,Ti,Tg,Tc}
+        
+        bloc = zeros(Float64, ndofs4cell)
+        ncells::Int = num_cells(xgrid)
+        dof_j::Int = 0
+        x::Vector{Float64} = zeros(Float64, 2)
+        cellvolumes = xgrid[CellVolumes]
+        
+        @time for cell = 1 : ncells
+            for j = 1 : ndofs4cell
+                ## right-hand side
+                temp = 0
+                for qp = 1 : nweights
+                    ## get global x for quadrature point
+                    update_trafo!(L2G, cell)
+                    eval_trafo!(x, L2G, xref[qp])
+                    ## (f, v_j)
+                    temp += weights[qp] * idvals[1, j, qp] * fdata(x)[1]
             end
-            bloc[j] = temp
+                bloc[j] = temp
+            end
+            
+            for j = 1 : ndofs4cell
+                dof_j = CellDofs[j, cell]
+                b[dof_j] += bloc[j] * cellvolumes[cell]
+            end
+            
+            fill!(bloc, 0)
         end
-
-        for j = 1 : ndofs4cell
-            dof_j = CellDofs[j, cell]
-            b[dof_j] += bloc[j] * cellvolumes[cell]
-        end
-
-        fill!(bloc, 0)
     end
+    barrier(L2G)
 end
 
 function solve_poisson_lowlevel!(Solution; μ = 1)
