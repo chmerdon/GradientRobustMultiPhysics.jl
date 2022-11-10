@@ -22,10 +22,10 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 DiffResults = "^1.0.0"
-DocStringExtensions = "^0.8"
+DocStringExtensions = "^0.8,0.9"
 ExtendableGrids = "^0.9.12"
 Symbolics = "^4.6"
-ExtendableSparse = "0.6.6"
+ExtendableSparse = "0.6.6,0.7,0.8,0.9"
 ForwardDiff = "^0.10"
 GridVisualize = "^0.5"
 SparseDiffTools = "^1.19"
