@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>210 : Poisson L-shape Adaptive Mesh Refinement · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li class="is-active"><a class="tocitem" href>210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li><li><a class="tocitem" href="../ExampleA11_NavierStokesFixpointIterations/">A11 : Navier-Stokes Fixed-point iterations</a></li><li><a class="tocitem" href="../ExampleA12_NavierStokesPeriodic/">A12 : Navier-Stokes-Problem with periodic boundary</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>210 : Poisson L-shape Adaptive Mesh Refinement</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>210 : Poisson L-shape Adaptive Mesh Refinement</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example210_PoissonLshapeAdaptive2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Poisson-L-shape-Adaptive-Mesh-Refinement"><a class="docs-heading-anchor" href="#:-Poisson-L-shape-Adaptive-Mesh-Refinement">210 : Poisson L-shape Adaptive Mesh Refinement</a><a id=":-Poisson-L-shape-Adaptive-Mesh-Refinement-1"></a><a class="docs-heading-anchor-permalink" href="#:-Poisson-L-shape-Adaptive-Mesh-Refinement" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example210_PoissonLshapeAdaptive2D.jl">source code</a>)</p><p>This example computes the standard-residual error estimator for the <span>$H^1$</span> error <span>$e = u - u_h$</span> of some <span>$H^1$</span>-conforming approximation <span>$u_h$</span> to the solution <span>$u$</span> of some Poisson problem <span>$-\Delta u = f$</span> on an L-shaped domain, i.e.</p><p class="math-container">\[\eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>210 : Poisson L-shape Adaptive Mesh Refinement · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li class="is-active"><a class="tocitem" href>210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example219_AxisymmetricStokes25D/">219 : Axisymmetric Stokes (2.5D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li><li><a class="tocitem" href="../ExampleA11_NavierStokesFixpointIterations/">A11 : Navier-Stokes Fixed-point iterations</a></li><li><a class="tocitem" href="../ExampleA12_NavierStokesPeriodic/">A12 : Navier-Stokes-Problem with periodic boundary</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>210 : Poisson L-shape Adaptive Mesh Refinement</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>210 : Poisson L-shape Adaptive Mesh Refinement</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example210_PoissonLshapeAdaptive2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Poisson-L-shape-Adaptive-Mesh-Refinement"><a class="docs-heading-anchor" href="#:-Poisson-L-shape-Adaptive-Mesh-Refinement">210 : Poisson L-shape Adaptive Mesh Refinement</a><a id=":-Poisson-L-shape-Adaptive-Mesh-Refinement-1"></a><a class="docs-heading-anchor-permalink" href="#:-Poisson-L-shape-Adaptive-Mesh-Refinement" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example210_PoissonLshapeAdaptive2D.jl">source code</a>)</p><p>This example computes the standard-residual error estimator for the <span>$H^1$</span> error <span>$e = u - u_h$</span> of some <span>$H^1$</span>-conforming approximation <span>$u_h$</span> to the solution <span>$u$</span> of some Poisson problem <span>$-\Delta u = f$</span> on an L-shaped domain, i.e.</p><p class="math-container">\[\eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
 + \sum_{F \in \mathcal{F}} \lvert F \rvert \| [[\nabla u_h \cdot \mathbf{n}]] \|^2_{L^2(F)}\]</p><p>This example script showcases the evaluation of 2nd order derivatives like the Laplacian and adaptive mesh refinement.</p><pre><code class="language-julia hljs">module Example210_PoissonLshapeAdaptive2D
 
 using GradientRobustMultiPhysics
@@ -151,10 +151,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 21)
 [ Info: overall residual = 1.4936523181711914e-15
 	 ndof =  21
-@time  solver =  1.145277 seconds (1.11 M allocations: 61.183 MiB, 99.75% compilation time)
-@time  η eval =  1.856519 seconds (1.13 M allocations: 61.106 MiB, 3.19% gc time, 99.86% compilation time)
-@time  e eval =  3.179163 seconds (4.50 M allocations: 231.756 MiB, 1.96% gc time, 99.80% compilation time)
-@time  refine =  0.000056 seconds (40 allocations: 4.422 KiB)
+@time  solver =  1.213142 seconds (1.12 M allocations: 61.855 MiB, 99.70% compilation time)
+@time  η eval =  1.974955 seconds (1.15 M allocations: 61.771 MiB, 4.31% gc time, 99.82% compilation time)
+@time  e eval =  3.386121 seconds (4.50 M allocations: 232.108 MiB, 2.48% gc time, 99.77% compilation time)
+@time  refine =  0.000076 seconds (40 allocations: 4.422 KiB)
 	    η =  1.2064583360169907
 	    e =  0.20764746516243865
 ------- LEVEL 2
@@ -162,10 +162,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 41)
 [ Info: overall residual = 1.3933188378624375e-15
 	 ndof =  41
-@time  solver =  0.001930 seconds (1.99 k allocations: 251.516 KiB)
-@time  η eval =  0.000701 seconds (1.25 k allocations: 87.672 KiB)
-@time  e eval =  0.001646 seconds (10.31 k allocations: 423.875 KiB)
-@time  refine =  0.000035 seconds (41 allocations: 5.234 KiB)
+@time  solver =  0.002364 seconds (2.00 k allocations: 252.406 KiB)
+@time  η eval =  0.000875 seconds (1.25 k allocations: 87.656 KiB)
+@time  e eval =  0.001647 seconds (10.32 k allocations: 424.031 KiB)
+@time  refine =  0.000039 seconds (41 allocations: 5.234 KiB)
 	    η =  0.699363303780635
 	    e =  0.12808914488126533
 ------- LEVEL 3
@@ -173,10 +173,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 67)
 [ Info: overall residual = 2.225297973982015e-15
 	 ndof =  67
-@time  solver =  0.001597 seconds (2.14 k allocations: 306.398 KiB)
-@time  η eval =  0.000658 seconds (1.25 k allocations: 89.188 KiB)
-@time  e eval =  0.002431 seconds (17.11 k allocations: 678.938 KiB)
-@time  refine =  0.000035 seconds (41 allocations: 5.969 KiB)
+@time  solver =  0.001924 seconds (2.15 k allocations: 307.727 KiB)
+@time  η eval =  0.000805 seconds (1.25 k allocations: 89.172 KiB)
+@time  e eval =  0.002608 seconds (17.12 k allocations: 679.094 KiB)
+@time  refine =  0.000048 seconds (41 allocations: 5.969 KiB)
 	    η =  0.4521377020155059
 	    e =  0.08269561626760584
 ------- LEVEL 4
@@ -184,10 +184,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 93)
 [ Info: overall residual = 2.658456793691295e-15
 	 ndof =  93
-@time  solver =  0.001741 seconds (2.30 k allocations: 420.422 KiB)
-@time  η eval =  0.000734 seconds (1.25 k allocations: 90.734 KiB)
-@time  e eval =  0.003373 seconds (23.91 k allocations: 934.000 KiB)
-@time  refine =  0.000037 seconds (44 allocations: 9.703 KiB)
+@time  solver =  0.002064 seconds (2.30 k allocations: 422.125 KiB)
+@time  η eval =  0.000859 seconds (1.25 k allocations: 90.719 KiB)
+@time  e eval =  0.003423 seconds (23.92 k allocations: 934.156 KiB)
+@time  refine =  0.000043 seconds (44 allocations: 9.703 KiB)
 	    η =  0.30443683244048675
 	    e =  0.055370889821830006
 ------- LEVEL 5
@@ -195,10 +195,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 119)
 [ Info: overall residual = 2.608876467651255e-15
 	 ndof =  119
-@time  solver =  0.001969 seconds (2.45 k allocations: 482.062 KiB)
-@time  η eval =  0.000754 seconds (1.25 k allocations: 92.297 KiB)
-@time  e eval =  0.004227 seconds (30.71 k allocations: 1.161 MiB)
-@time  refine =  0.000038 seconds (45 allocations: 13.141 KiB)
+@time  solver =  0.002238 seconds (2.45 k allocations: 484.141 KiB)
+@time  η eval =  0.000855 seconds (1.25 k allocations: 92.281 KiB)
+@time  e eval =  0.004297 seconds (30.72 k allocations: 1.161 MiB)
+@time  refine =  0.000049 seconds (45 allocations: 13.141 KiB)
 	    η =  0.2203282351651376
 	    e =  0.03965969913361387
 ------- LEVEL 6
@@ -206,10 +206,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 145)
 [ Info: overall residual = 2.993423067201837e-15
 	 ndof =  145
-@time  solver =  0.002169 seconds (2.60 k allocations: 576.727 KiB)
-@time  η eval =  0.000868 seconds (1.25 k allocations: 93.797 KiB)
-@time  e eval =  0.005094 seconds (37.51 k allocations: 1.410 MiB)
-@time  refine =  0.000044 seconds (46 allocations: 14.766 KiB)
+@time  solver =  0.002434 seconds (2.60 k allocations: 579.273 KiB)
+@time  η eval =  0.000892 seconds (1.25 k allocations: 93.781 KiB)
+@time  e eval =  0.005191 seconds (37.52 k allocations: 1.410 MiB)
+@time  refine =  0.000051 seconds (46 allocations: 14.766 KiB)
 	    η =  0.1762744224302262
 	    e =  0.031324343916452085
 ------- LEVEL 7
@@ -217,10 +217,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 192)
 [ Info: overall residual = 2.675490285732667e-15
 	 ndof =  192
-@time  solver =  0.002668 seconds (2.90 k allocations: 679.086 KiB)
-@time  η eval =  0.000955 seconds (1.25 k allocations: 96.344 KiB)
-@time  e eval =  0.006512 seconds (49.41 k allocations: 1.846 MiB)
-@time  refine =  0.000055 seconds (46 allocations: 16.094 KiB)
+@time  solver =  0.002860 seconds (2.90 k allocations: 682.383 KiB)
+@time  η eval =  0.001092 seconds (1.25 k allocations: 96.328 KiB)
+@time  e eval =  0.006781 seconds (49.42 k allocations: 1.846 MiB)
+@time  refine =  0.000056 seconds (46 allocations: 16.094 KiB)
 	    η =  0.14099823000025685
 	    e =  0.024700543922290406
 ------- LEVEL 8
@@ -228,10 +228,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 257)
 [ Info: overall residual = 3.4385772580135446e-15
 	 ndof =  257
-@time  solver =  0.003157 seconds (3.23 k allocations: 911.242 KiB)
-@time  η eval =  0.001161 seconds (1.25 k allocations: 100.547 KiB)
-@time  e eval =  0.008791 seconds (67.21 k allocations: 2.497 MiB)
-@time  refine =  0.000060 seconds (46 allocations: 18.188 KiB)
+@time  solver =  0.003331 seconds (3.24 k allocations: 915.727 KiB)
+@time  η eval =  0.001188 seconds (1.25 k allocations: 100.531 KiB)
+@time  e eval =  0.009066 seconds (67.22 k allocations: 2.497 MiB)
+@time  refine =  0.000068 seconds (46 allocations: 18.188 KiB)
 	    η =  0.11095486274991237
 	    e =  0.019413443504801113
 ------- LEVEL 9
@@ -239,10 +239,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 325)
 [ Info: overall residual = 4.034667356574736e-15
 	 ndof =  325
-@time  solver =  0.003946 seconds (3.60 k allocations: 1.061 MiB)
-@time  η eval =  0.001365 seconds (1.25 k allocations: 104.844 KiB)
-@time  e eval =  0.011101 seconds (85.21 k allocations: 3.158 MiB)
-@time  refine =  0.000074 seconds (49 allocations: 31.703 KiB)
+@time  solver =  0.003996 seconds (3.60 k allocations: 1.066 MiB)
+@time  η eval =  0.001389 seconds (1.25 k allocations: 104.828 KiB)
+@time  e eval =  0.011618 seconds (85.22 k allocations: 3.158 MiB)
+@time  refine =  0.000089 seconds (49 allocations: 31.703 KiB)
 	    η =  0.08461684077566957
 	    e =  0.014148054973920323
 ------- LEVEL 10
@@ -250,10 +250,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 411)
 [ Info: overall residual = 4.948156636138679e-15
 	 ndof =  411
-@time  solver =  0.004738 seconds (3.99 k allocations: 1.308 MiB)
-@time  η eval =  0.001587 seconds (1.25 k allocations: 109.812 KiB)
-@time  e eval =  0.014112 seconds (109.06 k allocations: 4.030 MiB)
-@time  refine =  0.000090 seconds (50 allocations: 41.547 KiB)
+@time  solver =  0.004810 seconds (3.99 k allocations: 1.315 MiB)
+@time  η eval =  0.001607 seconds (1.25 k allocations: 109.797 KiB)
+@time  e eval =  0.014824 seconds (109.07 k allocations: 4.031 MiB)
+@time  refine =  0.000106 seconds (50 allocations: 41.547 KiB)
 	    η =  0.0645153841353086
 	    e =  0.010765787226538601
 ------- LEVEL 11
@@ -261,10 +261,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 559)
 [ Info: overall residual = 5.5542987830150956e-15
 	 ndof =  559
-@time  solver =  0.005981 seconds (4.89 k allocations: 1.755 MiB)
-@time  η eval =  0.002024 seconds (1.25 k allocations: 118.688 KiB)
-@time  e eval =  0.019320 seconds (148.51 k allocations: 5.477 MiB)
-@time  refine =  0.000120 seconds (51 allocations: 46.703 KiB)
+@time  solver =  0.006227 seconds (4.89 k allocations: 1.764 MiB)
+@time  η eval =  0.002029 seconds (1.25 k allocations: 118.672 KiB)
+@time  e eval =  0.020199 seconds (148.52 k allocations: 5.477 MiB)
+@time  refine =  0.000127 seconds (51 allocations: 46.703 KiB)
 	    η =  0.0484883114791384
 	    e =  0.00803496729925074
 ------- LEVEL 12
@@ -272,10 +272,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 765)
 [ Info: overall residual = 6.169348751743725e-15
 	 ndof =  765
-@time  solver =  0.007793 seconds (6.30 k allocations: 2.322 MiB)
-@time  η eval =  0.002634 seconds (1.30 k allocations: 131.422 KiB)
-@time  e eval =  0.026689 seconds (205.41 k allocations: 7.560 MiB)
-@time  refine =  0.000153 seconds (51 allocations: 52.703 KiB)
+@time  solver =  0.008103 seconds (6.58 k allocations: 2.338 MiB)
+@time  η eval =  0.002583 seconds (1.30 k allocations: 131.406 KiB)
+@time  e eval =  0.027955 seconds (205.42 k allocations: 7.560 MiB)
+@time  refine =  0.000154 seconds (51 allocations: 52.703 KiB)
 	    η =  0.035315806763950325
 	    e =  0.005826860657684107
 ------- LEVEL 13
@@ -283,10 +283,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 1049)
 [ Info: overall residual = 7.238953480233113e-15
 	 ndof =  1049
-@time  solver =  0.010244 seconds (8.22 k allocations: 3.089 MiB)
-@time  η eval =  0.003383 seconds (1.51 k allocations: 151.469 KiB)
-@time  e eval =  0.036676 seconds (283.86 k allocations: 10.432 MiB)
-@time  refine =  0.000197 seconds (52 allocations: 76.969 KiB)
+@time  solver =  0.010696 seconds (10.34 k allocations: 3.138 MiB)
+@time  η eval =  0.003327 seconds (1.51 k allocations: 151.453 KiB)
+@time  e eval =  0.038191 seconds (283.87 k allocations: 10.432 MiB)
+@time  refine =  0.000204 seconds (52 allocations: 76.969 KiB)
 	    η =  0.026161112362158154
 	    e =  0.0043057688215345355
 ------- LEVEL 14
@@ -294,10 +294,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 1407)
 [ Info: overall residual = 8.740296687013293e-15
 	 ndof =  1407
-@time  solver =  0.013271 seconds (11.35 k allocations: 3.955 MiB)
-@time  η eval =  0.004488 seconds (3.85 k allocations: 208.797 KiB)
-@time  e eval =  0.050666 seconds (395.41 k allocations: 14.254 MiB)
-@time  refine =  0.000254 seconds (55 allocations: 116.109 KiB)
+@time  solver =  0.014421 seconds (20.68 k allocations: 4.120 MiB)
+@time  η eval =  0.004489 seconds (3.85 k allocations: 208.781 KiB)
+@time  e eval =  0.053738 seconds (395.42 k allocations: 14.255 MiB)
+@time  refine =  0.000268 seconds (55 allocations: 116.109 KiB)
 	    η =  0.0191323212261534
 	    e =  0.0031282484960664624
 ------- LEVEL 15
@@ -305,10 +305,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 1899)
 [ Info: overall residual = 1.0322101255211536e-14
 	 ndof =  1899
-@time  solver =  0.017455 seconds (15.76 k allocations: 5.445 MiB)
-@time  η eval =  0.005783 seconds (7.32 k allocations: 292.031 KiB)
-@time  e eval =  0.069527 seconds (551.44 k allocations: 19.570 MiB)
-@time  refine =  0.000324 seconds (55 allocations: 130.859 KiB)
+@time  solver =  0.019011 seconds (35.78 k allocations: 5.781 MiB)
+@time  η eval =  0.005790 seconds (7.32 k allocations: 292.016 KiB)
+@time  e eval =  0.071040 seconds (551.45 k allocations: 19.570 MiB)
+@time  refine =  0.000355 seconds (55 allocations: 130.859 KiB)
 	    η =  0.014214742705189156
 	    e =  0.0023170782126997426
 ------- LEVEL 16
@@ -316,10 +316,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 2632)
 [ Info: overall residual = 1.2140792147949145e-14
 	 ndof =  2632
-@time  solver =  0.024000 seconds (22.39 k allocations: 6.660 MiB)
-@time  η eval =  0.007795 seconds (12.51 k allocations: 416.703 KiB)
-@time  e eval =  0.105758 seconds (783.39 k allocations: 27.470 MiB)
-@time  refine =  0.000417 seconds (57 allocations: 189.391 KiB)
+@time  solver =  0.026144 seconds (58.08 k allocations: 7.244 MiB)
+@time  η eval =  0.007805 seconds (12.51 k allocations: 416.688 KiB)
+@time  e eval =  0.102932 seconds (783.39 k allocations: 27.470 MiB)
+@time  refine =  0.000508 seconds (57 allocations: 189.391 KiB)
 	    η =  0.010307927782974497
 	    e =  0.0016816677513625965
 ------- LEVEL 17
@@ -327,10 +327,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 3586)
 [ Info: overall residual = 1.5636819423737937e-14
 	 ndof =  3586
-@time  solver =  0.031699 seconds (30.98 k allocations: 8.795 MiB)
-@time  η eval =  0.010712 seconds (19.25 k allocations: 577.297 KiB)
-@time  e eval =  0.202005 seconds (1.08 M allocations: 37.720 MiB, 30.56% gc time)
-@time  refine =  0.001043 seconds (65 allocations: 280.891 KiB)
+@time  solver =  0.035336 seconds (87.30 k allocations: 9.709 MiB)
+@time  η eval =  0.010624 seconds (19.25 k allocations: 577.281 KiB)
+@time  e eval =  0.142737 seconds (1.08 M allocations: 37.717 MiB)
+@time  refine =  0.000620 seconds (65 allocations: 280.891 KiB)
 	    η =  0.007627208670980003
 	    e =  0.001243246036489646
 ------- LEVEL 18
@@ -338,10 +338,10 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 4834)
 [ Info: overall residual = 1.6636187543642074e-14
 	 ndof =  4834
-@time  solver =  0.042100 seconds (41.91 k allocations: 12.087 MiB)
-@time  η eval =  0.014036 seconds (28.20 k allocations: 790.969 KiB)
-@time  e eval =  0.172784 seconds (1.48 M allocations: 51.288 MiB)
-@time  refine =  0.000726 seconds (66 allocations: 420.141 KiB)
+@time  solver =  0.116014 seconds (125.40 k allocations: 13.436 MiB, 58.23% gc time)
+@time  η eval =  0.014035 seconds (28.20 k allocations: 790.953 KiB)
+@time  e eval =  0.180985 seconds (1.48 M allocations: 51.288 MiB)
+@time  refine =  0.000829 seconds (66 allocations: 420.141 KiB)
 	    η =  0.005664231339870221
 	    e =  0.0009217759234222433
 ------- LEVEL 19
@@ -349,9 +349,9 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 6545)
 [ Info: overall residual = 1.9561420956744195e-14
 	 ndof =  6545
-@time  solver =  0.056544 seconds (57.24 k allocations: 16.811 MiB)
-@time  η eval =  0.018408 seconds (40.46 k allocations: 1.058 MiB)
-@time  e eval =  0.255539 seconds (2.03 M allocations: 69.832 MiB)
+@time  solver =  0.063214 seconds (178.25 k allocations: 18.757 MiB)
+@time  η eval =  0.018721 seconds (40.46 k allocations: 1.058 MiB)
+@time  e eval =  0.253499 seconds (2.03 M allocations: 69.832 MiB)
 
     ndofs   |   || u - u_h ||    order | || ∇(u - u_h) ||   order |         η          order |
 ============|==========================|==========================|==========================|
@@ -373,4 +373,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
       2632  |     1.699e-05      3.05  |     1.682e-03      1.96  |     1.031e-02      1.97  |
       3586  |     1.087e-05      2.89  |     1.243e-03      1.95  |     7.627e-03      1.95  |
       4834  |     6.560e-06      3.38  |     9.218e-04      2.00  |     5.664e-03      1.99  |
-      6545  |     3.840e-06      3.53  |     6.643e-04      2.16  |     4.105e-03      2.12  |</code></pre><p><img src="../../images/Example210_PoissonLshapeAdaptive2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example209_FaceLagrangeMultiplier2D/">« 209 : Lagrange Multiplier on Faces</a><a class="docs-footer-nextpage" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Friday 21 October 2022 11:57">Friday 21 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      6545  |     3.840e-06      3.53  |     6.643e-04      2.16  |     4.105e-03      2.12  |</code></pre><p><img src="../../images/Example210_PoissonLshapeAdaptive2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example209_FaceLagrangeMultiplier2D/">« 209 : Lagrange Multiplier on Faces</a><a class="docs-footer-nextpage" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Friday 9 December 2022 20:50">Friday 9 December 2022</span>. Using Julia version 1.8.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
