@@ -46,7 +46,7 @@ where the usual Cartesian differential operators can be used.
 
 =#
 
-module Example219_AxisysmmetricStokes25D
+module Example219_AxisymmetricStokes25D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
