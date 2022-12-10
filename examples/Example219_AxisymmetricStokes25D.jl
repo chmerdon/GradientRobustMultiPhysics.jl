@@ -4,7 +4,7 @@
 ([source code](SOURCE_URL))
 
 This example solves the 3D Hagen-Poiseuille flow via 
-the 2.5D exisymmetric formulation of the Stokes problem
+the 2.5D axisymmetric formulation of the Stokes problem
 that seeks a velocity ``\mathbf{u} = (u_z, u_r)``
 and pressure ``p`` such that
 ```math
@@ -37,7 +37,7 @@ a(u,v) + b(p,v) & = (f,v) \\
 with the bilinear forms
 ```math
 \begin{aligned}
-a(u,v) := \int_{\Omega} \left( \nabla u : \nabla v + r^{-2} u_r v_r \right) r dr dz
+a(u,v) := \int_{\Omega} \left( \nabla u : \nabla v + r^{-2} u_r v_r \right) r dr dz\\
 b(q,v) := \int_{\Omega} q \left( \mathrm{div}(v) + r^{-1} u_r \right) r dr dz
 \end{aligned}
 ```
@@ -55,7 +55,7 @@ using GridVisualize
 ## data for axisymmetric Hagen-Poiseuille flow
 function exact_pressure!(μ)
     function closure(result,x)
-        result[1] = μ*(-2*x[1]+1.0)
+        result[1] = 4*μ*(1-x[1])
     end
 end
 function exact_velocity!(result,x)
@@ -67,7 +67,7 @@ end
 function ASLaplaceOperator(μ)
     function action_kernel!(result, input, x)
         r = x[2]
-        ## input = [u,∇u] as a vector of length 6
+        ## input = [u,∇u] = [u_z,u_r,du_z/dz, du_z/dr, du_r/dz, du_r/dr]
         result[1] = 0
         result[2] = μ/r * input[2]
         result[3] = μ*r * input[3]
@@ -77,21 +77,21 @@ function ASLaplaceOperator(μ)
         ## result will be multiplied with [v,∇v]
         return nothing
     end
-    action = Action(action_kernel!, [6,6]; dependencies = "X", bonus_quadorder = 4)
-    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇#A,∇#T) + (α#A + β⋅∇#A, #T)", transposed_assembly = true)
+    action = Action(action_kernel!, [6,6]; dependencies = "X", bonus_quadorder = 2)
+    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action)
 end
 
 ## custom bilinearform b for the axisymmetric Stokes problem
 function ASPressureOperator()
     function action_kernel!(result, input, x)
         r = x[2]
-        ## input = [u,divu] as a vector of length 3
+        ## input = [u,divu] = [u_z,u_r,du_r/dr + du_z/dz]
         result[1] = -(r*input[3] + input[2])
         ## result will be multiplied with [q]
         return nothing
     end
-    action = Action(action_kernel!, [1,3]; dependencies = "X", bonus_quadorder = 4)
-    return BilinearForm([OperatorPair{Identity,Divergence},Identity], action; transposed_assembly = false)
+    action = Action(action_kernel!, [1,3]; dependencies = "X", bonus_quadorder = 2)
+    return BilinearForm([OperatorPair{Identity,Divergence},Identity], action)
 end
 function ASPressureOperatorTransposed()
     function action_kernel!(result, input, x)
@@ -103,8 +103,8 @@ function ASPressureOperatorTransposed()
         ## result will be multiplied with [v,divv]
         return nothing
     end
-    action = Action(action_kernel!, [3,1]; dependencies = "X", bonus_quadorder = 4)
-    return BilinearForm([Identity,OperatorPair{Identity,Divergence}], action; transposed_assembly = false)
+    action = Action(action_kernel!, [3,1]; dependencies = "X", bonus_quadorder = 2)
+    return BilinearForm([Identity,OperatorPair{Identity,Divergence}], action)
 end
 
 ## everything is wrapped in a main function
@@ -131,9 +131,10 @@ function main(; verbosity = 0, Plotter = nothing, μ = 1)
     add_operator!(Problem, [1,2], ASPressureOperator())
     add_operator!(Problem, [2,1], ASPressureOperatorTransposed())
 
-    add_constraint!(Problem, FixedIntegralMean(2,0))
-    add_boundarydata!(Problem, 1, [1,2,4], BestapproxDirichletBoundary; data = u)
+    ## boundary conditions
+    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = u)
     add_boundarydata!(Problem, 1, [3], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = (0,1)) 
     @show Problem
 
     ## generate FESpaces
@@ -142,6 +143,12 @@ function main(; verbosity = 0, Plotter = nothing, μ = 1)
 
     ## solve
     solve!(Solution, Problem)
+
+    ## calculate L2 error
+    L2ErrorV = L2ErrorIntegrator(u, Identity)
+    L2ErrorP = L2ErrorIntegrator(p, Identity)
+    println("|| u - u_h || = $(sqrt(evaluate(L2ErrorV,Solution[1])))")
+    println("|| p - p_h || = $(sqrt(evaluate(L2ErrorP,Solution[2])))")
 
     ## plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
