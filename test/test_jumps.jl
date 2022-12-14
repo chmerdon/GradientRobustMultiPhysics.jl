@@ -35,7 +35,7 @@ function test_qpmatchup(xgrid)
                     pointerror += (xleft[k] - xright[k])^2
                 end
                 if pointerror > 1e-14
-                    @error "orientations = $orientation4dofitem xleft = $xleft right = $xright error = $pointerror"
+                    @error "orientations = $(AM.orientation4dofitem) xleft = $xleft right = $xright error = $pointerror"
                 end
                 maxerror = max(maxerror, pointerror)
             end

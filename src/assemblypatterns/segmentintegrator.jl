@@ -21,12 +21,14 @@ function SegmentIntegrator{T}(EG,FEOP,SG,FES::FESpace{Tv,Ti,FEType,FEAT}, FEB::F
     dimfill = dim_element(EG) - dim_element(SG)
     @assert dimfill >= 0
 
+    xrefSG = deepcopy(qf_SG.xref)
     if dimfill > 0
-        xref = Array{Array{T,1},1}(undef,length(qf_SG.xref))
+        new_xref = Array{Array{T,1},1}(undef,length(qf_SG.xref))
         for i = 1 : length(qf_SG.xref)
-            xref[i] = zeros(T,dim_element(EG))
+            new_xref[i] = zeros(T,dim_element(EG))
         end
-        FEBE = FEEvaluator(FES, FEOP, xref; T = T, AT = AT)
+        qf_aux = SQuadratureRule{Float64, EG, dim_element(EG), length(qf_SG.xref)}("aux", new_xref, qf_SG.w)
+        FEBE = FEEvaluator(FES, FEOP, qf_aux; T = T, AT = AT)
     else
         FEBE = FEEvaluator(FES, FEOP, qf_SG; T = T, AT = AT)
     end
@@ -40,7 +42,7 @@ function SegmentIntegrator{T}(EG,FEOP,SG,FES::FESpace{Tv,Ti,FEType,FEAT}, FEB::F
     end
     cvol::T = 0
 
-    return SegmentIntegrator{T,Tv,Ti,FEType,EG,FEOP,AT,SG,typeof(action)}(FEBE, FEB, DM, action, action_input, Ref(cvol), qf_SG.xref, qf_SG)
+    return SegmentIntegrator{T,Tv,Ti,FEType,EG,FEOP,AT,SG,typeof(action)}(FEBE, FEB, DM, action, action_input, Ref(cvol), xrefSG, qf_SG)
 end
 
 function integrate!(
@@ -72,6 +74,7 @@ function integrate!(
     
     # update operator eveluation on item
     update_basis!(FEBE, item)
+    @show 
 
     # compute volume
     action = SI.action
@@ -92,7 +95,7 @@ function integrate!(
     # do the integration
     qf = SI.qf
     action_input::Array{T,1} = SI.action_input
-    action_result::Array{T,1} = SI.action_result
+#    action_result::Array{T,1} = SI.action_result
     coeffs::Array{T,1} = FEB.entries
     basisvals::Union{SharedCValView{T},Array{T,3}} = FEBE.cvals
     xItemDofs::DofMapTypes{Int32} = SI.xItemDofs

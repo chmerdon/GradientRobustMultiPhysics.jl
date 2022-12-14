@@ -763,6 +763,46 @@ function run_timeintegration_tests()
     end
 end
 
+function run_segmentintegrator_tests()
+    
+    ## initial grid
+    xgrid = grid_unitsquare(Triangle2D)
+    
+    ## Taylor--Hood FESpace
+    FES = FESpace{H1P2{2,2}}(xgrid)
+    
+    ## Hegen-Poiseuille flow
+    u = DataFunction((result,x) -> (
+            result[1] = x[2]*(1.0-x[2]);
+            result[2] = 0.0;),
+        [2,2]; name = "u", dependencies = "X", bonus_quadorder = 2)
+    
+    ## interpolate
+    uh = FEVector(FES)
+    interpolate!(uh[1], u)
+    
+    ## init segment integrator
+    seg_integrator = SegmentIntegrator{Float64}(Triangle2D, Identity, Edge1D, FES, uh[1], 2)
+
+    ## integrate along line [1/4,1/4] to [3/4,1/4] in first triangle
+    ## exact integral should be [3//36,0]
+    result = zeros(Float64, 2)
+    world = Array{Array{Float64,1},1}([[1//4,1//4], [3//4,1//4]])
+    bary = Array{Array{Float64,1},1}([[1//4,1//2], [3//4, 1//2]])
+    integrate!(result, seg_integrator, world, bary, 1)
+    error1 = sqrt((result[1] - 3//32)^2 + result[2]^2)
+    @info result, error1
+    
+    ## integrate along line [1/2, 0] to [1/2, 1/2]
+    ## exact integral should be [1//12, 0]
+    world = Array{Array{Float64,1},1}([[1//2,0], [1//2, 1//2]])
+    bary = Array{Array{Float64,1},1}([[1//2,0], [1//2, 1//1]])
+    integrate!(result, seg_integrator, world, bary, 1)
+    error2 = sqrt((result[1] - 1//12)^2 + result[2]^2)
+    @info result, error2
+    @test max(error1,error2) < tolerance
+end
+
 
 function run_examples()
     println("\n")
@@ -816,6 +856,7 @@ function run_all_tests()
         run_basic_fe_tests()
         run_timeintegration_tests()
         run_stokes_tests()
+        run_segmentintegrator_tests()
         run_examples()
     end
 end
