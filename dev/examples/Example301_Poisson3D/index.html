@@ -70,44 +70,44 @@ end
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example301_Poisson3D.main()
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation for u (discretised by H1P1{1}, ndofs = 27)
-[ Info: assembly/solver time = 9.693555224/0.000298801 (s)
+[ Info: assembly/solver time = 8.757791922/0.000296724 (s)
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 2.5090e+00 	| 5.7929e+06 	| 5.7929e+06 	| (∇u,∇v)
-└ 	RHS[1,][1] 	| 5.4258e+00 	| 2.6373e+08 	| 2.6373e+08 	| (Δ(u), id(v))
+│ 	LHS[1,1][1] 	| 2.3693e+00 	| 5.7929e+06 	| 5.7929e+06 	| (∇u,∇v)
+└ 	RHS[1,][1] 	| 4.8648e+00 	| 2.6386e+08 	| 2.6386e+08 	| (Δ(u), id(v))
 [ Info: overall residual = 5.551115123125783e-17
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation for u (discretised by H1P1{1}, ndofs = 125)
-[ Info: assembly/solver time = 0.01031005/0.000836304 (s)
+[ Info: assembly/solver time = 0.010989576/0.000811694 (s)
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 1.7482e-03 	| 8.7040e+04 	| 8.7040e+04 	| (∇u,∇v)
-└ 	RHS[1,][1] 	| 3.3631e-03 	| 1.0015e+06 	| 1.0015e+06 	| (Δ(u), id(v))
+│ 	LHS[1,1][1] 	| 1.8916e-03 	| 8.7040e+04 	| 8.7040e+04 	| (∇u,∇v)
+└ 	RHS[1,][1] 	| 3.3108e-03 	| 1.0015e+06 	| 1.0015e+06 	| (Δ(u), id(v))
 [ Info: overall residual = 3.561045489399806e-16
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation for u (discretised by H1P1{1}, ndofs = 729)
-[ Info: assembly/solver time = 0.077129873/0.007378636 (s)
+[ Info: assembly/solver time = 0.085970479/0.007865013 (s)
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 1.2594e-02 	| 6.7494e+05 	| 6.7494e+05 	| (∇u,∇v)
-└ 	RHS[1,][1] 	| 2.4558e-02 	| 8.1757e+06 	| 8.1757e+06 	| (Δ(u), id(v))
-[ Info: overall residual = 6.528517777402067e-16
+│ 	LHS[1,1][1] 	| 1.2919e-02 	| 6.7494e+05 	| 6.7494e+05 	| (∇u,∇v)
+└ 	RHS[1,][1] 	| 2.3839e-02 	| 8.1757e+06 	| 8.1757e+06 	| (Δ(u), id(v))
+[ Info: overall residual = 7.020855288573299e-16
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation for u (discretised by H1P1{1}, ndofs = 4913)
-[ Info: assembly/solver time = 0.712048649/0.215871846 (s)
+[ Info: assembly/solver time = 0.776906382/0.123642553 (s)
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 1.0201e-01 	| 3.5714e+06 	| 3.5714e+06 	| (∇u,∇v)
-└ 	RHS[1,][1] 	| 2.1384e-01 	| 6.5634e+07 	| 6.5634e+07 	| (Δ(u), id(v))
-[ Info: overall residual = 1.2487248500409411e-15
+│ 	LHS[1,1][1] 	| 1.0406e-01 	| 3.5714e+06 	| 3.5714e+06 	| (∇u,∇v)
+└ 	RHS[1,][1] 	| 2.6240e-01 	| 6.5635e+07 	| 6.5635e+07 	| (Δ(u), id(v))
+[ Info: overall residual = 1.181573395335203e-15
 
     ndofs   |   || u - u_h ||    order | || ∇(u - u_h) ||   order |
 ============|==========================|==========================|
         27  |     3.386e-02      0.00  |     4.383e-01      0.00  |
        125  |     8.973e-03      2.60  |     2.259e-01      1.30  |
        729  |     2.281e-03      2.33  |     1.138e-01      1.17  |
-      4913  |     5.737e-04      2.17  |     5.702e-02      1.09  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example260_CahnHilliard2D/">« 260 : Cahn-Hilliard Equations 2D</a><a class="docs-footer-nextpage" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Saturday 10 December 2022 13:58">Saturday 10 December 2022</span>. Using Julia version 1.8.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      4913  |     5.737e-04      2.17  |     5.702e-02      1.09  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example260_CahnHilliard2D/">« 260 : Cahn-Hilliard Equations 2D</a><a class="docs-footer-nextpage" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Wednesday 14 December 2022 15:48">Wednesday 14 December 2022</span>. Using Julia version 1.8.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

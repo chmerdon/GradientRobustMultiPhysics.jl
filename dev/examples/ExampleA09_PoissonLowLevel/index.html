@@ -268,55 +268,55 @@ end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA09_PoissonLowLevel.main()
 [ Info: preparing celldofs
-  0.003683 seconds (53 allocations: 19.711 KiB, 94.70% compilation time)
+  0.003760 seconds (53 allocations: 19.711 KiB, 93.89% compilation time)
 [ Info: preparing bfacedofs
-  0.005703 seconds (70 allocations: 9.836 KiB, 96.81% compilation time)
+  0.005543 seconds (70 allocations: 9.836 KiB, 96.79% compilation time)
 [ Info: preparing cell volumes
-  0.000037 seconds (2 allocations: 2.172 KiB)
+  0.000039 seconds (2 allocations: 2.172 KiB)
 [ Info: ndofs = 545
 ┌ Info: 
 │ LOW - start
 └ ==============
 [ Info: LOW - assembly
-  0.000843 seconds (10 allocations: 143.500 KiB)
-  0.000086 seconds
-  0.886604 seconds (887.59 k allocations: 53.043 MiB, 99.35% compilation time)
+  0.000826 seconds (10 allocations: 143.500 KiB)
+  0.000087 seconds
+  0.861424 seconds (889.57 k allocations: 53.185 MiB, 6.18% gc time, 99.33% compilation time)
 [ Info: LOW - boundary data
-  0.000018 seconds
+  0.000026 seconds
 [ Info: LOW - solve
-  0.000870 seconds (61 allocations: 384.297 KiB)
+  0.000866 seconds (61 allocations: 384.297 KiB)
 [ Info: LOW - end
-  1.017290 seconds (892.58 k allocations: 53.603 MiB, 99.31% compilation time)
+  0.980313 seconds (894.55 k allocations: 53.746 MiB, 5.43% gc time, 99.29% compilation time)
 ┌ Info: 
 │ MID - start
 └ ==============
 [ Info: MID - assembly preparations
   0.000048 seconds (29 allocations: 10.555 KiB)
 [ Info: MID - assembly A
-  0.452757 seconds (1.01 M allocations: 54.675 MiB, 13.05% gc time, 99.31% compilation time)
+  0.358005 seconds (1.01 M allocations: 54.846 MiB, 99.14% compilation time)
 [ Info: MID - assembly b
-  1.558890 seconds (1.28 M allocations: 70.497 MiB, 99.81% compilation time)
+  1.454301 seconds (1.29 M allocations: 70.942 MiB, 3.51% gc time, 99.81% compilation time)
 [ Info: MID - boundary data
-  1.823030 seconds (1.04 M allocations: 56.534 MiB, 3.80% gc time, 99.99% compilation time)
+  1.564349 seconds (1.04 M allocations: 56.672 MiB, 99.99% compilation time)
 [ Info: MID - solve
-  0.000822 seconds (61 allocations: 384.297 KiB)
+  0.000838 seconds (61 allocations: 384.297 KiB)
 [ Info: MID - end
-  4.059524 seconds (3.34 M allocations: 182.518 MiB, 3.16% gc time, 99.81% compilation time)
+  3.569551 seconds (3.35 M allocations: 183.272 MiB, 1.43% gc time, 99.79% compilation time)
 ┌ Info: 
 │ HIGH - start
 └ ==============
 [ Info: HIGH - problem description
-  0.000089 seconds (72 allocations: 4.242 KiB)
+  0.000083 seconds (72 allocations: 4.242 KiB)
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation for u (discretised by H1Pk{1,2,2}, ndofs = 545)
-[ Info: assembly/solver time = 0.834645155/0.002903308 (s)
+[ Info: assembly/solver time = 0.763437467/0.002200774 (s)
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 2.7445e-03 	| 1.4694e+05 	| 1.4694e+05 	| (∇u,∇v)
-└ 	RHS[1,][1] 	| 8.2867e-01 	| 0.0000e+00 	| 0.0000e+00 	| (user action, id(v))
-[ Info: overall residual = 6.252721674146211e-16
+│ 	LHS[1,1][1] 	| 2.9384e-03 	| 1.4694e+05 	| 1.4694e+05 	| (∇u,∇v)
+└ 	RHS[1,][1] 	| 7.5727e-01 	| 0.0000e+00 	| 0.0000e+00 	| (user action, id(v))
+[ Info: overall residual = 6.671979675388975e-16
 [ Info: HIGH - end
-  0.965712 seconds (353.60 k allocations: 19.234 MiB, 97.84% compilation time)
-norm(SolutionLow.entries - SolutionHigh.entries) = 8.249327722607393e-15
-norm(SolutionLow.entries - SolutionMid.entries) = 0.0</code></pre><p><img src="../../images/ExampleA09_PoissonLowLevel_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA08_BasisPlotter/">« A08 : Basis-Plotter</a><a class="docs-footer-nextpage" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Saturday 10 December 2022 13:58">Saturday 10 December 2022</span>. Using Julia version 1.8.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  0.886544 seconds (353.67 k allocations: 19.236 MiB, 96.39% compilation time)
+norm(SolutionLow.entries - SolutionHigh.entries) = 6.1738193750004125e-15
+norm(SolutionLow.entries - SolutionMid.entries) = 0.0</code></pre><p><img src="../../images/ExampleA09_PoissonLowLevel_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA08_BasisPlotter/">« A08 : Basis-Plotter</a><a class="docs-footer-nextpage" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Wednesday 14 December 2022 15:48">Wednesday 14 December 2022</span>. Using Julia version 1.8.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
