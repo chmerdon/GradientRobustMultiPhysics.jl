@@ -178,7 +178,7 @@ function assemble_rhs!(b::AbstractVector, FES::FESpace; f = nothing)
                     eval_trafo!(x, L2G, xref[qp])
                     ## (f, v_j)
                     temp += weights[qp] * idvals[1, j, qp] * fdata(x)[1]
-            end
+                end
                 bloc[j] = temp
             end
             

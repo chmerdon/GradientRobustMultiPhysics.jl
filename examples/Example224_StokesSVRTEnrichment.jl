@@ -168,9 +168,6 @@ function get_problem(; μ = 1, order = 1, boundary_data = nothing, rhs = nothing
     return Problem
 end
 
-function solve()
-end
-
 
 ## test function that is called by test unit
 ## tests if polynomial solution is computed exactly

@@ -13,6 +13,22 @@ function update_basis!(FEBE::SingleFEEvaluator{<:Real,<:Real,<:Integer,<:Identit
     return nothing  
 end
 
+# IDENTITYCOMPONENT H1
+function update_basis!(FEBE::SingleFEEvaluator{<:Real,<:Real,<:Integer,<:IdentityComponent{c},<:AbstractH1FiniteElement}) where {c}
+    if FEBE.subset_handler != NothingFunction
+        subset = _update_subset!(FEBE)
+        cvals = FEBE.cvals
+        refbasisvals = FEBE.refbasisvals
+        fill!(cvals, 0)
+        for i = 1 : size(cvals,3)
+            for dof_i = 1 : size(cvals,2)
+                cvals[1,dof_i,i] = refbasisvals[i][subset[dof_i],c];
+            end
+        end
+    end
+    return nothing
+end
+
 # IDENTITY H1+COEFFICIENTS
 function update_basis!(FEBE::SingleFEEvaluator{<:Real,<:Real,<:Integer,<:Identity,<:AbstractH1FiniteElementWithCoefficients})
     subset = _update_subset!(FEBE)

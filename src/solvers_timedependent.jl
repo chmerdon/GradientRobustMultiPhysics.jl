@@ -11,7 +11,7 @@ abstract type CrankNicolson <: AbstractTimeIntegrationRule end
 mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule,MassMatrixFType}
     PDE::PDEDescription                     # PDE description (operators, data etc.)
     SC::SolverConfig{T,Tv,Ti}               # solver configurations (subiterations, penalties etc.)
-    LS::Array{AbstractLinearSystem{T,TiM},1}  # array for linear solvers of all subiterations
+    linear_cache::Array{Union{Nothing, LinearSolve.LinearCache},1} # connection to LinearSolve.jl
     ctime::Tt                               # current time
     cstep::Int                              # current timestep count
     last_timestep::Tt                       # last timestep
@@ -259,12 +259,9 @@ function TimeControlSolver(
     end
 
     # INIT LINEAR SOLVERS
-    LS = Array{AbstractLinearSystem{T,Int64},1}(undef,nsubiterations)
+    linear_cache = Array{LinearSolve.LinearCache,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        LS[s] = createlinsolver(SC.user_params[:linsolver],x[s].entries,S[s].entries,rhs[s].entries)
-        if TIR == CrankNicolson
-            update_factorization!(LS[s]) # otherwise Crank-Nicolson test case fails (why???)
-        end
+        linear_cache[s] = _LinearProblem(S[s].entries.cscmatrix, rhs[s].entries, SC)
     end
 
     # storage for last iterate (to compute change properly)
@@ -272,7 +269,7 @@ function TimeControlSolver(
 
     # generate TimeControlSolver
     statistics = zeros(Float64,length(InitialValues),4)
-    TCS = TimeControlSolver{T,T_time,Int64,Tv,Ti,TIR,typeof(massmatrix_assembler)}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,massmatrix_assembler,dt_is_nonlinear,dt_operator,dt_action,dt_lump,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{T,Int64},1}(undef,length(subiterations)), statistics)
+    TCS = TimeControlSolver{T,T_time,Int64,Tv,Ti,TIR,typeof(massmatrix_assembler)}(PDE,SC,linear_cache,start_time,0,0,AM,timedependent_equations,massmatrix_assembler,dt_is_nonlinear,dt_operator,dt_action,dt_lump,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{T,Int64},1}(undef,length(subiterations)), statistics)
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations
@@ -309,7 +306,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
     x = TCS.x
     res = TCS.res
     X = TCS.X
-    LS = TCS.LS
+    linear_cache = TCS.linear_cache
     fixed_dofs::Array{Ti,1} = TCS.fixed_dofs
     eqoffsets::Array{Array{Int,1},1} = TCS.eqoffsets
     statistics::Array{Float64,2} = TCS.statistics
@@ -468,9 +465,10 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
             time_solver = @elapsed begin
                 flush!(S[s].entries)
                 if update_matrix || (TCS.cstep % skip_update[s] == 0 && skip_update[s] != -1)
-                    update_factorization!(LS[s])
+                    linear_cache[s] = LinearSolve.set_A(linear_cache[s], S[s].entries.cscmatrix)
                 end
-                solve!(LS[s])
+                linear_cache[s] = LinearSolve.set_b(linear_cache[s], rhs[s].entries)
+                x[s].entries .= LinearSolve.solve(linear_cache[s])
             end
 
             ## CHECK LINEAR RESIDUAL

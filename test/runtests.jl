@@ -785,7 +785,7 @@ function run_segmentintegrator_tests()
     seg_integrator = SegmentIntegrator{Float64}(Triangle2D, Identity, Edge1D, FES, uh[1], 2)
 
     ## integrate along line [1/4,1/4] to [3/4,1/4] in first triangle
-    ## exact integral should be [3//36,0]
+    ## exact integral should be [3//32,0]
     result = zeros(Float64, 2)
     world = Array{Array{Float64,1},1}([[1//4,1//4], [3//4,1//4]])
     bary = Array{Array{Float64,1},1}([[1//4,1//2], [3//4, 1//2]])

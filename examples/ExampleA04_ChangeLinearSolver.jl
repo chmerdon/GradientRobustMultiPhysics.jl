@@ -1,41 +1,29 @@
 #= 
 
-# A04 : Custom Linear Solvers
+# A04 : Change Linear Solvers
 ([source code](SOURCE_URL))
 
-This example revisits the nonlinear Poisson example from the introductory examples and showcases how to define a user-specified linear solver.
+This example revisits the nonlinear Poisson example from the introductory examples
+and shows how to change the linear solver (in each Newton iteration)
+via the parameter linsolver in the solve function. In principle any
+Linearsolve.AbstractFactorization subtype can be used. One can use, e.g.
+
+- UMFPACKFactorization (default, via LinearSolve.jl)
+- KLUFactorization (via LinearSolve.jl)
+- KrylovJL_BICGSTAB (via LinearSolve.jl)
+- MKLPardisoFactorize (MKLPardiso via LinearSolvePardiso.jl)
+
+For more choices see LinearSolve.jl documentation.
 
 =#
 
-module ExampleA04_CustomLinearSolver
+module ExampleA04_ChangeLinearSolver
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using ExtendableSparse
 using GridVisualize
-
-
-## first define a subtype of AbstractLinearSystem, which is later given as an optional parameter to the problem solve! call
-mutable struct MySolver{Tv,Ti} <: GradientRobustMultiPhysics.AbstractLinearSystem{Tv, Ti}
-    x::AbstractVector{Tv}
-    A::ExtendableSparseMatrix{Tv,Ti}
-    b::AbstractVector{Tv}
-    ## add stuff here that you need e.g. for preconditioners
-    MySolver{Tv,Ti}(x,A,b) where {Tv,Ti} = new{Tv,Ti}(x,A,b)
-end
-
-## you need to define update_factorization! and solve! functions for your new subtype
-function GradientRobustMultiPhysics.update_factorization!(LS::MySolver)
-    ## this function is called before the solve (if other solver configuration not cause to skip it)
-    ## do anything here (e.g. updating the preconditioner)
-    println("\t\tHi! update_factorization! is called at start and every skip_update time...")
-end
-function GradientRobustMultiPhysics.solve!(LS::MySolver)
-    ## this function is called to solve the linear system
-    println("\t\tHi! solve! under way...")
-    LS.x .= LS.A \ LS.b
-end
-
+using LinearSolvePardiso
 
 ## problem data
 function exact_function!(result,x)
@@ -53,7 +41,7 @@ function rhs!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P1{1}, skip_update = 2)
+function main(; Plotter = nothing, verbosity = 0, nrefinements = 6, FEType = H1P1{1}, linsolver = MKLPardisoFactorize)
 
     ## set log level
     set_verbosity(verbosity)
@@ -80,14 +68,14 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1,  LinearForm(Identity, u_rhs; store = true))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, u_rhs; store = true))
 
     ## create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)
     Solution = FEVector(FES)
 
     ## solve the problem (here the newly defined linear solver type is used)
-    solve!(Solution, Problem; linsolver = MySolver{Float64,Int64}, skip_update = [skip_update])
+    solve!(Solution, Problem; linsolver = linsolver, show_solver_config = true, show_statistics = true)
 
     ## calculate error
     L2Error = L2ErrorIntegrator(u, Identity)

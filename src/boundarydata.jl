@@ -151,7 +151,6 @@ function boundarydata!(
             end
             if length(ifaces) > 0
                 if FE.broken == true || any(mask .== 0)
-                    @show mask
                     # face interpolation expects continuous dofmaps
                     # quick and dirty fix: use face interpolation and remap dofs to broken dofs
                     FESc = FESpace{FEType}(FE.xgrid)

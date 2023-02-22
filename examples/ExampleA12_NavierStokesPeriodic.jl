@@ -78,8 +78,8 @@ function main(; verbosity = 0, μ = 1, order = 2, periodic = true, nonlinear = t
     @show Problem
 
     if timedependent
-        # solve time-dependent (flow is stationary, but just to see if periodic conditions still work in this context)
-        interpolate!(Solution[1], u)
+        ## solve time-dependent (flow is stationary, but just to see if periodic conditions still work in this context)
+        GradientRobustMultiPhysics.interpolate!(Solution[1], u)
         sys = TimeControlSolver(Problem, Solution, BackwardEuler; timedependent_equations = [1])
         @show sys
         advance_until_time!(sys, 1e-1, 1)

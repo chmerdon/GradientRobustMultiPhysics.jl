@@ -9,7 +9,9 @@ using SuiteSparse
 using SparseArrays
 using StaticArrays
 using DiffResults
+using CommonSolve
 using LinearAlgebra
+using LinearSolve
 using ForwardDiff
 using Symbolics
 using SparseDiffTools
@@ -178,7 +180,6 @@ export add_constraint!
 
 
 include("solvers.jl")
-export AbstractLinearSystem
 export SolverConfig
 export solve, solve!, assemble!, apply_boundarydata!
 export show_statistics

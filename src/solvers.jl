@@ -14,8 +14,6 @@
 #
 # also parameter to steer penalties and stopping criterarions are saved in SolverConfig
 
-abstract type AbstractLinearSystem{Tv,Ti} end
-
 mutable struct SolverConfig{T, TvG, TiG}
     is_nonlinear::Bool      # (subiterations pf) PDE were detected to be nonlinear
     is_timedependent::Bool  # (subiterations pf) PDE were detected to be time_dependent
@@ -40,7 +38,9 @@ end
 default_solver_kwargs()=Dict{Symbol,Tuple{Any,String,Bool,Bool}}(
     :subiterations => ("auto", "an array of equation subsets (each an array) that should be solved together in each fixpoint iteration",true,true),
     :timedependent_equations => ([], "array of the equations that should get a time derivative (only for TimeControlSolver)",false,true),
-    :target_residual => (1e-10, "stop fixpoint iterations if the (nonlinear) residual is smaller than this number",true,true),
+    :target_residual => (1e-10, "[DEPRECATED] stop fixpoint iterations if the (nonlinear) residual is smaller than this number",true,true),
+    :abstol => (1e-10, "stop fixpoint iterations if the (nonlinear) absolute residual is smaller than this number",true,true),
+    :reltol => (1e-10, "stop fixpoint iterations if the (nonlinear) relative residual is smaller than this number",true,true),
     :maxiterations => ("auto", "maximal number of nonlinear iterations (TimeControlSolver runs that many in each time step)",true,true),
     :check_nonlinear_residual => ("auto", "check the nonlinear residual in last nonlinear iteration (causes one more reassembly of nonlinear terms)",true,true),
     :time => (0, "time at which time-dependent data functions are evaluated or initial time for TimeControlSolver",true,true),
@@ -52,7 +52,7 @@ default_solver_kwargs()=Dict{Symbol,Tuple{Any,String,Bool,Bool}}(
     :anderson_unknowns => ([1], "an array of unknown numbers that should be included in the Anderson acceleration",true,false),
     :fixed_penalty => (1e60, "penalty that is used for the values of fixed degrees of freedom (e.g. by Dirichlet boundary data or global constraints)",true,true),
     :parallel_storage => (false, "assemble storaged operators in parallel for loop", true, true),
-    :linsolver => ("UMFPACK", "String that encodes the linear solver, or type name of self-defined solver (see corressponding example), or type name of ExtendableSparse.AbstractFactorization",true,true),
+    :linsolver => (UMFPACKFactorization, "any AbstractFactorization from LinearSolve.jl (default = UMFPACKFactorization)",true,true),
     :show_solver_config => (false, "show the complete solver configuration before starting to solve",true,true),
     :show_iteration_details => (true, "show details (residuals etc.) of each iteration",true,true),
     :show_statistics => (false, "show some statistics like assembly times",true,true)
@@ -86,45 +86,20 @@ function _update_solver_params!(user_params,kwargs)
     return nothing
 end
 
-mutable struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization} <: AbstractLinearSystem{Tv,Ti} 
-    x::AbstractVector{Tv}
-    A::ExtendableSparseMatrix{Tv,Ti}
-    b::AbstractVector{Tv}
-    factorization_init::Bool
-    factorization::FT
+function _LinearProblem(A,b,SC::SolverConfig)
+    @logmsg MoreInfo "Initializing linear solver (linsolver = $(SC.user_params[:linsolver]))..."
+    LP = LinearProblem(A, b)
+
+    linear_cache = init(
+        LP,
+        SC.user_params[:linsolver];
+        abstol = SC.user_params[:abstol],
+        reltol = SC.user_params[:reltol]
+    )
+
+    return linear_cache
 end
 
-function LinearSystem{Tv,Ti,FT}(x,A,b) where {Tv,Ti,FT} 
-    LS = LinearSystem{Tv,Ti,FT}(x,A,b,false,FT()) 
-   # factorize!(LS.factorization, LS.A)
-   # LS.factorization_init = true
-    return LS
-end
-
-function createlinsolver(ST::Type{<:AbstractLinearSystem},x::AbstractVector,A::ExtendableSparseMatrix,b::AbstractVector)
-    return ST(x,A,b)
-end
-
-function update_factorization!(LS::AbstractLinearSystem)
-    # do nothing for an abstract solver
-end
-
-function update_factorization!(LS::LinearSystem)
-    if LS.factorization_init == false
-        @logmsg MoreInfo "Initializing factorization = $(typeof(LS).parameters[3])..."
-        # init factorisation (wait until here, since A might have been changed between solver init and first update call)
-        factorize!(LS.factorization, LS.A)
-        LS.factorization_init = true
-    else
-        @logmsg MoreInfo "Updating factorization = $(typeof(LS).parameters[3])..."
-        ExtendableSparse.update!(LS.factorization)
-    end
-end
-
-function solve!(LS::LinearSystem) 
-    @logmsg MoreInfo "Solving with factorization = $(typeof(LS).parameters[3])..."
-    ldiv!(LS.x,LS.factorization,LS.b)
-end
 
 function set_nonzero_pattern!(A::FEMatrix, AT::Type{<:AssemblyType} = ON_CELLS)
     @debug "Setting nonzero pattern for FEMatrix..."
@@ -167,15 +142,7 @@ function SolverConfig{T,TvG,TiG}(PDE::PDEDescription, user_params) where {T,TvG,
         user_params[:subiterations] = [1:size(PDE.LHSOperators,1)]
     end
     ## declare linear solver
-    if user_params[:linsolver] == "UMFPACK"
-        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.LUFactorization}
-    elseif user_params[:linsolver] == "CHOLESKY"
-        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.CholeskyFactorization}
-    elseif user_params[:linsolver] == "MKLPARDISO"
-        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.MKLPardisoLU}
-    elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization
-        user_params[:linsolver] = LinearSystem{T, Int64, user_params[:linsolver]}
-    end
+#    @assert user_params[:linsolver] <: AbstractFactorization
     while length(user_params[:skip_update]) < length(user_params[:subiterations])
         push!(user_params[:skip_update], 1)
     end
@@ -677,10 +644,9 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
 
     # SOLVE
     solver_time = @elapsed begin
-        LS = createlinsolver(SC.user_params[:linsolver], Target.entries, A.entries, b.entries)
-        flush!(A.entries)
-        update_factorization!(LS)
-        solve!(LS)
+        ## solve via LinearSolve.jl
+        linear_cache = _LinearProblem(A.entries.cscmatrix, b.entries, SC)
+        Target.entries .= LinearSolve.solve(linear_cache)
 
         # CHECK RESIDUAL
         residual = deepcopy(b)
@@ -889,8 +855,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
     resnorm::T = 0.0
 
     ## INIT SOLVER
-    time_solver = @elapsed LS = createlinsolver(SC.user_params[:linsolver],Target.entries,A.entries,b.entries)
-
+    time_solver = @elapsed linear_cache = _LinearProblem(A.entries.cscmatrix, b.entries, SC)
     end
 
     if SC.user_params[:show_iteration_details]
@@ -928,9 +893,10 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         time_solver = @elapsed begin
             flush!(A.entries)
             if j == 1 || (j % skip_update[1] == 0 && skip_update[1] != -1)
-                update_factorization!(LS)
+                linear_cache = LinearSolve.set_A(linear_cache, A.entries.cscmatrix)
             end
-            solve!(LS)
+            linear_cache = LinearSolve.set_b(linear_cache, b.entries)
+            Target.entries .= LinearSolve.solve(linear_cache)
         end
 
         # CHECK LINEAR RESIDUAL
@@ -1121,9 +1087,9 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
 
     ## INIT SOLVERS
     time_solver = @elapsed begin
-        LS = Array{AbstractLinearSystem{T,Int64},1}(undef,nsubiterations)
+        linear_cache = Array{LinearSolve.LinearCache,1}(undef,nsubiterations)
         for s = 1 : nsubiterations
-            LS[s] = createlinsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
+            linear_cache[s] = _LinearProblem(A[s].entries.cscmatrix, b[s].entries, SC)
         end
     end
 
@@ -1179,9 +1145,10 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
             time_solver = @elapsed begin
                 flush!(A[s].entries)
                 if iteration == 1 || (iteration % skip_update[s] == 0 && skip_update[s] != -1)
-                    update_factorization!(LS[s])
+                    linear_cache[s] = LinearSolve.set_A(linear_cache[s], A[s].entries.cscmatrix)
                 end
-                solve!(LS[s])
+                linear_cache[s] = LinearSolve.set_b(linear_cache[s], b[s].entries)
+                x[s].entries .= LinearSolve.solve(linear_cache[s])
             end
 
             # CHECK LINEAR RESIDUAL
@@ -1331,21 +1298,25 @@ end
 function solve(
     PDE::PDEDescription,
     FES;
-    kwargs)
+    kwargs...)
 ````
 
 Returns a solution of the PDE as an FEVector for the provided FESpace(s) FES (to be used to discretised the unknowns of the PDEs).
 To provide nonzero initial values (for nonlinear problems) the solve! function must be used.
 
+This function extends the CommonSolve.solve interface and the PDEDEscription takes the role of
+the ProblemType and FES takes the role of the SolverType.
+
 Keyword arguments:
 $(_myprint(default_solver_kwargs(),false))
 
-Depending on the subiterations and detected/configured nonlinearities the whole system is either solved directly in one step or via a fixed-point iteration.
+Depending on the subiterations and detected/configured nonlinearities the whole system is
+either solved directly in one step or via a fixed-point iteration.
 
 """
-function solve(PDE::PDEDescription, FES; kwargs...)
+function CommonSolve.solve(PDE::PDEDescription, FES; kwargs...)
     Solution = FEVector(FES, PDE)
-    solve!(Solution, PDE; kwargs...)
+    CommonSolve.solve!(Solution, PDE; kwargs...)
     return Solution
 end
 
@@ -1365,7 +1336,7 @@ $(_myprint(default_solver_kwargs(),false))
 Depending on the subiterations and detected/configured nonlinearities the whole system is either solved directly in one step or via a fixed-point iteration.
 
 """
-function solve!(
+function CommonSolve.solve!(
     Target::FEVector{T,Tv,Ti},    # contains initial guess and final solution after solve
     PDE::PDEDescription;
     kwargs...) where {T, Tv, Ti}
