@@ -20,6 +20,7 @@ For more choices see LinearSolve.jl documentation.
 module ExampleA04_ChangeLinearSolver
 
 using GradientRobustMultiPhysics
+using LinearSolve
 using ExtendableGrids
 using ExtendableSparse
 using GridVisualize

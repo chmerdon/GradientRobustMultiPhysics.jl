@@ -2,6 +2,7 @@ using Documenter
 using Literate
 using ExtendableSparse
 using ExtendableGrids
+using PlutoSliderServer
 using GradientRobustMultiPhysics
 
 
@@ -49,72 +50,144 @@ function replace_source_url(input,source_url)
     return String(take!(lines_out))
 end
 
-function make_all(; add_examples_output::Bool = true)
+function make_all(; with_examples::Bool = true, run_examples = true, run_notebooks::Bool = true)
 
-    #
-    # Generate Markdown pages from examples
-    #
-    example_jl_dir = joinpath(@__DIR__,"..","examples")
-    example_md_dir  = joinpath(@__DIR__,"src","examples")
-    image_dir = joinpath(@__DIR__,"src","images")
+    generated_examples = []
+    notebooks = []
 
-    for example_source in readdir(example_jl_dir)
-        base,ext=splitext(example_source)
-        if example_source == "pluto"
-            break;
+    if with_examples
+
+
+        #
+        # Run notebooks
+        #
+        notebooks = [
+            "Nonlinear elasticity" => "NonlinearElasticity.jl"
+        ]
+
+        notebookjl = last.(notebooks)
+        notebookmd = []
+
+        # function rendernotebook(name)
+        #     base=split(name,".")[1]
+        #     input=joinpath(@__DIR__,"..","pluto-examples",base*".jl")
+        #     output=joinpath(@__DIR__,"src","nbhtml",base*".html")
+        #     session = Pluto.ServerSession();
+        #     html_contents=PlutoStaticHTML.notebook2html(input;session)
+        #     write(output, html_contents)
+        # end
+
+
+        # for notebook in notebookjl
+        #     @info "Converting $(notebook)"
+        #     rendernotebook(notebook)
+        # end
+
+
+        # Use sliderserver to generate html
+        notebook_html_dir = joinpath(@__DIR__, "src", "nbhtml")
+        if run_notebooks
+            export_directory(
+                joinpath(@__DIR__, "..", "examples/pluto"),
+                notebook_paths = notebookjl,
+                Export_output_dir = joinpath(notebook_html_dir),
+                Export_offer_binder = false,
+            )
         end
-        if example_source[1:7] == "Example" && ext==".jl"
-            number = example_source[8:10]
-            source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/"*example_source
-            preprocess(buffer)=replace_source_url(buffer,source_url)|>hashify_block_comments
-                Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
-                            example_md_dir,
-                            documenter=false,
-                            execute=false,
-                            info=false,
-                            preprocess=preprocess)
 
-            filename = example_md_dir * "/" * base * ".md"
-            if (add_examples_output) && !(number in ["A05","231","260"]) # exclude these examples for now (because they take long or require extra packages)
-                # generate default main run output file 
-                include(example_jl_dir * "/" * example_source)
-                open(filename, "a") do io
-                    redirect_stdout(io) do
-                        println("**Default output:**")
-                        println("```")
-                        println("julia> $base.main()")
-                        eval(Meta.parse("$base.main()"))
-                        println("```")
+        # generate frame markdown for each notebook
+        for notebook in notebookjl
+            base = split(notebook, ".")[1]
+            mdstring = """
+                       ##### [$(base).jl](@id $(base))
+                       [Download](https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/examples/pluto/$(notebook))
+                       this [Pluto.jl](https://github.com/fonsp/Pluto.jl) notebook.
+                       ```@raw html
+                       <iframe style="height:20000px" width="100%" src="../$(base).html"> </iframe>
+                       ```
+                       """
+            mdname = base * ".md"
+            push!(notebookmd, joinpath("nbhtml", mdname))
+            io = open(joinpath(notebook_html_dir, mdname), "w")
+            write(io, mdstring)
+            close(io)
+        end
+
+        @show notebookmd
+        notebooks = first.(notebooks) .=> notebookmd
+        @show notebooks
+        pushfirst!(notebooks, "About the notebooks" => "notebooks_intro.md")
+        @show notebooks
+
+
+        #
+        # Generate Markdown pages from examples
+        #
+        example_jl_dir = joinpath(@__DIR__,"..","examples")
+        example_md_dir  = joinpath(@__DIR__,"src","examples")
+        excluded_examples = ["XXX","A05","231","260","401","402"] # excludes just the run of these examples
+        image_dir = joinpath(@__DIR__,"src","images")
+
+        for example_source in readdir(example_jl_dir)
+            base,ext=splitext(example_source)
+            if example_source == "pluto"
+                break;
+            end
+            if example_source[1:7] == "Example" && ext==".jl"
+                number = example_source[8:10]
+                source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/"*example_source
+                preprocess(buffer)=replace_source_url(buffer,source_url)|>hashify_block_comments
+                    Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
+                                example_md_dir,
+                                documenter=false,
+                                execute=false,
+                                info=false,
+                                preprocess=preprocess)
+
+                filename = example_md_dir * "/" * base * ".md"
+                if (run_examples) && !(number in excluded_examples) # exclude these examples for now (because they take long or require extra packages)
+                    # generate default main run output file 
+                    include(example_jl_dir * "/" * example_source)
+                    @time open(filename, "a") do io
+                        redirect_stdout(io) do
+                            println("**Default output:**")
+                            println("```")
+                            println("julia> $base.main()")
+                            eval(Meta.parse("$base.main()"))
+                            println("```")
+                        end
                     end
                 end
-            end
-            for k = 1 : 4
-                imgfile = "../images/" * base * "_$k.png"
-                if isfile(image_dir * "/" * base * "_$k.png")
-                    open(filename, "a") do io
-                        redirect_stdout(io) do
-                            println("![]($imgfile)")
+                for k = 1 : 4
+                    imgfile = "../images/" * base * "_$k.png"
+                    if isfile(image_dir * "/" * base * "_$k.png")
+                        open(filename, "a") do io
+                            redirect_stdout(io) do
+                                println("![]($imgfile)")
+                            end
                         end
                     end
                 end
             end
         end
+
+        generated_examples=joinpath.("examples",readdir(example_md_dir))
+
+        pushfirst!(generated_examples, "examples_intro.md")
     end
-
-    generated_examples=joinpath.("examples",readdir(example_md_dir))
-
-    pushfirst!(generated_examples,"examples_intro.md")
-    
 
     makedocs(
         modules=[GradientRobustMultiPhysics],
-        format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
         sitename="GradientRobustMultiPhysics.jl",
         authors="Christian Merdon",
+        repo = "github.com/chmerdon/GradientRobustMultiPhysics.jl",
+        clean = false,
+        checkdocs = :all,
+        doctest = true,
         pages = [
             "Home" => "index.md",
             "Index" => "package_index.md",
-            "Problem Description" => Any[
+            "Problem Description" => [
                     "pdedescription.md",
                     "pdeoperators.md",
                     "functionoperators.md",
@@ -131,28 +204,31 @@ function make_all(; add_examples_output::Bool = true)
             ],
             "Solving" => Any[
                     "pdesolvers.md",
-                    "timecontrolsolver.md"
+                    "timecontrolsolver.md",
                 ],
             "Postprocessing" => Any[
                     "itemintegrators.md",
                     "pointevaluators.md",
                     "viewers.md",
-                    "export.md"
+                    "export.md",
                 ],
             "Low-Level Structures" => Any[
                     "quadrature.md",
                     "assemblypatterns.md",
-                    "febasisevaluators.md"
+                    "febasisevaluators.md",
                 ],
-            "Examples" => generated_examples
+            "Tutorial Notebooks" => notebooks,
+            "Examples" => generated_examples,
         ]
     )
 
-    rm(example_md_dir,recursive=true)
+    with_examples && rm(example_md_dir, recursive = true)
+    run_notebooks && rm(notebook_html_dir, recursive = true)
     
 end
 
-make_all(; add_examples_output = true)
+#make_all(; with_examples = true, run_examples = true, run_notebooks = true)
+make_all(; with_examples = true, run_examples = false, run_notebooks = true)
 
 deploydocs(
     repo = "github.com/chmerdon/GradientRobustMultiPhysics.jl",
