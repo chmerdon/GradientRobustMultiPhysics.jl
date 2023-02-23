@@ -38,9 +38,9 @@ end
 default_solver_kwargs()=Dict{Symbol,Tuple{Any,String,Bool,Bool}}(
     :subiterations => ("auto", "an array of equation subsets (each an array) that should be solved together in each fixpoint iteration",true,true),
     :timedependent_equations => ([], "array of the equations that should get a time derivative (only for TimeControlSolver)",false,true),
-    :target_residual => (1e-10, "[DEPRECATED] stop fixpoint iterations if the (nonlinear) residual is smaller than this number",true,true),
-    :abstol => (1e-10, "stop fixpoint iterations if the (nonlinear) absolute residual is smaller than this number",true,true),
-    :reltol => (1e-10, "stop fixpoint iterations if the (nonlinear) relative residual is smaller than this number",true,true),
+    :target_residual => (1e-12, "stop fixpoint iterations if the absolute (nonlinear) residual is smaller than this number",true,true),
+    :abstol => (1e-12, "abstol for linear solver (if iterative)",true,true),
+    :reltol => (1e-12, "reltol for linear solver (if iterative)",true,true),
     :maxiterations => ("auto", "maximal number of nonlinear iterations (TimeControlSolver runs that many in each time step)",true,true),
     :check_nonlinear_residual => ("auto", "check the nonlinear residual in last nonlinear iteration (causes one more reassembly of nonlinear terms)",true,true),
     :time => (0, "time at which time-dependent data functions are evaluated or initial time for TimeControlSolver",true,true),
@@ -896,7 +896,9 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
                 linear_cache = LinearSolve.set_A(linear_cache, A.entries.cscmatrix)
             end
             linear_cache = LinearSolve.set_b(linear_cache, b.entries)
-            Target.entries .= LinearSolve.solve(linear_cache)
+            sol = LinearSolve.solve(linear_cache)
+            linear_cache = sol.cache
+            copyto!(Target.entries, sol.u)
         end
 
         # CHECK LINEAR RESIDUAL
@@ -1148,7 +1150,9 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
                     linear_cache[s] = LinearSolve.set_A(linear_cache[s], A[s].entries.cscmatrix)
                 end
                 linear_cache[s] = LinearSolve.set_b(linear_cache[s], b[s].entries)
-                x[s].entries .= LinearSolve.solve(linear_cache[s])
+                sol = LinearSolve.solve(linear_cache[s])
+                linear_cache[s] = sol.cache
+                copyto!(x[s].entries, sol.u)
             end
 
             # CHECK LINEAR RESIDUAL

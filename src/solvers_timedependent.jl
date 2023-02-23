@@ -468,7 +468,9 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                     linear_cache[s] = LinearSolve.set_A(linear_cache[s], S[s].entries.cscmatrix)
                 end
                 linear_cache[s] = LinearSolve.set_b(linear_cache[s], rhs[s].entries)
-                x[s].entries .= LinearSolve.solve(linear_cache[s])
+                sol = LinearSolve.solve(linear_cache[s])
+                linear_cache[s] = sol.cache
+                copyto!(x[s].entries, sol.u)
             end
 
             ## CHECK LINEAR RESIDUAL
