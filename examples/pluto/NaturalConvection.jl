@@ -4,161 +4,173 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 014c3380-b361-11ed-273e-37541f1ed74f
 begin
 	using GradientRobustMultiPhysics
 	using ExtendableGrids
 	using GridVisualize
+	using PlutoUI
 	using PlutoVista
 end
 
 # ╔═╡ 3e8fd4f5-b6be-4019-9c76-a80cc985b70e
 md"""
-# Tutorial notebook: Nonlinear Elasticity
+# Tutorial notebook: Natural convection
 
-Seek displacement ``u`` such that
+Seek velocity ``u``, pressure ``p`` and temperature ``\theta`` such that
 ```math
 \begin{aligned}
-	\mathrm{div} \left( \mathbb{C} \left(\epsilon(u) - \epsilon_0\right) \right) = 0
+	- \mu \Delta u + (u \cdot \nabla) u + \nabla p & = Ra \, \theta \, g \\
+       - \Delta \theta + u \cdot \nabla \theta & = 0
 \end{aligned}
 ```
-where ``\mathbb{C}`` is the isotropic stress tensor (encoding a linear stress-strain relation), ``\epsilon_0`` is some (e.g. thermal or lattice) misfit strain, and the displacement-strain relation is chosen to be nonlinear, i.e.,
+on a given domain ``\Omega`` (here a triangle) and boundary conditions
 ```math
 \begin{aligned}
-	\epsilon(u) := \frac{1}{2} \left(Du + Du^T + Du^TDu \right),
-\end{aligned}
-```
-suitable for large deformations.
-
-The weak formulation seeks ``u \in V := H^1_D(\Omega)`` such that
-```math
-\begin{aligned}
-	(\mathbb{C} \left(\epsilon(u) - \epsilon_0\right), \nabla v) = 0
-	\quad \text{for all } v \in V
+	u & = 0 && \quad \text{along } \partial \Omega\\
+ 	T & = T_\text{bottom} &&\quad \text{along } y = 0\\
+	T & = 0 &&\quad \text{along } x = 0
 \end{aligned}
 ```
 
+The weak formulation seeks ``(u,p,\theta) \in V \times Q \times X \subseteq H^1_0(\Omega)^2 \times L^2_0(\Omega) \times H^1_D(\Omega)`` such that
+```math
+\begin{aligned}
+	(\mu \nabla u, \nabla v) + ((u \cdot \nabla) u, v) - (\mathrm{div} v, p) & = (v, Ra g \, \theta) && \quad \text{for all } v \in V,\\
+(\mathrm{div} u, q) & = 0 && \quad \text{for all } q \in Q,\\
+       (\nabla \theta, \nabla \varphi) + (u \cdot \nabla \theta, \varphi) & = 0
+ && \quad \text{for all } \varphi \in X.
+\end{aligned} 
+```
+
+"""
+
+# ╔═╡ 6f2ef99c-98c8-4722-9965-573d9b05f8a7
+md"""
+The parameter ``Ra`` is the Rayleigh coefficient and can be adjusted with the slider:
+
+log10(Ra): $(@bind logRa Slider(0:1:6,show_value=true, default = 5))
+"""
+
+# ╔═╡ 17232e3d-a186-4dcb-9df7-f468557f23fd
+begin
+	μ = 1
+	Ra_final = 10^logRa
+	T_bottom = DataFunction((T,x) -> (T[1] = 2*(1-cos(2*π*x[1]))), [1,2]; dependencies = "X", bonus_quadorder = 4, name = "T_bottom")
+end
+
+# ╔═╡ f2e60bc4-8519-487e-9c02-5d9b87c8e566
+md"""
+The plots below show the speed of the velocity field (left) and the temperature θ (right) for the selected parameter Ra = $(Ra_final):
 """
 
 # ╔═╡ 765352bb-c097-4ceb-8ed1-ded021ab6218
 begin
 	## generate grid
-	scale = [1,25]
-	nref = 1
-
-	## generate simplex grid
-    X=LinRange(-scale[2]/2, scale[2]/2, nref*scale[2]+1)
-    Y=LinRange(0, scale[1], 2*nref*scale[1]+1)
-    xgrid=simplexgrid(X,Y)
-
-	## mask regions
-    cellmask!(xgrid, [-scale[2]/2,0.0], [scale[2]/2,scale[1]/2], 1)
-    cellmask!(xgrid, [-scale[2]/2,scale[1]/2], [scale[2]/2,scale[1]], 2)
-    bfacemask!(xgrid, [-scale[2]/2,0.0], [-scale[2]/2,scale[1]/2], 1)
-    bfacemask!(xgrid, [-scale[2]/2,scale[1]/2], [-scale[2]/2,scale[1]], 1)
-    bfacemask!(xgrid, [-scale[2]/2,0.0], [scale[2]/2,0.0], 2)
-    bfacemask!(xgrid, [-scale[2]/2,scale[1]], [scale[2]/2,scale[1]], 2)
-    bfacemask!(xgrid, [scale[2]/2,0.0], [scale[2]/2,scale[1]], 3)
-	
+	nref = 4
+    xgrid = reference_domain(Triangle2D)
+    xgrid = uniform_refine(xgrid, nref)
 	gridplot(xgrid; Plotter = PlutoVista)
 end
 
-# ╔═╡ e2c33c81-0ea4-43d9-b762-75373f7345a3
+# ╔═╡ 50ce55b3-eeb0-42b4-ba88-208fb0464942
 begin
-	## define nonlinear operator that computes ℂϵ(u) at quadrature points
-	mutable struct nonlinear_operator{T}
-	    λ::Vector{T} 	# Lame parameters for each region
-	    μ::Vector{T} 	# Lame parameters for each region
-	    ϵT::Vector{T} 	# thermal strain for each region
-	end
-
-	## displacement-strain relation in Voigt notation
-	function displacement_strain_relation!(strain, Du)
-		strain[1] = Du[1]
-		strain[2] = Du[4]
-		strain[3] = Du[2] + Du[3]
-		
-		## add nonlinear part of the strain 1/2 * (Du'*Du)
-		strain[1] += 1//2 * (Du[1]^2 + Du[3]^2)
-		strain[2] += 1//2 * (Du[2]^2 + Du[4]^2)
-		strain[3] += Du[1]*Du[2] + Du[3]*Du[4]
-		return nothing
-	end
-	
-	## kernel for nonlinear operator = displacement-stress relation
-	(op::nonlinear_operator)(result, input, item) = (
-		## input = evaluation of Du(qp) written as a vector [∇u_1, ∇u_2]
-		## result ≈ ℂϵ(u(qp))
-		## item[3] is the region number where operator is currently evaluated
-		
-		## compute strain
-		displacement_strain_relation!(result, input);
-		
-		## subtract thermal strain
-		result[1] -= op.ϵT[item[3]];
-		result[2] -= op.ϵT[item[3]];
-
-		## compute strain = apply isotropic stress tensor
-		result[4] = op.λ[item[3]]*(result[1]+result[2]) + 2*op.μ[item[3]]*result[2];
-		result[1] = op.λ[item[3]]*(result[1]+result[2]) + 2*op.μ[item[3]]*result[1];
-		result[2] = 2*op.μ[item[3]]*result[3];
-		result[3] = 2*op.μ[item[3]]*result[3];
-		
-		return nothing
-	)
+    ## create finite element space and reconstruction operator
+	#RIdentity = Identity
+	RIdentity = ReconstructionIdentity{HDIVBDM1{2}}
+    FETypes = [H1BR{2}, L2P0{1}, H1P1{1}]; 
 end
 
 # ╔═╡ 749404f8-51f3-46ae-9662-83611b362cd4
 begin
-	## define problem
-	ν = [0.3,0.3]          # Poisson number for each region/material
-    E = [2.1,1.1]          # Elasticity modulus for each region/material
-    ΔT = [580,580]         # temperature for each region/material
-    α = [1.3e-5,2.4e-4]    # thermal expansion coefficients
-
-    ## compute Lame' coefficients μ and λ from ν and E
-    ## and thermal misfit strain and assign to operator operator
-	λ = E .* ν ./ ( (1 .- 2*ν) .* (1 .+ ν))
-    μ = E ./ (2  .* (1 .+ ν.^(-1)))
-    ϵT = ΔT .* α
-
-    ## generate empty problem description and add unknowns
-    Problem = PDEDescription("nonlinear elasticity problem")
-    add_unknown!(Problem; unknown_name = "u", equation_name = "displacement equation")
 	
-    ## add nonlinear operator
-    PDE_operator = NonlinearForm(Gradient, [Gradient], [1], nonlinear_operator(λ, μ, ϵT), [4,4]; name = "ℂ(ϵ(#1)-ϵT):∇#T", regions = [1,2], dependencies = "I", bonus_quadorder = 3, sparse_jacobian = true, newton = true) 
-    add_operator!(Problem, 1, PDE_operator)
+	## load Stokes prototype and add a unknown for the temperature
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = false, store = true)
+    add_unknown!(Problem; unknown_name = "θ", variables = ["θ","φ"], equation_name = "temperature equation")
+    Problem.name = "natural convection problem"
 
-	## add boundary data (here: fix x component of displacement on boundary region 1)
-    add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = [1,0])
+    ## add convection term for velocity
+    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; test_operator = RIdentity, newton = true))
+
+    ## add boundary data for velocity (unknown 1) and temperature (unknown 3)
+    add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 3, [1], BestapproxDirichletBoundary; data = T_bottom)
+    add_boundarydata!(Problem, 3, [3], HomogeneousDirichletBoundary)
+
+    ## add Laplacian to temperature equation
+    add_operator!(Problem, [3,3], LaplaceOperator(1.0; store = true, name = "∇(T)⋅∇(V)"))
+	
+    ## add coupling terms for velocity and temperature (convection)
+	function Tconvection_kernel(result, input)
+		## input = [id(u),∇T]
+		result[1] = input[1]*input[3] + input[2]*input[4]
+		return nothing
+	end
+	function Tconvection_jacobian(jac, input)
+		jac[1,1] = input[3] 
+		jac[1,3] = input[1] 
+		jac[1,2] = input[4] 
+		jac[1,4] = input[2]
+		return nothing
+	end
+	add_operator!(Problem,3, NonlinearForm(Identity, [RIdentity,Gradient], [1,3], Tconvection_kernel, [1,4]; name = "(R(u)⋅∇(T)) V", jacobian = Tconvection_jacobian, newton = true))
+
+	## add coupling terms for velocity and temperature (gravity)
+	Ra = [1.0] ## use an array here to solve by embedding
+	rhs_velocity = (result, input) -> (result[1] = -Ra[1]*input[2])
+    vdotg_action = Action(rhs_velocity, [1 2]; name = "v⋅g")
+    add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], vdotg_action; name = "-Ra v⋅g T", store = true))
 
 	Problem
 end
 
-# ╔═╡ d333e2b6-5c81-4a78-942a-5ea3f01d6c18
+# ╔═╡ 2adb82a5-ad9a-455f-93d3-1c73aceb8c72
 begin
-    ## create finite element space
-    order = 2  # polynomial order of finite elements
-    FES = FESpace{H1Pk{2,2,order}}(xgrid)
-
-    ## solve
-    Solution = solve(Problem, FES; maxiterations = 100, target_residual = 1e-9)
+	## create finite element spaces and solution vector
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
+	Solution = FEVector(FES)
 end
 
-# ╔═╡ 26aa052f-c72b-4e79-8672-ad5ae3395ba6
+# ╔═╡ d333e2b6-5c81-4a78-942a-5ea3f01d6c18
 begin
-	## displace mesh and plot
-    xgrid_displaced = displace_mesh(xgrid, Solution[1])
+    ## solve by Ra embedding
+	Ra[1] = min(Ra_final, 5000)
+	step = 0
+	fill!(Solution.entries,0)
+	while (true)
+		Ra[1] = min(Ra_final, Ra[1]*2)
+		step += 1
+		@info "Step $step : solving for Ra=$(Ra[1])"
+    	@time solve!(Solution, Problem; maxiterations = 100, target_residual = 1e-8)
+		if Ra[1] >= Ra_final
+			break
+		end
+	end
 
-	## solution was invariant against translation in y-direction
-	## so let us subtract this translation and pretend we fixed
-	## one point of the grid
-	ytranslation = xgrid[Coordinates][2,1] - xgrid_displaced[Coordinates][2,1]
-	xgrid_displaced[Coordinates][2,:] .+= ytranslation
+	## update plots above
+	p = GridVisualizer(; Plotter = PlutoVista, layout = (1,1), clear = true, resolution = (300,300))
+	scalarplot!(p[1,1], xgrid,nodevalues(Solution[1]; abs = true)[1,:]; Plotter = PlutoVista, levels = 0)
+    vectorplot!(p[1,1], xgrid,evaluate(PointEvaluator(Solution[1], Identity)); Plotter = PlutoVista, spacing = 0.1, clear = false, title = "θ for Ra = $(Ra_final)")
+	p2 = scalarplot(xgrid, Solution[3][:]; Plotter = PlutoVista, levels = 11, title = "T_h", resolution = (300,300))
+	
+	## compute Nussulet number
+    NuIntegrator = ItemIntegrator([Jump(Gradient)], vdotg_action; AT = ON_BFACES, regions = [1])
+	Nu = evaluate(NuIntegrator,Solution[3])/Ra
+end
 
-	## plot displaced mesh
-    gridplot(xgrid_displaced, Plotter = PlutoVista)
+# ╔═╡ 737bf5cd-e8f5-48e7-a07c-4ed42a8ba970
+begin
+	p, p2
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -167,12 +179,14 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 ExtendableGrids = "cfc395e8-590f-11e8-1f13-43a2532b2fa8"
 GradientRobustMultiPhysics = "0802c0ca-1768-4022-988c-6dd5f9588a11"
 GridVisualize = "5eed8a63-0fb0-45eb-886d-8d5a387d12b8"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 PlutoVista = "646e1f28-b900-46d7-9d87-d554eb38a413"
 
 [compat]
 ExtendableGrids = "~0.9.17"
 GradientRobustMultiPhysics = "~0.10.4"
 GridVisualize = "~0.5.2"
+PlutoUI = "~0.7.50"
 PlutoVista = "~0.8.23"
 """
 
@@ -188,6 +202,12 @@ deps = ["GroupsCore", "InteractiveUtils", "LinearAlgebra", "MacroTools", "Markdo
 git-tree-sha1 = "29e65c331f97db9189ef00a4c7aed8127c2fd2d4"
 uuid = "c3fe647b-3220-5bb0-a1ea-a7954cac585d"
 version = "0.27.10"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "8eaf9f1b4921132a4cff3f36a1d9ba923b14a481"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.1.4"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "faa260e4cb5aba097a73fab382dd4b5819d8ec8c"
@@ -606,6 +626,12 @@ git-tree-sha1 = "709d864e3ed6e3545230601f94e11ebc65994641"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.11"
 
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "8d511d5b81240fc8e6802386302675bdf47737b9"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.4"
+
 [[deps.HypertextLiteral]]
 deps = ["Tricks"]
 git-tree-sha1 = "c47c5fa4c5308f27ccaac35504858d8914e102f9"
@@ -617,6 +643,12 @@ deps = ["LinearAlgebra", "SparseArrays"]
 git-tree-sha1 = "b007cfc7f9bee9a958992d2301e9c5b63f332a90"
 uuid = "88f59080-6952-5380-9ea5-54057fb9a43f"
 version = "0.2.0"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "f7be53659ab06ddc986428d3a9dcc95f6fa6705a"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.2"
 
 [[deps.IfElse]]
 git-tree-sha1 = "debdd00ffef04665ccbb3e150747a77560e8fad1"
@@ -679,6 +711,12 @@ deps = ["Preferences"]
 git-tree-sha1 = "abc9885a7ca2052a736a600f7fa66209f96506e1"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
 version = "1.4.1"
+
+[[deps.JSON]]
+deps = ["Dates", "Mmap", "Parsers", "Unicode"]
+git-tree-sha1 = "3c837543ddb02250ef42f4738347454f95079d4e"
+uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+version = "0.21.3"
 
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "f2355693d6778a178ade15952b7ac47a4ff97996"
@@ -887,6 +925,12 @@ git-tree-sha1 = "34c0e9ad262e5f7fc75b10a9952ca7692cfc5fbe"
 uuid = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 version = "0.12.3"
 
+[[deps.Parsers]]
+deps = ["Dates", "SnoopPrecompile"]
+git-tree-sha1 = "6f4fbcd1ad45905a5dee3f4256fabb49aa2110c6"
+uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
+version = "2.5.7"
+
 [[deps.Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
@@ -902,6 +946,12 @@ deps = ["Base64", "Configurations", "Dates", "Distributed", "FileWatching", "Fuz
 git-tree-sha1 = "0ee5bd226e5b95e2232229f7c4a97309ccd8158b"
 uuid = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
 version = "0.19.22"
+
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
+git-tree-sha1 = "5bb5129fdd62a2bbbe17c2756932259acf467386"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.50"
 
 [[deps.PlutoVista]]
 deps = ["ColorSchemes", "Colors", "DocStringExtensions", "GridVisualizeTools", "HypertextLiteral", "Pluto", "UUIDs"]
@@ -1283,10 +1333,14 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╔═╡ Cell order:
 # ╟─014c3380-b361-11ed-273e-37541f1ed74f
 # ╟─3e8fd4f5-b6be-4019-9c76-a80cc985b70e
+# ╟─6f2ef99c-98c8-4722-9965-573d9b05f8a7
+# ╟─17232e3d-a186-4dcb-9df7-f468557f23fd
+# ╟─f2e60bc4-8519-487e-9c02-5d9b87c8e566
+# ╟─737bf5cd-e8f5-48e7-a07c-4ed42a8ba970
 # ╠═765352bb-c097-4ceb-8ed1-ded021ab6218
-# ╠═e2c33c81-0ea4-43d9-b762-75373f7345a3
+# ╠═50ce55b3-eeb0-42b4-ba88-208fb0464942
 # ╠═749404f8-51f3-46ae-9662-83611b362cd4
+# ╠═2adb82a5-ad9a-455f-93d3-1c73aceb8c72
 # ╠═d333e2b6-5c81-4a78-942a-5ea3f01d6c18
-# ╠═26aa052f-c72b-4e79-8672-ad5ae3395ba6
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

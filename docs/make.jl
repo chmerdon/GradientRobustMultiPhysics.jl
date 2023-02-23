@@ -63,6 +63,8 @@ function make_all(; with_examples::Bool = true, run_examples = true, run_noteboo
         #
         notebooks = [
             "Nonlinear elasticity" => "NonlinearElasticity.jl"
+            "Pressure-robustness" => "PressureRobustness.jl"
+            "Natural convection" => "NaturalConvection.jl"
         ]
 
         notebookjl = last.(notebooks)
