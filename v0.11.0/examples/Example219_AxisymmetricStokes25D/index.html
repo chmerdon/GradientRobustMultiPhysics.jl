@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>219 : Axisymmetric Stokes (2.5D) · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Tutorial Notebooks</span><ul><li><a class="tocitem" href="../../notebooks_intro/">About the notebooks</a></li><li><a class="tocitem" href="../../nbhtml/NonlinearElasticity/">Nonlinear elasticity</a></li><li><a class="tocitem" href="../../nbhtml/PressureRobustness/">Pressure-robustness</a></li><li><a class="tocitem" href="../../nbhtml/NaturalConvection/">Natural convection</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li class="is-active"><a class="tocitem" href>219 : Axisymmetric Stokes (2.5D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_ChangeLinearSolver/">A04 : Change Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li><li><a class="tocitem" href="../ExampleA11_NavierStokesFixpointIterations/">A11 : Navier-Stokes Fixed-point iterations</a></li><li><a class="tocitem" href="../ExampleA12_NavierStokesPeriodic/">A12 : Navier-Stokes-Problem with periodic boundary</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>219 : Axisymmetric Stokes (2.5D)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>219 : Axisymmetric Stokes (2.5D)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="github.com/chmerdon/GradientRobustMultiPhysics.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Axisymmetric-Stokes-(2.5D)"><a class="docs-heading-anchor" href="#:-Axisymmetric-Stokes-(2.5D)">219 : Axisymmetric Stokes (2.5D)</a><a id=":-Axisymmetric-Stokes-(2.5D)-1"></a><a class="docs-heading-anchor-permalink" href="#:-Axisymmetric-Stokes-(2.5D)" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example219_AxisymmetricStokes25D.jl">source code</a>)</p><p>This example solves the 3D Hagen-Poiseuille flow via the 2.5D axisymmetric formulation of the Stokes problem that seeks a velocity <span>$\mathbf{u} = (u_z, u_r)$</span> and pressure <span>$p$</span> such that</p><p class="math-container">\[\begin{aligned}
+- \mu\left(\partial^2_r + r^{-1} \partial_r + \partial^2_z - r^{-2} \right) u_r
++ \partial_r p &amp; = \mathbf{f}_r\\
+- \mu\left(\partial^2_r + r^{-1} \partial_r + \partial^2_z \right) u_z
++ \partial_z p &amp; = \mathbf{f}_z\\
+(\partial_r + r^{-1})u_r + \partial_z u_z &amp; = 0
+\end{aligned}\]</p><p>with exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span>.</p><p>The axisymmetric formulation assumes that the velocity in some 3D-domain, that is obtained by rotation of a 2D domain <span>$\Omega$</span>, only depends on the distance <span>$r$</span> to the rotation axis and the <span>$z$</span>-coordinate tangential to the x-axis, but not on the angular coordinate of the cylindric coordinates. The implementation employs <span>$r$</span>-dependent bilinear forms and a Cartesian grid for the 2D <span>$(z,r)$</span> domain that is assumed to be rotated around the <span>$r=0$</span>-axis.</p><p>This leads to the weak formulation</p><p class="math-container">\[\begin{aligned}
+a(u,v) + b(p,v) &amp; = (f,v) \\
+         b(q,u) &amp; = 0
+\end{aligned}\]</p><p>with the bilinear forms</p><p class="math-container">\[\begin{aligned}
+a(u,v) := \int_{\Omega} \left( \nabla u : \nabla v + r^{-2} u_r v_r \right) r dr dz\\
+b(q,v) := \int_{\Omega} q \left( \mathrm{div}(v) + r^{-1} u_r \right) r dr dz
+\end{aligned}\]</p><p>where the usual Cartesian differential operators can be used.</p><pre><code class="language-julia hljs">module Example219_AxisymmetricStokes25D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+
+# data for axisymmetric Hagen-Poiseuille flow
+function exact_pressure!(μ)
+    function closure(result,x)
+        result[1] = 4*μ*(1-x[1])
+    end
+end
+function exact_velocity!(result,x)
+    result[1] = (1.0-x[2]^2);
+    result[2] = 0.0;
+end
+
+# custom bilinearform a for the axisymmetric Stokes problem
+function ASLaplaceOperator(μ)
+    function action_kernel!(result, input, x)
+        r = x[2]
+        # input = [u,∇u] = [u_z,u_r,du_z/dz, du_z/dr, du_r/dz, du_r/dr]
+        result[1] = 0
+        result[2] = μ/r * input[2]
+        result[3] = μ*r * input[3]
+        result[4] = μ*r * input[4]
+        result[5] = μ*r * input[5]
+        result[6] = μ*r * input[6]
+        # result will be multiplied with [v,∇v]
+        return nothing
+    end
+    action = Action(action_kernel!, [6,6]; dependencies = &quot;X&quot;, bonus_quadorder = 2)
+    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action)
+end
+
+# custom bilinearform b for the axisymmetric Stokes problem
+function ASPressureOperator()
+    function action_kernel!(result, input, x)
+        r = x[2]
+        # input = [u,divu] = [u_z,u_r,du_r/dr + du_z/dz]
+        result[1] = -(r*input[3] + input[2])
+        # result will be multiplied with [q]
+        return nothing
+    end
+    action = Action(action_kernel!, [1,3]; dependencies = &quot;X&quot;, bonus_quadorder = 2)
+    return BilinearForm([OperatorPair{Identity,Divergence},Identity], action)
+end
+function ASPressureOperatorTransposed()
+    function action_kernel!(result, input, x)
+        r = x[2]
+        # input = [q] as a vector of length 1
+        result[1] = 0
+        result[2] = -input[1]
+        result[3] = -r*input[1]
+        # result will be multiplied with [v,divv]
+        return nothing
+    end
+    action = Action(action_kernel!, [3,1]; dependencies = &quot;X&quot;, bonus_quadorder = 2)
+    return BilinearForm([Identity,OperatorPair{Identity,Divergence}], action)
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, Plotter = nothing, μ = 1)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # negotiate data functions to the package
+    u = DataFunction(exact_velocity!, [2,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 2)
+    p = DataFunction(exact_pressure!(μ), [1,2]; name = &quot;p&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 1)
+
+    # grid
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
+
+    # finite element type
+    FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
+
+    # problem description
+    Problem = PDEDescription(&quot;axisymmetric Stokes&quot;)
+    add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;momentum balance&quot;)
+    add_unknown!(Problem; unknown_name = &quot;p&quot;, equation_name = &quot;continuity equation&quot;)
+    add_operator!(Problem, [1,1], ASLaplaceOperator(μ))
+    add_operator!(Problem, [1,2], ASPressureOperator())
+    add_operator!(Problem, [2,1], ASPressureOperatorTransposed())
+
+    # boundary conditions
+    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = u)
+    add_boundarydata!(Problem, 1, [3], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = (0,1))
+    @show Problem
+
+    # generate FESpaces
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
+    Solution = FEVector(FES)
+
+    # solve
+    solve!(Solution, Problem)
+
+    # calculate L2 error
+    L2ErrorV = L2ErrorIntegrator(u, Identity)
+    L2ErrorP = L2ErrorIntegrator(p, Identity)
+    println(&quot;|| u - u_h || = $(sqrt(evaluate(L2ErrorV,Solution[1])))&quot;)
+    println(&quot;|| p - p_h || = $(sqrt(evaluate(L2ErrorP,Solution[2])))&quot;)
+
+    # plot
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 9)
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_h&quot;)
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Thursday 23 February 2023 22:13">Thursday 23 February 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
