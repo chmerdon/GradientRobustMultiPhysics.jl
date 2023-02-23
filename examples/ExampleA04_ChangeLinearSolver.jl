@@ -23,7 +23,6 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 using ExtendableSparse
 using GridVisualize
-using LinearSolvePardiso
 
 ## problem data
 function exact_function!(result,x)
@@ -41,7 +40,7 @@ function rhs!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 0, nrefinements = 6, FEType = H1P1{1}, linsolver = MKLPardisoFactorize)
+function main(; Plotter = nothing, verbosity = 0, nrefinements = 6, FEType = H1P1{1}, linsolver = KLUFactorization)
 
     ## set log level
     set_verbosity(verbosity)

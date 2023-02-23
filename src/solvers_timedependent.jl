@@ -32,7 +32,6 @@ mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule
     LastIterate::FEVector{T,Tv,Ti}          # helper variable if maxiterations > 1
     fixed_dofs::Array{Ti,1}                 # fixed dof numbes (values are stored in X)
     eqoffsets::Array{Array{Int,1},1}        # offsets for subblocks of each equation package
-    ALU::Array{Any,1}                       # LU decompositions of matrices A
     statistics::Array{T,2}                  # statistics of last timestep
 end
 
@@ -261,6 +260,7 @@ function TimeControlSolver(
     # INIT LINEAR SOLVERS
     linear_cache = Array{LinearSolve.LinearCache,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
+        flush!(S[s].entries)
         linear_cache[s] = _LinearProblem(S[s].entries.cscmatrix, rhs[s].entries, SC)
     end
 
@@ -269,7 +269,7 @@ function TimeControlSolver(
 
     # generate TimeControlSolver
     statistics = zeros(Float64,length(InitialValues),4)
-    TCS = TimeControlSolver{T,T_time,Int64,Tv,Ti,TIR,typeof(massmatrix_assembler)}(PDE,SC,linear_cache,start_time,0,0,AM,timedependent_equations,massmatrix_assembler,dt_is_nonlinear,dt_operator,dt_action,dt_lump,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{T,Int64},1}(undef,length(subiterations)), statistics)
+    TCS = TimeControlSolver{T,T_time,Int64,Tv,Ti,TIR,typeof(massmatrix_assembler)}(PDE,SC,linear_cache,start_time,0,0,AM,timedependent_equations,massmatrix_assembler,dt_is_nonlinear,dt_operator,dt_action,dt_lump,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, statistics)
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations
