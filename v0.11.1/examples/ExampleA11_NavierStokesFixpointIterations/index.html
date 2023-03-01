@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>A11 : Navier-Stokes Fixed-point iterations · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Tutorial Notebooks</span><ul><li><a class="tocitem" href="../../notebooks_intro/">About the notebooks</a></li><li><a class="tocitem" href="../../nbhtml/NonlinearElasticity/">Nonlinear elasticity</a></li><li><a class="tocitem" href="../../nbhtml/PressureRobustness/">Pressure-robustness</a></li><li><a class="tocitem" href="../../nbhtml/NaturalConvection/">Natural convection</a></li><li><a class="tocitem" href="../../nbhtml/SVRTStabilization/">SVRT stabilization</a></li><li><a class="tocitem" href="../../nbhtml/LowLevelPoisson/">Low level Poisson</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example219_AxisymmetricStokes25D/">219 : Axisymmetric Stokes (2.5D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_ChangeLinearSolver/">A04 : Change Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li><li class="is-active"><a class="tocitem" href>A11 : Navier-Stokes Fixed-point iterations</a></li><li><a class="tocitem" href="../ExampleA12_NavierStokesPeriodic/">A12 : Navier-Stokes-Problem with periodic boundary</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>A11 : Navier-Stokes Fixed-point iterations</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>A11 : Navier-Stokes Fixed-point iterations</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="github.com/chmerdon/GradientRobustMultiPhysics.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="A11-:-Navier-Stokes-Fixed-point-iterations"><a class="docs-heading-anchor" href="#A11-:-Navier-Stokes-Fixed-point-iterations">A11 : Navier-Stokes Fixed-point iterations</a><a id="A11-:-Navier-Stokes-Fixed-point-iterations-1"></a><a class="docs-heading-anchor-permalink" href="#A11-:-Navier-Stokes-Fixed-point-iterations" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/ExampleA11_NavierStokesFixpointIterations.jl">source code</a>)</p><p>This example computes the velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> of the incompressible Navier–Stokes problem</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = \mathbf{f}\\
+\mathrm{div}(u) &amp; = 0
+\end{aligned}\]</p><p>with exterior force <span>$\mathbf{f}$</span> and some parameter <span>$\mu$</span> and inhomogeneous Dirichlet boundary data.</p><p>The convection term can be discretized in (at least) three different ways, leading to three different fixed-point iteration schemes:</p><ul><li>Newton iteration (when discretised as a NonlinearForm)</li><li>Picard iteration (when discretised as a BilinearForm)</li><li>fully explicit iteration (when discretised as a LinearForm)</li></ul><p>This example script has a test case that checks that the result of all three iterations are the same.</p><pre><code class="language-julia hljs">module ExampleA11_NavierStokesFixpointIterations
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+using SimplexGridFactory
+using Triangulate
+
+# flow data for boundary condition, right-hand side and error calculation
+function get_flowdata(μ)
+    u = DataFunction((result,x) -&gt; (
+        result[1] = sin(2*pi*x[1])*sin(2*pi*x[2]);
+        result[2] = cos(2*pi*x[1])*cos(2*pi*x[2]);
+        ), [2,2]; dependencies = &quot;X&quot;, name = &quot;u&quot;, bonus_quadorder = 5)
+    p = DataFunction((result,x) -&gt; (result[1] = (cos(4*pi*x[1])-cos(4*pi*x[2])) / 4), [1,2]; dependencies = &quot;X&quot;, name = &quot;p&quot;)
+    Δu, ∇p = Δ(u), ∇(p)
+    f = DataFunction((result,x) -&gt; (
+        result .= -μ*Δu(x) + ∇p(x)
+        ), [2,2]; dependencies = &quot;X&quot;, name = &quot;f&quot;, bonus_quadorder = 5)
+    return u, f
+end
+
+# everything is wrapped in a main function
+function main(;
+    μ = 1e-1,               # viscosity
+    Plotter = nothing,      # Plotter for visualization (e.g. PyPlot)
+    iterationtype = 1,      # convection term discretisation (1 = Newton, 2 = Picard, 3 = just in right-hand side)
+    verbosity = 0)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # FEType (Hdiv-conforming)
+    FETypes = [H1P2{2,2}, L2P1{1}] # Scott-Vogelius
+
+    # load exact flow data
+    u, f = get_flowdata(μ)
+
+    # problem description
+    Problem = PDEDescription(&quot;Navier-Stokes Equations&quot;)
+    add_unknown!(Problem; equation_name = &quot;momentum equation&quot;, unknown_name = &quot;u&quot;)
+    add_unknown!(Problem; equation_name = &quot;incompressibility constraint&quot;, unknown_name = &quot;p&quot;, algebraic_constraint = true)
+    add_operator!(Problem, [1,1], LaplaceOperator(μ))
+    add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
+
+    # convection term discretised in 3 ways
+    function convection_kernel(result, input)
+        uh, ∇uh = view(input,1:2), view(input,3:6)
+        result[1] = ∇uh[1]*uh[1] + ∇uh[2]*uh[2]
+        result[2] = ∇uh[3]*uh[1] + ∇uh[4]*uh[2]
+    end
+
+    # add convection term as chosen by iterationtype
+    if iterationtype == 1 # Newton for c(u_h, u_h, v_h)
+        add_operator!(Problem, 1, NonlinearForm(Identity, [Identity, Gradient], [1,1], convection_kernel, [2,6]; name = &quot;((#1⋅∇)#1, #T)&quot;))
+    elseif iterationtype == 2 # Picard (adds c(u_old, u_h, v_h) on left-hand side)
+        add_operator!(Problem, [1,1], BilinearForm([Gradient, Identity], [Identity], [1], Action(convection_kernel, [2,6]); name = &quot;((#1⋅∇)#1, #T)&quot;, transposed_assembly = true))
+    elseif iterationtype == 3 # fully explicit (adds c(u_old, u_old, v_h) on right-hand side)
+        add_rhsdata!(Problem, 1, LinearForm(Identity, [Identity, Gradient], [1,1], Action(convection_kernel, [2,6]); name = &quot;((#1⋅∇)#1, #T)&quot;, factor = -1))
+    end
+
+    # add right-hand side data
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
+
+    # add boundary data (fixes normal components of along boundary)
+    add_boundarydata!(Problem, 1, [1,2,3,4], InterpolateDirichletBoundary; data = u)
+    add_constraint!(Problem, FixedIntegralMean(2,0))
+
+    # show final problem description (without stabilizing terms)
+    @show Problem
+
+    # get grid and barycentric refinement
+    xgrid = barycentric_refine(uniform_refine(grid_unitsquare(Triangle2D), 3))
+
+    # generate FES spaces and solution vector
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
+    Solution = FEVector(FES)
+
+    # solve
+    solve!(Solution, Problem; skip_update = iterationtype == 3 ? -1 : 1, maxiterations = 20, target_residual = 1e-13, show_statistics = true)
+
+    # plot last solution and convergence hisotry
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,3), clear = true, resolution = (1500,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true), 1, :), levels = 3, colorbarticks = 9, title = &quot;u_h (abs + quiver)&quot;)
+    vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false)
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[2]),1,:), levels = 7, title = &quot;p_h&quot;)
+
+    return Solution
+end
+
+# checks if the solutions of all three iteration schemes are the same
+function test(; μ = 1e-1)
+    SolutionNLF = main(; μ = μ, iterationtype = 1)
+    SolutionBLF = main(; μ = μ, iterationtype = 2)
+    SolutionLF = main(; μ = μ, iterationtype = 3)
+    distance1 = maximum(SolutionNLF.entries - SolutionBLF.entries)
+    distance2 = maximum(SolutionNLF.entries - SolutionLF.entries)
+    return max(distance1, distance2)
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/ExampleA11_NavierStokesFixpointIterations_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA10_PoissonPeriodic/">« A10 : Poisson-Problem with periodic boundary</a><a class="docs-footer-nextpage" href="../ExampleA12_NavierStokesPeriodic/">A12 : Navier-Stokes-Problem with periodic boundary »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Wednesday 1 March 2023 15:01">Wednesday 1 March 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
