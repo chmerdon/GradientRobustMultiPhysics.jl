@@ -140,17 +140,17 @@ $(TYPEDSIGNATURES)
 Custom `show` function for `FESpace` that prints some information and all available dofmaps.
 """
 function Base.show(io::IO, FES::FESpace{Tv,Ti,FEType,APT}) where {Tv,Ti,FEType<:AbstractFiniteElement,APT}
-	  println("\nFESpace information")
-    println("===================")
-    println("     name = $(FES.name)")
-    println("   FEType = $FEType")
-    println("  FEClass = $(supertype(FEType))")
-    println("    ndofs = $(FES.ndofs)\n")
-    println("")
-    println("DofMaps");
-    println("==========");
+	println(io, "\nFESpace information")
+    println(io, "===================")
+    println(io, "     name = $(FES.name)")
+    println(io, "   FEType = $FEType")
+    println(io, "  FEClass = $(supertype(FEType))")
+    println(io, "    ndofs = $(FES.ndofs)\n")
+    println(io, "")
+    println(io, "DofMaps");
+    println(io, "==========");
     for tuple in FES.dofmaps
-        println("> $(tuple[1])")
+        println(io, "> $(tuple[1])")
     end
 end
 
@@ -199,7 +199,12 @@ Base.getindex(FES::FESpace,DM::Type{<:DofMap})=get!(FES,DM)
 function count_ndofs(xgrid, FEType, broken)
     EG = xgrid[UniqueCellGeometries]
     xItemGeometries = xgrid[CellGeometries]
-    ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG]
+    if length(EG) == 1
+        ncells4EG = [(EG[1], num_cells(xgrid))]
+    else
+        ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG] # allocations !!!
+    end
+    @show ncells4EG
     ncomponents::Int = get_ncomponents(FEType)
     totaldofs::Int = 0
     offset4component::Int = 0
@@ -218,7 +223,7 @@ function count_ndofs(xgrid, FEType, broken)
             offset4component += ncells4EG[j][2] * get_ndofs4c(parsed_dofmap, DofTypeInterior)
         end
 
-        if j == length(EG) && !broken
+       if j == length(EG) && !broken
             # add continuous dofs here
             totaldofs += size(xgrid[Coordinates],2) * get_ndofs(parsed_dofmap, DofTypeNode)
             if get_ndofs(parsed_dofmap, DofTypeFace) > 0
