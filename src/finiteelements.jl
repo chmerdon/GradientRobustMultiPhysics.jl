@@ -204,7 +204,6 @@ function count_ndofs(xgrid, FEType, broken)
     else
         ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG] # allocations !!!
     end
-    @show ncells4EG
     ncomponents::Int = get_ncomponents(FEType)
     totaldofs::Int = 0
     offset4component::Int = 0

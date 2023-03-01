@@ -44,7 +44,7 @@ To test this we prescribe the boundary data of a linear velocity field ``\mathbf
 
 - In Step 3 the user can choose a finite-element pair and if a pressure-robust modification to the right-hand side should be applied.
 
-- In Step 4 the user can specify the viscosity coefficient and see how the discretisation errors depend on it (automatically updated plot in Step 5).
+- In Step 4 the user can specify the viscosity coefficient and see how the discretisation errors depend on it (automatically updates plots).
 
 """
 
@@ -163,14 +163,11 @@ end
 
 # ╔═╡ 6243a27b-706f-4d4b-acbd-5431868e2b6f
 md"""
-### Step 5: Plot of 1st and 2nd component of u
+##### Plot of 1st and 2nd component of u
 """
 
 # ╔═╡ b87e20a7-2d97-430c-b18f-da849ee8ebc9
-scalarplot(xgrid, Solution.entries[1:nnodes]; Plotter = PlutoVista, title = "$μ")
-
-# ╔═╡ 038bcbb0-6cc5-4a20-908d-e2a44dd7ef9c
-scalarplot(xgrid, Solution.entries[offset+1:offset+nnodes]; Plotter = PlutoVista, title = "$μ")
+[scalarplot(xgrid, Solution.entries[1:nnodes]; Plotter = PlutoVista, resolution = (350,350)), scalarplot(xgrid, Solution.entries[offset+1:offset+nnodes]; Plotter = PlutoVista, resolution = (350,350)), μ]
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1330,8 +1327,8 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 """
 
 # ╔═╡ Cell order:
+# ╟─fa059506-0710-11ec-1bb4-5f0937e3b169
 # ╟─5fd62983-cad4-4a72-97e3-51c512451753
-# ╠═fa059506-0710-11ec-1bb4-5f0937e3b169
 # ╟─582e3416-5d15-4d01-936a-bd2a1e6b7310
 # ╠═e882b9a6-5804-4381-a09c-bf9df81d798a
 # ╟─bf1bb705-bdcc-4e10-9711-747fbbebbaef
@@ -1346,6 +1343,5 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─4e5e4d65-2db6-48d2-b8ac-5b5eb5d505e7
 # ╟─6243a27b-706f-4d4b-acbd-5431868e2b6f
 # ╠═b87e20a7-2d97-430c-b18f-da849ee8ebc9
-# ╟─038bcbb0-6cc5-4a20-908d-e2a44dd7ef9c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

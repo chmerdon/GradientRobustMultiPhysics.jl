@@ -35,6 +35,10 @@ function main(; verbosity = 0, order = 2, μ = 1, nrefinements = 3, Plotter = no
 
     ## build/load any grid (here: a uniform-refined 2D unit square into triangles)
     xgrid = uniform_refine(grid_unitsquare(Triangle2D), nrefinements)
+    @info "preparing face nodes"
+    @time xgrid[FaceNodes]
+    @info "preparing cell volumes"
+    @time cellvolumes = xgrid[CellVolumes]
 
     ## choose FE type
     FEType = H1Pk{1,2,order}
@@ -50,8 +54,6 @@ function main(; verbosity = 0, order = 2, μ = 1, nrefinements = 3, Plotter = no
     @time CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
     @info "preparing bfacedofs"
     @time BFaceDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.BFaceDofs]
-    @info "preparing cell volumes"
-    @time cellvolumes = xgrid[CellVolumes]
 
     @info "ndofs = $(length(SolutionLow.entries))"
     @time solve_poisson_lowlevel!(SolutionLow; μ = μ)
