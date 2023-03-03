@@ -374,7 +374,7 @@ function BilinearForm(
     # construct PDEoperator
     if name == "auto"
         if action.name == "no action"
-            name = "($(operators_linear[1])(#A), $(operators_linear[2])(#T))"
+            name = "($(operators_linear[2])(#A), $(operators_linear[1])(#T))"
         else
             name = apply_action_to == 1 ? "(A(...,$(operators_linear[1])(#A)), $(operators_linear[2])(#T))" : "($(operators_linear[1])(#A), A(...,$(operators_linear[2])(#T)))"
         end

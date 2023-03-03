@@ -129,7 +129,8 @@ function add_unknown!(PDE::PDEDescription; equation_name::String = "", unknown_n
         end
     end
     if variables == "auto"
-        variables = ["$(unknown_name[1])","$(unknown_name[1]+1)"]
+        unknown_test = "$(unknown_name[1]+1)" * SubString(unknown_name, 2, length(unknown_name))
+        variables = [unknown_name,unknown_test]
     end
     push!(PDE.equation_names,equation_name)
     push!(PDE.unknown_names,unknown_name)

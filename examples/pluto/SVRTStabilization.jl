@@ -59,19 +59,21 @@ On general meshes a novel Raviart-Thomas enrichment can be used to guarantee inf
 
 """
 
-# ╔═╡ 9f34b325-c8a9-47f1-8daf-4c9b90d35d76
-begin
-	μ = 1e-5
-	order = 2
-	nref = 3
-	@assert order ∈ 1:4
-end
-
 # ╔═╡ 98631725-a796-4415-8665-e4dc38d22ef2
 @bind method Select(["use RT-enriched Scott-Vogelius", "use classical Scott-Vogelius", "use Taylor-Hood"])
 
-# ╔═╡ 9471724b-e1bd-4e9e-a214-444965121957
-@bind options MultiCheckBox(["use barycentric refinement"])
+# ╔═╡ c0e5f1ae-f63c-4399-a070-3b8c41343bc3
+md"""
+order = $(@bind order NumberField(1:4, default=2)) 
+
+nref = $(@bind nref NumberField(1:7, default=3)) $(@bind options MultiCheckBox(["use barycentric refinement"]))
+
+μ = 10^$(@bind logmu NumberField(-10:3, default=-3))
+
+"""
+
+# ╔═╡ 222aea06-3967-41bf-9b79-2ba75a84e4c7
+μ = 10.0^logmu  	# viscosity
 
 # ╔═╡ dc99f3a7-e9ac-4f9a-a215-99f2fd1b0968
 md"""
@@ -93,7 +95,7 @@ begin
 				bfaceregions=[1, 2, 3, 4],
 				regionpoints=[0.5 0.5;]',
 				regionnumbers=[1],
-				regionvolumes=[4.0^(-nref-1)/2])
+				regionvolumes=[4.0^(-nref-1)])
 	end
 	xgrid = get_grid(nref)
 	if "use barycentric refinement" ∈ options
@@ -106,60 +108,68 @@ end
 begin
 	use_enrichment = method == "use RT-enriched Scott-Vogelius"
 	## data for test problem
-    u = DataFunction((result, x, t) -> (
+    exact_u = DataFunction((result, x, t) -> (
             result[1] = exp(-8*pi*pi*μ*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
             result[2] = exp(-8*pi*pi*μ*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
-        ), [2,2]; name = "u", dependencies = "XT", bonus_quadorder = 6)
-    p = DataFunction((result, x, t) -> (
+	), [2,2]; name = "u", dependencies = "XT", bonus_quadorder = 10)
+    exact_p = DataFunction((result, x, t) -> (
             result[1] = exp(-8*pi*pi*μ*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
         ), [1,2]; name = "p", dependencies = "XT", bonus_quadorder = 4)
-    Δu = Δ(u)
-    ∇p = ∇(p)
+    Δu = Δ(exact_u)
+    ∇p = ∇(exact_p)
     f = DataFunction((result, x, t) -> (
             result .= -μ * Δu(x,t) + ∇p(x,t);
-        ), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 6)
+	), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 6)
+	L2errorU = L2ErrorIntegrator(exact_u, Identity)
+	H1errorU = L2ErrorIntegrator(∇(exact_u), Gradient)
+	L2errorP = L2ErrorIntegrator(exact_p, Identity)
+	nothing
 end
 
 # ╔═╡ 749404f8-51f3-46ae-9662-83611b362cd4
 begin
 	## define problem
     Problem = PDEDescription("Stokes problem")
-    id_uc = add_unknown!(Problem; equation_name = "momentum equation (Pk part)", unknown_name = "u_Pk", variables = ["uc","vc"])
+    u = add_unknown!(Problem; equation_name = "momentum equation (Pk part)",
+							  unknown_name = "u")
 	if use_enrichment
-    	id_uR = add_unknown!(Problem; equation_name = "momentum equation (RT enrichment)", unknown_name = "u_RT", variables = ["uR","vR"])
+    	uR = add_unknown!(Problem; equation_name = "momentum equation (RT part)",
+								   unknown_name = "uR", variables = ["uR","vR"])
 	end
-    id_p = add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "p")
+    p = add_unknown!(Problem; equation_name = "div constraint", unknown_name = "p")
 
     ## add Laplacian for Pk part
-    add_operator!(Problem, [id_uc,id_uc], LaplaceOperator(μ))
+    add_operator!(Problem, [u,u], LaplaceOperator(μ))
 
     ## add Lagrange multiplier for divergence of velocity (=pressure)
-    add_operator!(Problem, [id_uc,id_p], LagrangeMultiplier(Divergence))
-    add_constraint!(Problem, FixedIntegralMean(id_p, 0))
+    add_operator!(Problem, [u,p], LagrangeMultiplier(Divergence))
+    add_constraint!(Problem, FixedIntegralMean(p, 0))
 
-    ## add boundary data and right-hand side
-    add_boundarydata!(Problem, id_uc, [1,2,3,4], InterpolateDirichletBoundary; data = u)
-    add_rhsdata!(Problem, id_uc, LinearForm(Identity, f))
+    ## add inhmogeneous Dirichlet boundary data
+    add_boundarydata!(Problem, u, 1:4, InterpolateDirichletBoundary; data = exact_u)
+	## add right-hand side data
+    add_rhsdata!(Problem, u, LinearForm(Identity, f))
 
 	if use_enrichment
 	    if order > 1 ## add consistency terms (skew-symmetric)
-	        add_operator!(Problem, [id_uc,id_uR], BilinearForm([Laplacian, Identity]; factor = μ, also_transposed_block = true, transpose_factor = -μ))
+	        add_operator!(Problem, [u,uR], BilinearForm([Laplacian, Identity];
+							factor = μ, also_transposed_block = true, transpose_factor = -μ))
 	    else ## add stabilisation for RT0
-	        α = 1.0
-	        lump = true
-	        ARR = BilinearForm([Divergence, Divergence]; factor = α*μ, APT = lump ? APT_LumpedBilinearForm : APT_BilinearForm)
-	        add_operator!(Problem, [id_uR,id_uR], ARR)
+	        ARR = BilinearForm([Divergence, Divergence];
+									factor = μ, APT = APT_LumpedBilinearForm)
+	        add_operator!(Problem, [uR,uR], ARR)
 	    end
+		
 		## boundary data for enrichment
-		if order == 1 # <- RT part corrects (piecewise normal flux integrals of) P1 part
-        add_boundarydata!(Problem, id_uR, [1,2,3,4], CorrectDirichletBoundary{id_uc}; data = u) 
+		if order == 1 # <- RT part corrects fluxes of P1 part
+        	add_boundarydata!(Problem, uR, [1,2,3,4], CorrectDirichletBoundary{u}; 										data = exact_u) 
     	end
 
 		## div-pressure relation for enrichment
-    	add_operator!(Problem, [id_uR,id_p], LagrangeMultiplier(Divergence))
+    	add_operator!(Problem, [uR,p], LagrangeMultiplier(Divergence))
 		
 		## right-hand side for enrichment
-    	add_rhsdata!(Problem, id_uR, LinearForm(Identity, f))
+    	add_rhsdata!(Problem, uR, LinearForm(Identity, f))
 	end
     
 	Problem
@@ -168,24 +178,34 @@ end
 # ╔═╡ 2adb82a5-ad9a-455f-93d3-1c73aceb8c72
 begin
 	## create finite element spaces and solution vector
-	FETypes = [H1Pk{2,2,order}, order == 1 ? HDIVRT0{2} : HDIVRTkENRICH{2, order-1}, order == 1 ? L2P0{1} : H1Pk{1,2,order-1}]
+	FETypes = [H1Pk{2,2,order}, 
+			   order == 1 ? HDIVRT0{2} : HDIVRTkENRICH{2, order-1}, 
+		       order == 1 ? L2P0{1} : H1Pk{1,2,order-1}]
 	if use_enrichment
-    	FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid; broken = true)]
+    	FES = [FESpace{FETypes[1]}(xgrid),
+			   FESpace{FETypes[2]}(xgrid),
+			   FESpace{FETypes[3]}(xgrid; broken = true)]
 	else
-		FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[3]}(xgrid; broken = method !== "use Taylor-Hood")]
+		FES = [FESpace{FETypes[1]}(xgrid), 
+			   FESpace{FETypes[3]}(xgrid; broken = method !== "use Taylor-Hood")]
 	end
 	Solution = solve(Problem, FES)
 	nothing
 end
 
-# ╔═╡ f914e48f-36f2-4b4d-8a81-09bd6a868412
-Solution
-
 # ╔═╡ 0a3c9565-62ce-44bd-8c2b-8c0dc9cf7564
-[gridplot(xgrid; Plotter = PlutoVista, resolution = (250,250)), tricontour(xgrid[Coordinates],xgrid[CellNodes], nodevalues(Solution[1]; abs = true)[1,:]; levels = 7, resolution = (250,250)),tricontour(xgrid[Coordinates],xgrid[CellNodes], nodevalues(Solution[id_p])[1,:]; levels = 7, resolution = (250,250))]
+[gridplot(xgrid; Plotter = PlutoVista, resolution = (250,250)), tricontour(xgrid[Coordinates],xgrid[CellNodes], nodevalues(Solution[1]; abs = true)[1,:]; levels = 7, resolution = (250,250)),tricontour(xgrid[Coordinates],xgrid[CellNodes], nodevalues(Solution[p])[1,:]; levels = 7, resolution = (250,250))]
+
+# ╔═╡ ed427a4f-ed03-47ae-9432-53040dec5439
+md"""
+``\quad \| ∇(u - u_h) \|_0`` = $(sqrt(evaluate(H1errorU, Solution[u])))  ``\qquad \| p - p_h \|_0`` = $(sqrt(evaluate(L2errorP, Solution[p])))
+"""
 
 # ╔═╡ cd8e1cd2-f363-4e0e-99c5-78485a8062b0
 [tricontour(xgrid[Coordinates],xgrid[CellNodes], nodevalues(Solution[1], Divergence)[1,:]; levels = 7, resolution = (250,250)), length(Solution) == 3 ? tricontour(xgrid[Coordinates],xgrid[CellNodes], nodevalues(Solution[1], Divergence)[1,:] + nodevalues(Solution[2], Divergence)[1,:]; levels = 7, resolution = (250,250)) : nothing]
+
+# ╔═╡ 8ad446f5-aa67-4329-a2a7-be0c4afdde0f
+Solution
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1383,16 +1403,17 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╔═╡ Cell order:
 # ╟─014c3380-b361-11ed-273e-37541f1ed74f
 # ╟─3e8fd4f5-b6be-4019-9c76-a80cc985b70e
-# ╠═9f34b325-c8a9-47f1-8daf-4c9b90d35d76
 # ╟─98631725-a796-4415-8665-e4dc38d22ef2
-# ╟─9471724b-e1bd-4e9e-a214-444965121957
-# ╟─f914e48f-36f2-4b4d-8a81-09bd6a868412
+# ╟─c0e5f1ae-f63c-4399-a070-3b8c41343bc3
+# ╟─222aea06-3967-41bf-9b79-2ba75a84e4c7
 # ╟─dc99f3a7-e9ac-4f9a-a215-99f2fd1b0968
 # ╟─0a3c9565-62ce-44bd-8c2b-8c0dc9cf7564
+# ╟─ed427a4f-ed03-47ae-9432-53040dec5439
 # ╟─2f89775a-37e0-4cf8-b23c-d8339d09a0d1
 # ╟─cd8e1cd2-f363-4e0e-99c5-78485a8062b0
 # ╟─765352bb-c097-4ceb-8ed1-ded021ab6218
-# ╟─50ce55b3-eeb0-42b4-ba88-208fb0464942
+# ╠═8ad446f5-aa67-4329-a2a7-be0c4afdde0f
+# ╠═50ce55b3-eeb0-42b4-ba88-208fb0464942
 # ╠═749404f8-51f3-46ae-9662-83611b362cd4
 # ╠═2adb82a5-ad9a-455f-93d3-1c73aceb8c72
 # ╟─00000000-0000-0000-0000-000000000001

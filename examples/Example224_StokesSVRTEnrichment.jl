@@ -128,8 +128,8 @@ end
 function get_problem(; μ = 1, order = 1, boundary_data = nothing, rhs = nothing)
     ## define problem
     Problem = PDEDescription("Stokes problem")
-    add_unknown!(Problem; equation_name = "momentum equation (Pk part)", unknown_name = "u_Pk", variables = ["u^{ct}","v^{ct}"])
-    add_unknown!(Problem; equation_name = "momentum equation (RT enrichment)", unknown_name = "u_RT", variables = ["u^R","v^R"])
+    add_unknown!(Problem; equation_name = "momentum equation (Pk part)", unknown_name = "u_Pk")
+    add_unknown!(Problem; equation_name = "momentum equation (RT enrichment)", unknown_name = "u_RT")
     add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "p")
 
     ## add Laplacian for Pk part
