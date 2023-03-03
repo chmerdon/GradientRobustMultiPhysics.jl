@@ -646,7 +646,8 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
     solver_time = @elapsed begin
         ## solve via LinearSolve.jl
         linear_cache = _LinearProblem(A.entries.cscmatrix, b.entries, SC)
-        Target.entries .= LinearSolve.solve(linear_cache)
+        sol = LinearSolve.solve(linear_cache)
+        copyto!(Target.entries, sol.u)
 
         # CHECK RESIDUAL
         residual = deepcopy(b)

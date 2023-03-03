@@ -62,11 +62,13 @@ function make_all(; with_examples::Bool = true, run_examples = true, run_noteboo
         # Run notebooks
         #
         notebooks = [
+            "Burger's equation" => "BurgersEquation.jl"
             "Nonlinear elasticity" => "NonlinearElasticity.jl"
-            "Pressure-robustness" => "PressureRobustness.jl"
             "Natural convection" => "NaturalConvection.jl"
-            "SVRT stabilization" => "SVRTStabilization.jl"
+            "Cahn Hilliard" => "CahnHilliard.jl"
             "Low level Poisson" => "LowLevelPoisson.jl"
+            "Pressure-robustness" => "PressureRobustness.jl"
+            "SVRT stabilization" => "SVRTStabilization.jl"
         ]
 
         notebookjl = last.(notebooks)
