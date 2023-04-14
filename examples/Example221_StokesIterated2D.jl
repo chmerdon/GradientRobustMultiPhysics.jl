@@ -20,7 +20,7 @@ Given intermediate solutions  ``\mathbf{u}_h`` and  ``p_h`` the next approximati
 \begin{aligned}
 (\nabla \mathbf{u}_h^{next}, \nabla \mathbf{v}_h) + ((\mathbf{u}_h^{next} \cdot \nabla) \mathbf{u}_h^{next}, \mathbf{v}_h) + \lambda (\mathrm{div}_h(\mathbf{u}_h) ,\mathrm{div}_h(\mathbf{v}_h)) & = (\mathbf{f},\mathbf{v}_h) + (p_h,\mathrm{div}(\mathbf{v}_h))
 && \text{for all } \mathbf{v}_h \in \mathbf{V}_h\\
-(p^{next}_h,q_h) & = (p_h,q_h) - (\mathrm{div}(\mathbf{u}_h^{next}),q_h) && \text{for all } q_h \in Q_h
+(p^{next}_h,q_h) & = (p_h,q_h) - \lambda (\mathrm{div}(\mathbf{u}_h^{next}),q_h) && \text{for all } q_h \in Q_h
 \end{aligned}
 ```
 

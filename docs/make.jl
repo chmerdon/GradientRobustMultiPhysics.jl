@@ -66,9 +66,10 @@ function make_all(; with_examples::Bool = true, run_examples = true, run_noteboo
             "Nonlinear elasticity" => "NonlinearElasticity.jl"
             "Natural convection" => "NaturalConvection.jl"
             "Cahn Hilliard" => "CahnHilliard.jl"
-            "Low level Poisson" => "LowLevelPoisson.jl"
             "Pressure-robustness" => "PressureRobustness.jl"
             "SVRT stabilization" => "SVRTStabilization.jl"
+            "Low level Poisson" => "LowLevelPoisson.jl"
+            "Low level Navier-Stokes" => "LowLevelNavierStokes.jl"
         ]
 
         notebookjl = last.(notebooks)

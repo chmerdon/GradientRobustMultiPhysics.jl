@@ -7,48 +7,78 @@ using InteractiveUtils
 # ╔═╡ 014c3380-b361-11ed-273e-37541f1ed74f
 begin
 	using GradientRobustMultiPhysics
+	using ForwardDiff
+	using DiffResults
+	using LinearAlgebra
 	using ExtendableGrids
 	using ExtendableSparse
 	using GridVisualize
 	using PlutoVista
 	using Pkg
 
-	## make sure to use the newest version
-	#Pkg.add(Pkg.PackageSpec(;name="GradientRobustMultiPhysics", version="0.11.1"))
 	Pkg.status()
 end
 
 # ╔═╡ 3e8fd4f5-b6be-4019-9c76-a80cc985b70e
 md"""
-# Tutorial notebook: Low level structures and Poisson problem
+# Tutorial notebook: Low level Navier--Stokes problem
 
-As a toy example in this notebook, consider the Poisson problem that seeks ``u`` such that
+Consider the Navier-Stokes problem that seeks ``u`` and ``p`` such that
 ```math
 \begin{aligned}
-	- \mu \Delta u = f.
+	- \mu \Delta u + (u \cdot \nabla) u + \nabla p &= f\\
+			\mathrm{div}(u) & = 0.
 \end{aligned}
 ```
 
-The weak formulation seeks ``u \in V := H^1_0(\Omega)`` such that
+The weak formulation seeks ``u \in V := H^1_0(\Omega)`` and ``p \in Q := L^2_0(\Omega)`` such that
 ```math
 \begin{aligned}
-	\mu (\nabla u, \nabla v) = (f, v)
-	\quad \text{for all } v \in V
+	\mu (\nabla u, \nabla v) + ((u \cdot \nabla) u, v) - (p, \mathrm{div}(v)) & = (f, v)
+	& \text{for all } v \in V\\
+	(q, \mathrm{div}(u)) & = 0
+	& \text{for all } q \in Q\\
 \end{aligned}
 ```
+This tutorial notebook compute a planar lattice flow with inhomogeneous Dirichlet boundary conditions (which requires some modification above). Newton's method with automatic differentation is used to handle the nonlinear convection term.
+"""
 
+# ╔═╡ b5119656-dbf0-4249-a8bc-eac47deb8a43
+md"""
+This is a plot of the computed velocity and pressure:
 """
 
 # ╔═╡ 6160364e-6ab2-475d-9345-3436e6f2b3e3
 begin
 	## PDE data
-	μ = 1.0
-	f = x -> x[1] - x[2]
-	quadorder_f = 1
-
+	const μ = 1e-2
+	function f!(fval,x,t) # right-hand side
+		fval[1] = 8.0*π*π*μ * exp(-8.0*π*π*μ*t) * sin(2.0*π*x[1])*sin(2.0*π*x[2])
+		fval[2] = 8.0*π*π*μ * exp(-8.0*π*π*μ*t) * cos(2.0*π*x[1])*cos(2.0*π*x[2])
+		return nothing
+	end
+	
+	function u!(uval,x,t) # exact velocity (for boundary data and error calculation)
+		uval[1] = exp(-8.0*π*π*μ*t) * sin(2.0*π*x[1])*sin(2.0*π*x[2])
+		uval[2] = exp(-8.0*π*π*μ*t) * cos(2.0*π*x[1])*cos(2.0*π*x[2])
+		return nothing
+	end
+	
 	## discretization parameters
-	nref = 9
-	order = 1
+	const nref = 5
+	const teval = 0
+	const order = 2
+	
+	## prepare error calculation
+	function p!(pval,x,t) # exact pressure (for error calculation)
+		pval[1] = exp(-16*pi*pi*μ*t)*(cos(4*pi*x[1])-cos(4*pi*x[2]))/4
+		return nothing
+	end
+	exact_u = DataFunction(u!, [2,2]; dependencies = "XT", bonus_quadorder = 5)
+	H1errorU = L2ErrorIntegrator(∇(exact_u), Gradient; time = teval)
+	exact_p = DataFunction(p!, [1,2]; dependencies = "XT", bonus_quadorder = 5)
+	L2errorP = L2ErrorIntegrator(exact_p, Identity; time = teval)
+	nothing
 end
 
 # ╔═╡ 8e0a11e7-7998-403a-8484-7d0180ea40b2
@@ -67,187 +97,316 @@ end
 
 # ╔═╡ 7e2a082f-5457-47ac-96d5-b688a70a5506
 begin
-	## create finite element space
-    FEType = H1Pk{1,2,order}
+	## create finite element space (Taylor--Hood)
+    FETypes = [H1Pk{2,2,order}, H1Pk{1,2,order-1}]
 
 	## prepare finite element space and dofmaps
 	println("Creating FESpace...")
-    @time FES = FESpace{FEType}(xgrid)
-	println("Creating cell dofs...")
-    @time CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
-	println("Creating bface dofs...")
-    @time BFaceDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.BFaceDofs]
-	
+    @time FES = [FESpace{FETypes[1]}(xgrid; name = "velocity space"),                  	             FESpace{FETypes[2]}(xgrid; name = "pressure space")]
 	FES
 end
 
 # ╔═╡ 6dcca265-b8fd-4043-a2a7-4ff9bf579dd5
-function assemble!(A::ExtendableSparseMatrix, b::Vector, FES, f, μ = 1)
+function prepare_assembly!(A, b, FESu, FESp, Solution, f, μ = 1)
 
-    xgrid = FES.xgrid
+	A = A.entries
+	b = b.entries
+	Solution = Solution.entries
+    xgrid = FESu.xgrid
     EG = xgrid[UniqueCellGeometries][1]
-    FEType = eltype(FES)
+    FEType_u = eltype(FESu)
+    FEType_p = eltype(FESp)
     L2G = L2GTransformer(EG, xgrid, ON_CELLS)
+    cellvolumes = xgrid[CellVolumes]
+    ncells::Int = num_cells(xgrid)
 
     ## dofmap
-    CellDofs = FES[GradientRobustMultiPhysics.CellDofs]
+    CellDofs_u = FESu[GradientRobustMultiPhysics.CellDofs]
+    CellDofs_p = FESp[GradientRobustMultiPhysics.CellDofs]
+	offset_p = FESu.ndofs
 	
     ## quadrature formula
-	qf = QuadratureRule{Float64, EG}(2*(get_polynomialorder(FEType, EG)-1))
+	qf = QuadratureRule{Float64, EG}(3*get_polynomialorder(FEType_u, EG)-1)
 	weights::Vector{Float64} = qf.w
 	xref::Vector{Vector{Float64}} = qf.xref
 	nweights::Int = length(weights)
 	
 	## FE basis evaluator
-	FEBasis_∇ = FEEvaluator(FES, Gradient, qf)
-	∇vals = FEBasis_∇.cvals
-	FEBasis_id = FEEvaluator(FES, Identity, qf)
-	idvals = FEBasis_id.cvals
+	FEBasis_∇u = FEEvaluator(FESu, Gradient, qf)
+	∇uvals = FEBasis_∇u.cvals
+	FEBasis_idu = FEEvaluator(FESu, Identity, qf)
+	iduvals = FEBasis_idu.cvals
+	FEBasis_idp = FEEvaluator(FESp, Identity, qf)
+	idpvals = FEBasis_idp.cvals
 
+	## prepare automatic differentation of convection operator
+	function operator!(result, input)
+		# result = (u ⋅ ∇)u
+		result[1] = input[1]*input[3]+input[2]*input[4]
+		result[2] = input[1]*input[5]+input[2]*input[6]
+	end
+    result = Vector{Float64}(undef,2)
+    input = Vector{Float64}(undef,6)
+    tempV = zeros(Float64, 2)
+    Dresult = DiffResults.JacobianResult(result, input)
+    cfg = ForwardDiff.JacobianConfig(operator!, result, input, ForwardDiff.Chunk{6}())
+    jac = DiffResults.jacobian(Dresult)
+    value = DiffResults.value(Dresult)
 	
-    cellvolumes = xgrid[CellVolumes]
    
     ## ASSEMBLY LOOP
-    function barrier(EG, L2G::L2GTransformer)
-		## barrier function to avoid allocations by EG dispatch
+    function barrier(EG, L2G::L2GTransformer, linear::Bool, nonlinear::Bool)
+		## barrier function to avoid allocations caused by L2G
 		
-    	ndofs4cell::Int = get_ndofs(ON_CELLS, FEType, EG)
-    	Aloc = zeros(Float64, ndofs4cell, ndofs4cell)
-        ncells::Int = num_cells(xgrid)
+    	ndofs4cell_u::Int = get_ndofs(ON_CELLS, FEType_u, EG)
+    	ndofs4cell_p::Int = get_ndofs(ON_CELLS, FEType_p, EG)
+    	Aloc = zeros(Float64, ndofs4cell_u, ndofs4cell_u)
+    	Bloc = zeros(Float64, ndofs4cell_u, ndofs4cell_p)
     	dof_j::Int, dof_k::Int = 0, 0
+		fval::Vector{Float64} = zeros(Float64,2)
         x::Vector{Float64} = zeros(Float64, 2)
-        
+		
         for cell = 1 : ncells
 			## update FE basis evaluators
-	        FEBasis_∇.citem[] = cell
-	        update_basis!(FEBasis_∇) 
+	        update_basis!(FEBasis_∇u, cell)
+	        update_basis!(FEBasis_idu, cell)
+	        update_basis!(FEBasis_idp, cell) 
 	
-			## assemble local stiffness matrix
-	        for j = 1 : ndofs4cell, k = j : ndofs4cell
-				temp = 0
-				for qp = 1 : nweights
-					temp += weights[qp] * dot(view(∇vals,:,j,qp), view(∇vals,:,k,qp))
-				end
-				Aloc[j,k] = temp
-	        end
-	        Aloc .*= μ * cellvolumes[cell]
-	
-			## add local matrix to global matrix
-	        for j = 1 : ndofs4cell
-	            dof_j = CellDofs[j, cell]
-	            for k = j : ndofs4cell
-	                dof_k = CellDofs[k, cell]
-	                if abs(Aloc[j,k]) > 1e-15
-	                    # write into sparse matrix, only lines with allocations
-	                    rawupdateindex!(A, +, Aloc[j,k], dof_j, dof_k) 
-	                    if k > j
-	                        rawupdateindex!(A, +, Aloc[j,k], dof_k, dof_j)
-	                    end
+			## assemble local stiffness matrix (symmetric)
+			if (linear)
+		        for j = 1 : ndofs4cell_u, k = 1 : ndofs4cell_u
+					temp = 0
+					for qp = 1 : nweights
+						temp += weights[qp] * dot(view(∇uvals,:,j,qp), view(∇uvals,:,k,qp))
+					end
+					Aloc[k,j] = μ * temp
+		        end
+
+				## assemble div-pressure coupling
+		        for j = 1 : ndofs4cell_u, k = 1 : ndofs4cell_p
+					temp = 0
+					for qp = 1 : nweights
+						temp -= weights[qp] * (∇uvals[1,j,qp] + ∇uvals[4,j,qp]) * 
+						idpvals[1,k,qp]
+					end
+					Bloc[j,k] = temp
+		        end
+		        Bloc .*= cellvolumes[cell]
+				
+				## assemble right-hand side
+	            update_trafo!(L2G, cell)
+	            for j = 1 : ndofs4cell_u
+	                ## right-hand side
+	                temp = 0
+	                for qp = 1 : nweights
+	                    ## get global x for quadrature point
+	                    eval_trafo!(x, L2G, xref[qp])
+	                    ## evaluate (f(x), v_j(x))
+						f!(fval, x, teval)
+	                    temp += weights[qp] * dot(view(iduvals,: , j, qp), fval)
 	                end
+					## write into global vector
+	                dof_j = CellDofs_u[j, cell]
+	                b[dof_j] += temp * cellvolumes[cell]
 	            end
+			end
+
+			## assemble nonlinear term
+			if (nonlinear)
+				for qp = 1 : nweights
+					fill!(input,0)
+					for j = 1 : ndofs4cell_u
+						dof_j = CellDofs_u[j, cell]
+						for d = 1 : 2
+							input[d] += Solution[dof_j] * iduvals[d,j,qp]
+						end
+						for d = 1 : 4
+							input[2+d] += Solution[dof_j] * ∇uvals[d,j,qp]
+						end
+					end
+					
+                	## evaluate jacobian
+					ForwardDiff.chunk_mode_jacobian!(Dresult, operator!, result, input, cfg)
+					
+	                # update matrix
+	                for j = 1 : ndofs4cell_u
+	                    # multiply ansatz function with local jacobian
+						fill!(tempV,0)
+						for d = 1 : 2
+							tempV[1] += jac[1,d] * iduvals[d,j,qp]
+							tempV[2] += jac[2,d] * iduvals[d,j,qp]
+						end
+						for d = 1 : 4
+							tempV[1] += jac[1,2+d] * ∇uvals[d,j,qp]
+							tempV[2] += jac[2,2+d] * ∇uvals[d,j,qp]
+						end
+	
+	                    # multiply test function operator evaluation
+	                    for k = 1 : ndofs4cell_u
+	                        Aloc[k,j] += dot(tempV,view(iduvals,:,k,qp)) * weights[qp]
+	                    end
+	                end 
+	
+	                # update rhs
+	                mul!(tempV, jac, input)
+	                tempV .-= value
+	                for j = 1 : ndofs4cell_u
+                		dof_j = CellDofs_u[j, cell]
+                		b[dof_j] += dot(tempV, view(iduvals,:,j,qp)) * weights[qp] * cellvolumes[cell]
+	                end
+				end
+			end
+			
+			## add local matrices to global matrix
+	        Aloc .*= cellvolumes[cell]
+	        for j = 1 : ndofs4cell_u
+	            dof_j = CellDofs_u[j, cell]
+	            for k = 1 : ndofs4cell_u
+	                dof_k = CellDofs_u[k, cell]
+	                rawupdateindex!(A, +, Aloc[j,k], dof_j, dof_k)
+	            end
+				if (linear)
+					for k = 1 : ndofs4cell_p
+						dof_k = CellDofs_p[k, cell] + offset_p
+		                rawupdateindex!(A, +, Bloc[j,k], dof_j, dof_k) 
+		                rawupdateindex!(A, +, Bloc[j,k], dof_k, dof_j)
+					end
+				end
 	        end
 	        fill!(Aloc, 0)
-
-			## assemble right-hand side
-            update_trafo!(L2G, cell)
-            for j = 1 : ndofs4cell
-                ## right-hand side
-                temp = 0
-                for qp = 1 : nweights
-                    ## get global x for quadrature point
-                    eval_trafo!(x, L2G, xref[qp])
-                    ## evaluate (f(x), v_j(x))
-                    temp += weights[qp] * idvals[1, j, qp] * f(x)
-                end
-				## write into global vector
-                dof_j = CellDofs[j, cell]
-                b[dof_j] += temp * cellvolumes[cell]
-            end
+	        fill!(Bloc, 0)
         end
     end
-    barrier(EG, L2G)
-    flush!(A)
+
+	function update_system!(linear::Bool, nonlinear::Bool)
+	    barrier(EG, L2G, linear, nonlinear)
+	    flush!(A)
+	end
+	update_system!
 end
 
 # ╔═╡ 7299586b-6859-41af-bcd0-1a0daa454c81
-function solve_poisson_lowlevel(FES, μ, f)
+function solve_stokes_lowlevel(FES, μ, f!)
 	
+	println("Initializing system...")
 	Solution = FEVector(FES)
-	FES = Solution[1].FES
-	A = FEMatrix(FES, FES)
+	A = FEMatrix(FES)
 	b = FEVector(FES)
-	println("Assembling operators...")
-	@time assemble!(A.entries, b.entries, FES, f, μ)
-
-    ## fix boundary dofs
-	println("Assembling boundary data...")
+	@time update_system! = prepare_assembly!(A, b, FES[1], FES[2], Solution, f!, μ)
+	@time update_system!(true, false)
+	Alin = deepcopy(A) # = keep linear part of system matrix
+	blin = deepcopy(b) # = keep linear part of right-hand side
+	
+	println("Pepare boundary conditions...")
 	@time begin
-		BFaceDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.BFaceDofs]
+		u_init = FEVector(FES)
+		interpolate!(u_init[1], DataFunction(u!, [2,2]; dependencies = "XT", bonus_quadorder = 5); time = teval)
+		
+		fixed_dofs = [size(A.entries,1)] # fix one pressure dof = last dof
+		BFaceDofs::Adjacency{Int32} = FES[1][GradientRobustMultiPhysics.BFaceDofs]
 		nbfaces::Int = num_sources(BFaceDofs)
 		AM::ExtendableSparseMatrix{Float64,Int64} = A.entries
 		dof_j::Int = 0
 		for bface = 1 : nbfaces
 			for j = 1 : num_targets(BFaceDofs,1)
 				dof_j = BFaceDofs[j, bface]
-				AM[dof_j,dof_j] = 1e60
-				b.entries[dof_j] = 0
+				push!(fixed_dofs, dof_j)
 			end
 		end
 	end
-	ExtendableSparse.flush!(A.entries)
 
-    ## solve
-	println("Solving linear system...")
-    @time copyto!(Solution.entries, A.entries \ b.entries)
+	
+	for it = 1 : 20
+	    ## solve
+		println("\nITERATION $it\n=============")
+		println("Solving linear system...")
+	    @time copyto!(Solution.entries, A.entries \ b.entries)
+		res = A.entries.cscmatrix * Solution.entries .- b.entries
+		for dof in fixed_dofs
+			res[dof] = 0
+		end
+		linres = norm(res)
+		println("linear residual = $linres")
+		
+		fill!(A.entries.cscmatrix.nzval,0)
+		fill!(b.entries,0)
+		println("Updating linear system...")
+		@time begin
+			update_system!(false,true)
+			A.entries.cscmatrix += Alin.entries.cscmatrix
+			b.entries .+= blin.entries
+		end
+		
+	    ## fix boundary dofs
+		for dof in fixed_dofs
+			AM[dof,dof] = 1e60
+			b.entries[dof] = 1e60 * u_init.entries[dof]
+		end
+		ExtendableSparse.flush!(A.entries)
 
-	return Solution
+		## calculate nonlinear residual
+		res = A.entries.cscmatrix * Solution.entries .- b.entries
+		for dof in fixed_dofs
+			res[dof] = 0
+		end
+		nlres = norm(res)
+		println("nonlinear residual = $nlres")
+		if nlres < max(1e-12, 20*linres)
+			break
+		end
+
+	end
+
+    ## move pressure integral mean to zero
+	@time begin
+		println("Postprocessing...")
+	    pmeanIntegrator = ItemIntegrator([Identity])
+	    total_area = sum(Solution[2].FES.xgrid[CellVolumes], dims=1)[1]
+	    meanvalue = evaluate(pmeanIntegrator, Solution[2])/total_area
+	    for dof = 1:FES[2].ndofs
+	        Solution[2][dof] -= meanvalue
+	    end   
+	end
+
+	return Solution, u_init
 end
 
 # ╔═╡ 0785624c-e95a-4e76-8071-2eea591091e0
 begin
 	## call low level solver
-	sol = solve_poisson_lowlevel(FES, μ, f)
+	sol, u_init = solve_stokes_lowlevel(FES, μ, f!)
+	sol
 end
 
 # ╔═╡ 6f7a1407-dfb3-497b-8c57-8efac6592194
-tricontour(xgrid[Coordinates],xgrid[CellNodes],sol.entries[1:num_nodes(xgrid)]; levels = 5)
+[tricontour(xgrid[Coordinates],xgrid[CellNodes],nodevalues(sol[1]; abs = true)[:]; levels = 5),
+tricontour(xgrid[Coordinates],xgrid[CellNodes],nodevalues(sol[2])[:]; levels = 5)
+]
 
-# ╔═╡ 35386942-6556-45df-8be3-10a02b05e854
+# ╔═╡ 03e875d8-4c8a-4c1f-bf38-04eaea176810
 md"""
-	Now everything again high-level via a PDEDescription:
+``\quad \| ∇(u - u_h) \|_0`` = $(sqrt(evaluate(H1errorU, sol[1])))
+``\qquad \| p - p_h \|_0`` = $(sqrt(evaluate(L2errorP, sol[2])))
 """
-
-# ╔═╡ 02740215-fde2-414c-8cdf-554aaa6c1367
-begin
-    ## create PDE description
-	Problem = PDEDescription("Poisson problem")
-	add_unknown!(Problem; unknown_name = "u", equation_name = "Poisson equation")
-	add_operator!(Problem, [1,1], LaplaceOperator(μ))
-	fdata = DataFunction((result, x) -> (result[1] = f(x);), [1,2]; dependencies = "X", bonus_quadorder = quadorder_f)
-	add_rhsdata!(Problem, 1, LinearForm(Identity, fdata; regions = [1]))
-	add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
-	Problem
-end
-
-# ╔═╡ 07a09bf6-b821-40ce-8056-19dbf156b223
-begin
-    ## solve
-    @time sol_high = solve(Problem, FES; show_statistics = true)
-end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+DiffResults = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
 ExtendableGrids = "cfc395e8-590f-11e8-1f13-43a2532b2fa8"
 ExtendableSparse = "95c220a8-a1cf-11e9-0c77-dbfce5f500b3"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GradientRobustMultiPhysics = "0802c0ca-1768-4022-988c-6dd5f9588a11"
 GridVisualize = "5eed8a63-0fb0-45eb-886d-8d5a387d12b8"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PlutoVista = "646e1f28-b900-46d7-9d87-d554eb38a413"
 
 [compat]
+DiffResults = "~1.1.0"
 ExtendableGrids = "~0.9.17"
 ExtendableSparse = "~0.9.6"
+ForwardDiff = "~0.10.35"
 GradientRobustMultiPhysics = "~0.11.1"
 GridVisualize = "~1.0.2"
 PlutoVista = "~0.8.24"
@@ -1451,17 +1610,16 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 """
 
 # ╔═╡ Cell order:
-# ╠═014c3380-b361-11ed-273e-37541f1ed74f
+# ╟─014c3380-b361-11ed-273e-37541f1ed74f
 # ╟─3e8fd4f5-b6be-4019-9c76-a80cc985b70e
-# ╠═6160364e-6ab2-475d-9345-3436e6f2b3e3
+# ╟─b5119656-dbf0-4249-a8bc-eac47deb8a43
 # ╟─6f7a1407-dfb3-497b-8c57-8efac6592194
+# ╟─03e875d8-4c8a-4c1f-bf38-04eaea176810
+# ╠═6160364e-6ab2-475d-9345-3436e6f2b3e3
 # ╠═8e0a11e7-7998-403a-8484-7d0180ea40b2
 # ╠═7e2a082f-5457-47ac-96d5-b688a70a5506
 # ╠═0785624c-e95a-4e76-8071-2eea591091e0
 # ╠═7299586b-6859-41af-bcd0-1a0daa454c81
 # ╠═6dcca265-b8fd-4043-a2a7-4ff9bf579dd5
-# ╟─35386942-6556-45df-8be3-10a02b05e854
-# ╠═02740215-fde2-414c-8cdf-554aaa6c1367
-# ╠═07a09bf6-b821-40ce-8056-19dbf156b223
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

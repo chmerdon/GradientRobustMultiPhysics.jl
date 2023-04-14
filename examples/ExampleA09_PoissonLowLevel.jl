@@ -121,7 +121,7 @@ function assemble_Laplacian!(A::ExtendableSparseMatrix, FES; μ = 1)
             for k = j : ndofs4cell
                 dof_k = CellDofs[k, cell]
                 if abs(Aloc[j,k]) > 1e-14
-                    # write into matrix, may cause allocations
+                    ## write into matrix, may cause allocations
                     rawupdateindex!(A, +, Aloc[j,k], dof_j, dof_k) 
                     if k > j
                         rawupdateindex!(A, +, Aloc[j,k], dof_k, dof_j)
