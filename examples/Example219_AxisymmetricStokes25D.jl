@@ -41,7 +41,8 @@ a(u,v) := \int_{\Omega} \left( \nabla u : \nabla v + r^{-2} u_r v_r \right) r dr
 b(q,v) := \int_{\Omega} q \left( \mathrm{div}(v) + r^{-1} u_r \right) r dr dz
 \end{aligned}
 ```
-where the usual Cartesian differential operators can be used.
+where the usual Cartesian differential operators can be used. The factor ``2\pi`` from the
+integral over the rotation angle drops out on both sides.
 
 
 =#
@@ -52,16 +53,6 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 using GridVisualize
 
-## data for axisymmetric Hagen-Poiseuille flow
-function exact_pressure!(μ)
-    function closure(result,x)
-        result[1] = 4*μ*(1-x[1])
-    end
-end
-function exact_velocity!(result,x)
-    result[1] = (1.0-x[2]^2);
-    result[2] = 0.0;
-end
 
 ## custom bilinearform a for the axisymmetric Stokes problem
 function ASLaplaceOperator(μ)
@@ -108,14 +99,36 @@ function ASPressureOperatorTransposed()
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, μ = 1)
+## problem = 1 is Hagen-Poiseuille
+## problem = 2 is stagnation point flow without solid surface
+## μ = viscosity
+## k = parameter for problem = 2
+function main(; problem = 1, k = 1, verbosity = 0, Plotter = nothing, μ = 1)
 
     ## set log level
     set_verbosity(verbosity)
 
+    ## boundary/comparison data for axisymmetric Hagen-Poiseuille flow
+    function exact_pressure!(result, x)
+        if problem == 1 # Hagen-Poiseuille
+            result[1] = 4*μ*(1-x[1])
+        elseif problem == 2 # stagnation point flow without solid surface
+            result[1] = k
+        end
+    end
+    function exact_velocity!(result, x)
+        if problem == 1 # Hagen-Poiseuille
+            result[1] = (1.0-x[2]^2);
+            result[2] = 0.0;
+        elseif problem == 2 # stagnation point flow without solid surface
+            result[1] = -2*k*x[1]
+            result[2] = k*x[2]
+        end
+    end
+
     ## negotiate data functions to the package
     u = DataFunction(exact_velocity!, [2,2]; name = "u", dependencies = "X", bonus_quadorder = 2)
-    p = DataFunction(exact_pressure!(μ), [1,2]; name = "p", dependencies = "X", bonus_quadorder = 1)
+    p = DataFunction(exact_pressure!, [1,2]; name = "p", dependencies = "X", bonus_quadorder = 1)
 
     ## grid
     xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
@@ -132,9 +145,14 @@ function main(; verbosity = 0, Plotter = nothing, μ = 1)
     add_operator!(Problem, [2,1], ASPressureOperatorTransposed())
 
     ## boundary conditions
-    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = u)
-    add_boundarydata!(Problem, 1, [3], HomogeneousDirichletBoundary)
-    add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = (0,1)) 
+    if problem == 1
+        add_boundarydata!(Problem, 1, [3,4], InterpolateDirichletBoundary; data = u)
+        add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = (0,1)) 
+    elseif problem == 2
+        add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = u)
+        add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary; mask = (1,0))
+        add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = (0,1))
+    end
     @show Problem
 
     ## generate FESpaces
@@ -152,8 +170,9 @@ function main(; verbosity = 0, Plotter = nothing, μ = 1)
 
     ## plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 9)
-    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = "p_h")
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 6, xlabel = "z", ylabel = "r")
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false)
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 5, xlabel = "z", ylabel = "r", title = "p_h")
 end
 
 end

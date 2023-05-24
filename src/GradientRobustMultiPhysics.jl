@@ -92,7 +92,7 @@ export nodevalues_view
 export FEVectorBlock, FEVector
 export dot, norm, norms
 export FEMatrixBlock, FEMatrix, _addnz
-export fill!, addblock!, addblock_matmul!, lrmatmul, add!, apply_penalties!
+export fill!, addblock!, addblock_matmul!, lrmatmul, mul!, add!, apply_penalties!
 
 export get_reconstruction_matrix
 
@@ -120,9 +120,10 @@ include("assemblypatterns.jl")
 export AssemblyPatternType, AssemblyPreparations
 export ItemIntegrator, L2ErrorIntegrator, L2NormIntegrator, L2DifferenceIntegrator
 export DiscreteLinearForm
-export APT_BilinearForm, APT_SymmetricBilinearForm, APT_LumpedBilinearForm
+export AssemblyPattern, APT_BilinearForm, APT_SymmetricBilinearForm, APT_LumpedBilinearForm
 export DiscreteBilinearForm, DiscreteSymmetricBilinearForm, DiscreteLumpedBilinearForm
 export DiscreteNonlinearForm
+export assemble!, full_assemble!
 export prepare_assembly!
 export assemble!, evaluate!, evaluate
 export AssemblyManager, update_assembly!
