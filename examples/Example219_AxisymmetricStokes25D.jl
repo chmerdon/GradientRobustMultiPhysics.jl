@@ -3,16 +3,15 @@
 # 219 : Axisymmetric Stokes (2.5D)
 ([source code](SOURCE_URL))
 
-This example solves the 3D Hagen-Poiseuille flow via 
-the 2.5D axisymmetric formulation of the Stokes problem
-that seeks a velocity ``\mathbf{u} = (u_z, u_r)``
+This example solves the 3D Hagen-Poiseuille flow (problem = 1) and a stagnation point flow (problem = 2) via 
+the 2.5D axisymmetric formulation of the Navier--Stokes problem that seeks a velocity ``\mathbf{u} = (u_z, u_r)``
 and pressure ``p`` such that
 ```math
 \begin{aligned}
 - \mu\left(\partial^2_r + r^{-1} \partial_r + \partial^2_z - r^{-2} \right) u_r
-+ \partial_r p & = \mathbf{f}_r\\
++ (u_r \partial_r + u_z \partial_z) u_r + \partial_r p & = \mathbf{f}_r\\
 - \mu\left(\partial^2_r + r^{-1} \partial_r + \partial^2_z \right) u_z
-+ \partial_z p & = \mathbf{f}_z\\
++ (u_r \partial_r + u_z \partial_z) u_z + \partial_z p & = \mathbf{f}_z\\
 (\partial_r + r^{-1})u_r + \partial_z u_z & = 0
 \end{aligned}
 ```
@@ -55,21 +54,27 @@ using GridVisualize
 
 
 ## custom bilinearform a for the axisymmetric Stokes problem
-function ASLaplaceOperator(μ)
+## (in case of Navier-Stokes it includes the nonlinear convection term)
+function ASVelocityOperator(μ, nonlinear)
     function action_kernel!(result, input, x)
+        uh, ∇uh = view(input,1:2), view(input,3:6)
         r = x[2]
-        ## input = [u,∇u] = [u_z,u_r,du_z/dz, du_z/dr, du_r/dz, du_r/dr]
+        ## add Laplacian
         result[1] = 0
-        result[2] = μ/r * input[2]
-        result[3] = μ*r * input[3]
-        result[4] = μ*r * input[4]
-        result[5] = μ*r * input[5]
-        result[6] = μ*r * input[6]
+        result[2] = μ/r * uh[2]
+        result[3] = μ*r * ∇uh[1]
+        result[4] = μ*r * ∇uh[2]
+        result[5] = μ*r * ∇uh[3]
+        result[6] = μ*r * ∇uh[4]
+        ## add nonlinear convection term
+        if nonlinear
+            result[1] += r*(∇uh[1]*uh[1] + ∇uh[2]*uh[2])
+            result[2] += r*(∇uh[3]*uh[1] + ∇uh[4]*uh[2])
+        end
         ## result will be multiplied with [v,∇v]
         return nothing
     end
-    action = Action(action_kernel!, [6,6]; dependencies = "X", bonus_quadorder = 2)
-    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action)
+    return nonlinear ? NonlinearForm(OperatorPair{Identity,Gradient}, [Identity, Gradient], [1,1], action_kernel!, [6,6]; dependencies = "X", bonus_quadorder = 2) : BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], Action(action_kernel!, [6,6], dependencies = "X"), bonus_quadorder = 2)
 end
 
 ## custom bilinearform b for the axisymmetric Stokes problem
@@ -103,7 +108,7 @@ end
 ## problem = 2 is stagnation point flow without solid surface
 ## μ = viscosity
 ## k = parameter for problem = 2
-function main(; problem = 1, k = 1, verbosity = 0, Plotter = nothing, μ = 1)
+function main(; problem = 1, k = 1, verbosity = 0, Plotter = nothing, μ = 1, nref = 5, nonlinear = true)
 
     ## set log level
     set_verbosity(verbosity)
@@ -113,7 +118,7 @@ function main(; problem = 1, k = 1, verbosity = 0, Plotter = nothing, μ = 1)
         if problem == 1 # Hagen-Poiseuille
             result[1] = 4*μ*(1-x[1])
         elseif problem == 2 # stagnation point flow without solid surface
-            result[1] = k
+            result[1] = nonlinear ? -1//2*k^2*(4*x[1]^2 + x[2]^2) + 5//6 : 1.0
         end
     end
     function exact_velocity!(result, x)
@@ -128,10 +133,10 @@ function main(; problem = 1, k = 1, verbosity = 0, Plotter = nothing, μ = 1)
 
     ## negotiate data functions to the package
     u = DataFunction(exact_velocity!, [2,2]; name = "u", dependencies = "X", bonus_quadorder = 2)
-    p = DataFunction(exact_pressure!, [1,2]; name = "p", dependencies = "X", bonus_quadorder = 1)
+    p = DataFunction(exact_pressure!, [1,2]; name = "p", dependencies = "X", bonus_quadorder = 2)
 
     ## grid
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), nref);
 
     ## finite element type
     FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
@@ -140,7 +145,7 @@ function main(; problem = 1, k = 1, verbosity = 0, Plotter = nothing, μ = 1)
     Problem = PDEDescription("axisymmetric Stokes")
     add_unknown!(Problem; unknown_name = "u", equation_name = "momentum balance")
     add_unknown!(Problem; unknown_name = "p", equation_name = "continuity equation")
-    add_operator!(Problem, [1,1], ASLaplaceOperator(μ))
+    add_operator!(Problem, [1,1], ASVelocityOperator(μ, nonlinear))
     add_operator!(Problem, [1,2], ASPressureOperator())
     add_operator!(Problem, [2,1], ASPressureOperatorTransposed())
 
@@ -149,9 +154,10 @@ function main(; problem = 1, k = 1, verbosity = 0, Plotter = nothing, μ = 1)
         add_boundarydata!(Problem, 1, [3,4], InterpolateDirichletBoundary; data = u)
         add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = (0,1)) 
     elseif problem == 2
-        add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = u)
+        add_boundarydata!(Problem, 1, [2,3], InterpolateDirichletBoundary; data = u)
         add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary; mask = (1,0))
         add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary; mask = (0,1))
+        add_constraint!(Problem, FixedIntegralMean(2, 0))
     end
     @show Problem
 
