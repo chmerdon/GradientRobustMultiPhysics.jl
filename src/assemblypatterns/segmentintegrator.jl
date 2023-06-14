@@ -110,7 +110,7 @@ function integrate!(
 
             if is_xdependent(action)
                 update_trafo!(FEBE.L2G, item)
-                eval_trafo!(action.x, FEBE.L2G, xref)
+                eval_trafo!(action.x, FEBE.L2G, xref[i])
             end
             if is_xrefdependent(action)
                 action.xref = xref

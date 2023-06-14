@@ -465,9 +465,9 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
             time_solver = @elapsed begin
                 flush!(S[s].entries)
                 if update_matrix || (TCS.cstep % skip_update[s] == 0 && skip_update[s] != -1)
-                    linear_cache[s] = LinearSolve.set_A(linear_cache[s], S[s].entries.cscmatrix)
+                    linear_cache[s].A = S[s].entries.cscmatrix
                 end
-                linear_cache[s] = LinearSolve.set_b(linear_cache[s], rhs[s].entries)
+                linear_cache[s].b = rhs[s].entries
                 sol = LinearSolve.solve(linear_cache[s])
                 linear_cache[s] = sol.cache
                 copyto!(x[s].entries, sol.u)

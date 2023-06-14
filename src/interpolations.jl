@@ -535,7 +535,7 @@ function ExtendableGrids.interpolate!(
             else
                 cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell, eps = eps, trybrute = !only_localsearch)
             end
-                evaluate!(result,PE,xref,cell)
+            evaluate!(result,PE,xref,cell)
             return nothing
         end
         fe_function = DataFunction(point_evaluation_parentgrid!, [resultdim, xdim_target]; dependencies = "XI", bonus_quadorder = quadorder)
@@ -587,7 +587,6 @@ function nodevalues!(target::AbstractArray{T,2},
     abs::Bool = false,
     factor = 1,
     regions::Array{Int,1} = [0],
-    nodes = [0], 
     target_offset::Int = 0,
     source_offset::Int = 0,
     zero_target::Bool = true,
@@ -597,6 +596,8 @@ function nodevalues!(target::AbstractArray{T,2},
     xItemRegions::GridRegionTypes{Ti} = FE.xgrid[CellRegions]
     xItemDofs::DofMapTypes{Ti} = FE[CellDofs]
     xItemNodes::Adjacency{Ti} = FE.xgrid[CellNodes]
+    nitems = num_sources(xItemNodes)
+    target_resultdim::Int = 0
 
     if regions == [0]
         try
@@ -605,61 +606,38 @@ function nodevalues!(target::AbstractArray{T,2},
             regions = [xItemRegions[1]]
         end
     end
+    nregions = length(regions)
 
     # setup basisevaler for each unique cell geometries
     EG = FE.xgrid[UniqueCellGeometries]
-    ndofs4EG::Array{Int,1} = Array{Int,1}(undef,length(EG))
-    qf = Array{QuadratureRule,1}(undef,length(EG))
-    basisevaler::Array{FEEvaluator{T,Tv,Ti},1} = Array{FEEvaluator{T,Tv,Ti},1}(undef,length(EG))
-    for j = 1 : length(EG)
-        qf[j] = VertexRule(EG[j])
-        basisevaler[j] = FEEvaluator(FE, operator, qf[j]; T = T)
-        ndofs4EG[j] = size(basisevaler[j].cvals,2)
-    end    
-    cvals_resultdim::Int = size(basisevaler[1].cvals,1)
-    target_resultdim::Int = abs ? 1 : cvals_resultdim
-    @assert size(target,1) >= target_resultdim "too small target dimension"
-
-    nitems::Int = num_sources(xItemDofs)
-    basisvals::Array{T,3} = basisevaler[1].cvals # pointer to operator results
-    item::Int = 0
-    itemET = EG[1]
-    nregions::Int = length(regions)
-    iEG::Int = 1
-    node::Int = 0
-    dof::Ti = 0
-    temp::Array{T,1} = zeros(T,cvals_resultdim)
-    localT::Array{T,1} = zeros(T,cvals_resultdim)
-    weights::Array{T,1} = qf[1].w
 
     if zero_target
         fill!(target, 0)
     end
 
-    if nodes == [0] # all nodes ==> regions a evaluation
-        nnodes = num_sources(FE.xgrid[Coordinates])
-        nneighbours = zeros(Int,nnodes)
-        flag4node::Array{Bool,1} = zeros(Bool,nnodes)
+    nnodes::Int = num_sources(FE.xgrid[Coordinates])
+    nneighbours::Array{Int,1} = zeros(Int,nnodes)
+    flag4node::Array{Bool,1} = zeros(Bool,nnodes)
+
+    function barrier(EG, qf, BE)
+        node::Int = 0
+        dof::Ti = 0
+        weights::Array{T,1} = qf.w
+        basisvals = BE.cvals
+        ndofs = size(basisvals,2)
+        cvals_resultdim::Int = size(basisvals,1)
+        temp::Array{T,1} = zeros(T,cvals_resultdim)
+        localT::Array{T,1} = zeros(T,cvals_resultdim)
+        target_resultdim = abs ? 1 : cvals_resultdim
+        @assert size(target,1) >= target_resultdim "too small target dimension"
+
         for item = 1 : nitems
             for r = 1 : nregions
             # check if item region is in regions
-                if xItemRegions[item] == regions[r]
-
-                    # find index for CellType
-                    if length(EG) > 1
-                        itemET = xItemGeometries[item]
-                        for j=1:length(EG)
-                            if itemET == EG[j]
-                                iEG = j
-                                break;
-                            end
-                        end
-                        weights = qf[iEG].w
-                    end
+                if xItemRegions[item] == regions[r] && xItemGeometries[item] == EG
 
                     # update FEbasisevaler
-                    update_basis!(basisevaler[iEG],item)
-                    basisvals = basisevaler[iEG].cvals
+                    update_basis!(BE,item)
 
                     for i in eachindex(weights) # vertices
                         node = xItemNodes[i,item]
@@ -667,9 +645,9 @@ function nodevalues!(target::AbstractArray{T,2},
                         if continuous == false || flag4node[node] == false
                             nneighbours[node] += 1
                             flag4node[node] = true
-                            for dof_i = 1 : ndofs4EG[iEG]
+                            for dof_i = 1 : ndofs
                                 dof = xItemDofs[dof_i,item]
-                                eval_febe!(temp, basisevaler[iEG], dof_i, i)
+                                eval_febe!(temp, BE, dof_i, i)
                                 for k = 1 : cvals_resultdim
                                     localT[k] += source[source_offset + dof] * temp[k]
                                     #target[k+target_offset,node] += temp[k] * source[source_offset + dof]
@@ -691,63 +669,14 @@ function nodevalues!(target::AbstractArray{T,2},
                 end # if in region    
             end # region for loop
         end # item for loop
-    else
-        nnodes = length(nodes)
-        xNodeCells = atranspose(xItemNodes)
-        nneighbours = zeros(Int,nnodes)
-        i::Int = 0
-        for n = 1 : nnodes
-            node = nodes[n]
+    end # barrier
 
-            # get number of neighbours
-            nneighbours[n] = continuous ? 1 : num_targets(xNodeCells, node)
-
-            for b = 1 : nneighbours[n]
-                item = xNodeCells[b,node]
-
-                ## find local node index
-                i = 1
-                while xItemNodes[i,item] != node
-                    i += 1
-                end
-
-                # find index for CellType
-                if length(EG) > 1
-                    itemET = xItemGeometries[item]
-                    for j=1:length(EG)
-                        if itemET == EG[j]
-                            iEG = j
-                            break;
-                        end
-                    end
-                    weights = qf[iEG].w
-                end
-
-                # update FEbasisevaler
-                update_basis!(basisevaler[iEG],item)
-                basisvals = basisevaler[iEG].cvals
-
-                fill!(localT,0)
-                for dof_i = 1 : ndofs4EG[iEG]
-                    dof = xItemDofs[dof_i,item]
-                    eval_febe!(temp, basisevaler[iEG], dof_i, i)
-                    for k = 1 : cvals_resultdim
-                        localT[k] += source[source_offset + dof] * temp[k]
-                    end
-                end
-                localT .*= factor
-                if abs
-                    for k = 1 : cvals_resultdim
-                        target[1+target_offset,n] += localT[k]^2
-                    end
-                else
-                    for k = 1 : cvals_resultdim
-                        target[k+target_offset,n] += localT[k]
-                    end
-                end
-            end
-        end
-    end
+    for j = 1 : length(EG)
+        qf = VertexRule(EG[j])
+        BE = FEEvaluator(FE, operator, qf; T = T)
+        barrier(EG[j], qf, BE)
+    end    
+    
 
     if continuous == false
         for n = 1 : nnodes, k = 1 : target_resultdim
@@ -763,6 +692,8 @@ function nodevalues!(target::AbstractArray{T,2},
 
     return nothing
 end
+
+
 
 
 """
@@ -783,8 +714,8 @@ Evaluates the finite element function with the coefficient vector source
 and the specified FunctionOperator at all the nodes of the (specified regions of the) grid and writes the values into target.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues!(target, source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], abs::Bool = false, nodes = [0], factor = 1, continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
-    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, abs = abs, nodes = nodes, factor = factor, zero_target = zero_target, target_offset = target_offset)
+function nodevalues!(target, source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], abs::Bool = false, factor = 1, continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
+    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, abs = abs, factor = factor, zero_target = zero_target, target_offset = target_offset)
 end
 
 
@@ -826,7 +757,7 @@ function nodevalues(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:
     else
         target = zeros(T,nvals,length(nodes))
     end
-    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, nodes = nodes, factor = factor, abs = abs)
+    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, factor = factor, abs = abs)
     return target
 end
 
@@ -874,7 +805,8 @@ function continuify(
     regions::Array{Int,1} = [0]) where {T,Tv,Ti,FEType,APT}
 ````
 
-interpolates operator evaluation of source into a FE function of FEType H1Pk
+interpolates operator evaluation of source into a FE function of FEType H1Pk, i.e., Lagrange interpolation of arbitrary 
+operator evaluations of the source finite element type, broken = true generates a piecewise interpolation
 """
 ## interpolates operator evaluation of source into a H1Pk FE function
 function continuify(
@@ -891,7 +823,9 @@ function continuify(
     xItemGeometries = xgrid[CellGeometries]
     xItemRegions::GridRegionTypes{Ti} = xgrid[CellRegions]
     xItemDofs::DofMapTypes{Ti} = FE[CellDofs]
-    xItemNodes::Adjacency{Ti} = xgrid[CellNodes]
+    ncomponents = get_ncomponents(FEType)
+    xdim = size(xgrid[Coordinates], 1)
+    nitems::Int = num_sources(xItemDofs)
 
     if regions == [0]
         try
@@ -903,32 +837,12 @@ function continuify(
 
     # setup basisevaler for each unique cell geometries
     EG = FE.xgrid[UniqueCellGeometries]
-    ndofs4EG::Array{Int,1} = Array{Int,1}(undef,length(EG))
-    qf = Array{QuadratureRule,1}(undef,length(EG))
-    basisevaler::Array{FEEvaluator{T,Tv,Ti},1} = Array{FEEvaluator{T,Tv,Ti},1}(undef,length(EG))
     if order == "auto"
         order = max(get_polynomialorder(FEType, EG[1]) + QuadratureOrderShift4Operator(operator),1)
     end
-    for j = 1 : length(EG)
-        qf[j] = VertexRule(EG[j], order)
-        basisevaler[j] = FEEvaluator(FE, operator, qf[j]; T = T)
-        ndofs4EG[j] = size(basisevaler[j].cvals,2)
-    end    
-    cvals_resultdim::Int = size(basisevaler[1].cvals,1)
+    cvals_resultdim::Int = Length4Operator(operator, xdim, ncomponents)
     target_resultdim::Int = abs ? 1 : cvals_resultdim
 
-    nitems::Int = num_sources(xItemDofs)
-    basisvals::Array{T,3} = basisevaler[1].cvals # pointer to operator results
-    item::Int = 0
-    itemET = EG[1]
-    nregions::Int = length(regions)
-    iEG::Int = 1
-    node::Int = 0
-    dof::Ti = 0
-    dofc::Ti = 0
-    temp::Array{T,1} = zeros(T,cvals_resultdim)
-    localT::Array{T,1} = zeros(T,cvals_resultdim)
-    weights::Array{T,1} = qf[1].w
 
     name = "$operator(" * source.name * ")"
     edim = dim_element(EG[1])
@@ -948,8 +862,7 @@ function continuify(
     FEScont = FESpace{FETypeC}(xgrid; broken = broken)
     target = FEVector(name, FEScont)
     xItemDofsC::DofMapTypes{Ti} = target[1].FES[CellDofs]
-    target_offset = broken ? Int(get_ndofs(ON_CELLS, FETypeC, EG[1]) / cvals_resultdim) : target[1].FES.coffset
-    ndofs = target_offset
+    target_offset::Int = broken ? Int(get_ndofs(ON_CELLS, FETypeC, EG[1]) / cvals_resultdim) : target[1].FES.coffset
 
     if order > 2
         @warn "continuify may not work correctly if target order is larger than 2 currently"
@@ -959,61 +872,67 @@ function continuify(
     #subset_handler! = get_basissubset(ON_CELLS, target[1].FES, EG[1])
     #subset_ids = Array{Int,1}(1 : get_ndofs(ON_CELLS, FETypeC, EG[1]))
 
-    nneighbours = broken ? nothing : zeros(Int, ndofs)
-    for item = 1 : nitems
-        for r = 1 : nregions
-        # check if item region is in regions
-            if xItemRegions[item] == regions[r]
+    nneighbours::Array{Int,1} = broken ? [] : zeros(Int, target_offset)
 
-                # find index for CellType
-                if length(EG) > 1
-                    itemET = xItemGeometries[item]
-                    for j=1:length(EG)
-                        if itemET == EG[j]
-                            iEG = j
-                            break;
-                        end
-                    end
-                    weights = qf[iEG].w
-                end
+    function barrier(EG, qf, BE)
 
-                # update FEbasisevaler
-                update_basis!(basisevaler[iEG],item)
-                basisvals = basisevaler[iEG].cvals
-                #subset_handler!(subset_ids, item)
+        basisvals = BE.cvals
+        ndofs::Int = size(basisvals,2)
+        nregions::Int = length(regions)
+        dof::Ti = 0
+        dofc::Ti = 0
+        temp::Array{T,1} = zeros(T,cvals_resultdim)
+        localT::Array{T,1} = zeros(T,cvals_resultdim)
+        weights::Array{T,1} = qf.w
+        
+        for item = 1 : nitems
+            for r = 1 : nregions
+            # check if item region is in regions
+                if xItemRegions[item] == regions[r] && xItemGeometries[item] == EG
 
-               
-                for i in eachindex(weights) # dofs
-                    fill!(localT,0)
-                    for dof_i = 1 : ndofs4EG[iEG]
-                        dof = xItemDofs[dof_i,item]
-                        eval_febe!(temp, basisevaler[iEG], dof_i, i)
-                        for k = 1 : cvals_resultdim
-                            localT[k] += source[dof] * temp[k]
+                    # update FEbasisevaler
+                    update_basis!(BE,item)
+                    #subset_handler!(subset_ids, item)
+                
+                    for i in eachindex(weights) # dofs
+                        fill!(localT,0)
+                        for dof_i = 1 : ndofs
+                            dof = xItemDofs[dof_i, item]
+                            eval_febe!(temp, BE, dof_i, i)
+                            for k = 1 : cvals_resultdim
+                                localT[k] += source[dof] * temp[k]
+                            end
                         end
-                    end
-                    localT .*= factor
-                    dofc = xItemDofsC[i,item]
-                    if !broken
-                        nneighbours[dofc] += 1
-                    end
-                    if abs
-                        for k = 1 : cvals_resultdim
-                            target.entries[dofc+(k-1)*target_offset] += localT[k]^2
+                        localT .*= factor
+                        dofc = xItemDofsC[i, item]
+                        if !broken
+                            nneighbours[dofc] += 1
                         end
-                    else
-                        for k = 1 : cvals_resultdim
-                            target.entries[dofc+(k-1)*target_offset] += localT[k]
+                        if abs
+                            for k = 1 : cvals_resultdim
+                                target.entries[dofc+(k-1)*target_offset] += localT[k]^2
+                            end
+                        else
+                            for k = 1 : cvals_resultdim
+                                target.entries[dofc+(k-1)*target_offset] += localT[k]
+                            end
                         end
-                    end
-                end  
-                break; # region for loop
-            end # if in region    
-        end # region for loop
-    end # item for loop
+                    end  
+                    break; # region for loop
+                end # if in region    
+            end # region for loop
+        end # item for loop
+    end
+
+    for j = 1 : length(EG)
+        qf = VertexRule(EG[j], order)
+        BE = FEEvaluator(FE, operator, qf; T = T)
+        cvals_resultdim = size(BE.cvals,1)
+        barrier(EG[j], qf, BE)
+    end
 
     if !broken
-        for dofc = 1 : ndofs, k = 1 : target_resultdim
+        for dofc = 1 : target_offset, k = 1 : target_resultdim
             target.entries[dofc+(k-1)*target_offset] /= nneighbours[dofc]
         end
     end

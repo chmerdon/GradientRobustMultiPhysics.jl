@@ -52,7 +52,7 @@ default_solver_kwargs()=Dict{Symbol,Tuple{Any,String,Bool,Bool}}(
     :anderson_unknowns => ([1], "an array of unknown numbers that should be included in the Anderson acceleration",true,false),
     :fixed_penalty => (1e60, "penalty that is used for the values of fixed degrees of freedom (e.g. by Dirichlet boundary data or global constraints)",true,true),
     :parallel_storage => (false, "assemble storaged operators in parallel for loop", true, true),
-    :linsolver => (UMFPACKFactorization, "any AbstractFactorization from LinearSolve.jl (default = UMFPACKFactorization)",true,true),
+    :linsolver => (UMFPACKFactorization(), "any AbstractFactorization from LinearSolve.jl (default = UMFPACKFactorization)",true,true),
     :show_solver_config => (false, "show the complete solver configuration before starting to solve",true,true),
     :show_iteration_details => (true, "show details (residuals etc.) of each iteration",true,true),
     :show_statistics => (false, "show some statistics like assembly times",true,true)
@@ -365,7 +365,12 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
             eq = subiterations[s][j]
             for k = 1 : size(SC.LHS_AssemblyTimes,2)
                 for o = 1 : size(SC.LHS_AssemblyTimes[eq,k],1)
-                    info_msg *= "\n\tLHS[$eq,$k][$o] \t| $(@sprintf("%.4e", SC.LHS_AssemblyTimes[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_LastLoopAllocations[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_TotalLoopAllocations[eq,k][o])) \t| $(parse_unknowns(PDE.LHSOperators[eq,k][o].name, PDE, (eq,k), PDE.LHSOperators[eq,k][o].fixed_arguments_ids))"
+                    if typeof(PDE.LHSOperators[eq,k][o]) <: PDEOperator
+                        extra_info = parse_unknowns(PDE.LHSOperators[eq,k][o].name, PDE, (eq,k), PDE.LHSOperators[eq,k][o].fixed_arguments_ids) 
+                    else
+                        extra_info = "$(typeof(PDE.LHSOperators[eq,k][o]))"
+                    end
+                    info_msg *= "\n\tLHS[$eq,$k][$o] \t| $(@sprintf("%.4e", SC.LHS_AssemblyTimes[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_LastLoopAllocations[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_TotalLoopAllocations[eq,k][o])) \t| $(extra_info)"
                 end
             end
         end
@@ -375,7 +380,12 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
         for j = 1 : length(subiterations[s])
             eq = subiterations[s][j]
             for o = 1 : size(SC.RHS_AssemblyTimes[eq],1)
-                info_msg *= "\n\tRHS[$eq,][$o] \t| $(@sprintf("%.4e", SC.RHS_AssemblyTimes[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_LastLoopAllocations[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_TotalLoopAllocations[eq][o])) \t| $(parse_unknowns(PDE.RHSOperators[eq][o].name, PDE, (eq), PDE.RHSOperators[eq][o].fixed_arguments_ids))"
+                if typeof(PDE.RHSOperators[eq][o]) <: PDEOperator
+                    extra_info = parse_unknowns(PDE.RHSOperators[eq][o].name, PDE, (eq), PDE.RHSOperators[eq][o].fixed_arguments_ids)
+                else
+                    extra_info = "$(typeof(PDE.RHSOperators[eq][o]))"
+                end
+                info_msg *= "\n\tRHS[$eq,][$o] \t| $(@sprintf("%.4e", SC.RHS_AssemblyTimes[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_LastLoopAllocations[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_TotalLoopAllocations[eq][o])) \t| $(extra_info)"
             end
         end
     end
@@ -894,9 +904,9 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         time_solver = @elapsed begin
             flush!(A.entries)
             if j == 1 || (j % skip_update[1] == 0 && skip_update[1] != -1)
-                linear_cache = LinearSolve.set_A(linear_cache, A.entries.cscmatrix)
+                linear_cache.A = A.entries.cscmatrix
             end
-            linear_cache = LinearSolve.set_b(linear_cache, b.entries)
+            linear_cache.b = b.entries
             sol = LinearSolve.solve(linear_cache)
             linear_cache = sol.cache
             copyto!(Target.entries, sol.u)
@@ -1148,9 +1158,9 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
             time_solver = @elapsed begin
                 flush!(A[s].entries)
                 if iteration == 1 || (iteration % skip_update[s] == 0 && skip_update[s] != -1)
-                    linear_cache[s] = LinearSolve.set_A(linear_cache[s], A[s].entries.cscmatrix)
+                    linear_cache[s].A = A[s].entries.cscmatrix
                 end
-                linear_cache[s] = LinearSolve.set_b(linear_cache[s], b[s].entries)
+                linear_cache[s].b = b[s].entries
                 sol = LinearSolve.solve(linear_cache[s])
                 linear_cache[s] = sol.cache
                 copyto!(x[s].entries, sol.u)
@@ -1289,11 +1299,11 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
 end
 
 
-function FEVector(FES::FESpace, PDE::PDEDescription) where {Tv, Ti}
+function FEVector(FES::FESpace, PDE::PDEDescription)
     return FEVector([FES], PDE)
 end
 
-function FEVector(FES::Array{<:FESpace{Tv,Ti}}, PDE::PDEDescription) where {Tv, Ti}
+function FEVector(FES::Array{<:FESpace,1}, PDE::PDEDescription)
     @assert length(PDE.unknown_names) == length(FES)
     return FEVector(FES; name = [PDE.variables[j][1] for j in 1 : length(FES)])
 end
