@@ -563,6 +563,127 @@ end
 
 """
 ````
+function nodevalues_subset!(
+    target::AbstractArray{<:Real,2},
+    source::AbstractArray{T,1},
+    FE::FESpace{Tv,Ti,FEType,AT},
+    operator::Type{<:AbstractFunctionOperator} = Identity;
+    regions::Array{Int,1} = [0],
+    abs::Bool = false,
+    factor = 1,
+    nodes = [],
+    target_offset::Int = 0,   # start to write into target after offset
+    zero_target::Bool = true, # target vector is zeroed
+    continuous::Bool = false)
+````
+
+Evaluates the finite element function with the coefficient vector source (interpreted as a coefficient vector for the FESpace FE)
+and the specified FunctionOperator at the specified list of nodes of the grid and writes the values an that order into target.
+Discontinuous (continuous = false) quantities are averaged.
+"""
+function nodevalues_subset!(target::AbstractArray{T,2},
+    source::AbstractArray{T,1},
+    FE::FESpace{Tv,Ti,FEType,AT},
+    operator::Type{<:AbstractFunctionOperator} = Identity;
+    abs::Bool = false,
+    factor = 1,
+    nodes = [],
+    regions::Array{Int,1} = [0], # are ignored at the moment
+    target_offset::Int = 0,
+    source_offset::Int = 0,
+    zero_target::Bool = true,
+    continuous::Bool = false) where {T,Tv,Ti,FEType,AT}
+
+    xItemGeometries = FE.xgrid[CellGeometries]
+    xItemRegions::GridRegionTypes{Ti} = FE.xgrid[CellRegions]
+    xItemDofs::DofMapTypes{Ti} = FE[CellDofs]
+    xItemNodes::Adjacency{Ti} = FE.xgrid[CellNodes]
+
+    EG = FE.xgrid[UniqueCellGeometries]
+    ndofs4EG::Array{Int,1} = Array{Int,1}(undef,length(EG))
+    qf = Array{QuadratureRule,1}(undef,length(EG))
+    basisevaler::Array{FEEvaluator{T,Tv,Ti},1} = Array{FEEvaluator{T,Tv,Ti},1}(undef,length(EG))
+    for j = 1 : length(EG)
+        qf[j] = VertexRule(EG[j])
+        basisevaler[j] = FEEvaluator(FE, operator, qf[j]; T = T)
+        ndofs4EG[j] = size(basisevaler[j].cvals,2)
+    end    
+    cvals_resultdim::Int = size(basisevaler[1].cvals,1)
+    target_resultdim::Int = abs ? 1 : cvals_resultdim
+    @assert size(target,1) >= target_resultdim "too small target dimension"
+
+    # setup basisevaler for each unique cell geometries
+    EG = FE.xgrid[UniqueCellGeometries]
+
+    if zero_target
+        fill!(target, 0)
+    end
+
+    nnodes::Int = num_sources(FE.xgrid[Coordinates])
+    nneighbours::Array{Int,1} = zeros(Int,nnodes)
+    
+    nnodes = length(nodes)
+    xNodeCells = atranspose(xItemNodes)
+    nneighbours = zeros(Int,nnodes)
+    i::Int = 0
+    iEG::Int = 1
+    temp::Array{T,1} = zeros(T,cvals_resultdim)
+    localT::Array{T,1} = zeros(T,cvals_resultdim)
+    @time for n = 1 : nnodes
+        node = nodes[n]
+
+        # get number of neighbours
+        nneighbours[n] = continuous ? 1 : num_targets(xNodeCells, node)
+
+        for b = 1 : nneighbours[n]
+            item = xNodeCells[b,node]
+
+            ## find local node index
+            i = 1
+            while xItemNodes[i,item] != node
+                i += 1
+            end
+
+            # find index for CellType
+            if length(EG) > 1
+                itemET = xItemGeometries[item]
+                for j=1:length(EG)
+                    if itemET == EG[j]
+                        iEG = j
+                        break;
+                    end
+                end
+            end
+
+            # update FEbasisevaler
+            update_basis!(basisevaler[iEG],item)
+
+            fill!(localT,0)
+            for dof_i = 1 : ndofs4EG[iEG]
+                dof = xItemDofs[dof_i,item]
+                eval_febe!(temp, basisevaler[iEG], dof_i, i)
+                for k = 1 : cvals_resultdim
+                    localT[k] += source[source_offset + dof] * temp[k]
+                end
+            end
+            localT .*= factor
+            if abs
+                for k = 1 : cvals_resultdim
+                    target[1+target_offset,n] += localT[k]^2
+                end
+            else
+                for k = 1 : cvals_resultdim
+                    target[k+target_offset,n] += localT[k]
+                end
+            end
+        end
+    end
+    
+end
+
+
+"""
+````
 function nodevalues!(
     target::AbstractArray{<:Real,2},
     source::AbstractArray{T,1},
@@ -737,7 +858,7 @@ and the specified FunctionOperator at all the nodes of the (specified regions of
 grid and returns an array with the values.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, nodes = [0], regions::Array{Int,1} = [0], factor = 1, continuous = "auto") where {T,Tv,Ti,APT,FEType}
+function nodevalues(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, nodes = [], regions::Array{Int,1} = [0], factor = 1, continuous = "auto") where {T,Tv,Ti,APT,FEType}
     if continuous == "auto"
         if FEType <: AbstractH1FiniteElement && operator == Identity && !source.FES.broken
             continuous = true
@@ -752,12 +873,13 @@ function nodevalues(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:
         ncomponents = get_ncomponents(eltype(source.FES))
         nvals = Length4Operator(operator, xdim, ncomponents)
     end
-    if nodes == [0]
+    if nodes == []
         target = zeros(T,nvals,num_nodes(source.FES.xgrid))
+        nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, factor = factor, abs = abs)
     else
         target = zeros(T,nvals,length(nodes))
+        nodevalues_subset!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, nodes = nodes, factor = factor, abs = abs)
     end
-    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, factor = factor, abs = abs)
     return target
 end
 
