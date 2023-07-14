@@ -117,7 +117,7 @@ function integrate!(
             end
 
             # evaluate operator
-            fill!(SI.action_input,0)
+            fill!(action_input,0)
             for dof_i = 1 : size(basisvals,2), k = 1 : length(action_input)
                 action_input[k] += coeffs[xItemDofs[dof_i,item] + SI.FEB.offset] * basisvals[k,dof_i,i]
             end
@@ -125,7 +125,7 @@ function integrate!(
             eval_action!(action,action_input)
 
             # accumulate
-            result .= action.val * weights[i]
+            result .+= action.val * weights[i]
         else
             for dof_i = 1 : size(basisvals,2), k = 1 : length(action_input)
                 result[k] += coeffs[xItemDofs[dof_i,item] + SI.FEB.offset] * basisvals[k,dof_i,i] * weights[i]
