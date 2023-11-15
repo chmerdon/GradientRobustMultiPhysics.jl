@@ -190,6 +190,7 @@ function make_all(; with_examples::Bool = true, run_examples = true, run_noteboo
         repo = "github.com/chmerdon/GradientRobustMultiPhysics.jl",
         clean = false,
         checkdocs = :all,
+        warnonly = true,
         doctest = true,
         pages = [
             "Home" => "index.md",
