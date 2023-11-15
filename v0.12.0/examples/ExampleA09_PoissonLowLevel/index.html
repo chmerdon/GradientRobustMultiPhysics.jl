@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>A09 : Poisson-Problem with low level structures · GradientRobustMultiPhysics.jl</title><meta name="title" content="A09 : Poisson-Problem with low level structures · GradientRobustMultiPhysics.jl"/><meta property="og:title" content="A09 : Poisson-Problem with low level structures · GradientRobustMultiPhysics.jl"/><meta property="twitter:title" content="A09 : Poisson-Problem with low level structures · GradientRobustMultiPhysics.jl"/><meta name="description" content="Documentation for GradientRobustMultiPhysics.jl."/><meta property="og:description" content="Documentation for GradientRobustMultiPhysics.jl."/><meta property="twitter:description" content="Documentation for GradientRobustMultiPhysics.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Tutorial Notebooks</span><ul><li><a class="tocitem" href="../../notebooks_intro/">About the notebooks</a></li><li><a class="tocitem" href="../../nbhtml/BurgersEquation/">Burger&#39;s equation</a></li><li><a class="tocitem" href="../../nbhtml/NonlinearElasticity/">Nonlinear elasticity</a></li><li><a class="tocitem" href="../../nbhtml/NaturalConvection/">Natural convection</a></li><li><a class="tocitem" href="../../nbhtml/CahnHilliard/">Cahn Hilliard</a></li><li><a class="tocitem" href="../../nbhtml/PressureRobustness/">Pressure-robustness</a></li><li><a class="tocitem" href="../../nbhtml/SVRTStabilization/">SVRT stabilization</a></li><li><a class="tocitem" href="../../nbhtml/LowLevelPoisson/">Low level Poisson</a></li><li><a class="tocitem" href="../../nbhtml/LowLevelNavierStokes/">Low level Navier-Stokes</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example103_BurgersEquation1D/">103 : Burger&#39;s Equation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example219_AxisymmetricStokes25D/">219 : Axisymmetric Stokes (2.5D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_ChangeLinearSolver/">A04 : Change Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li class="is-active"><a class="tocitem" href>A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li><li><a class="tocitem" href="../ExampleA11_NavierStokesFixpointIterations/">A11 : Navier-Stokes Fixed-point iterations</a></li><li><a class="tocitem" href="../ExampleA12_NavierStokesPeriodic/">A12 : Navier-Stokes-Problem with periodic boundary</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>A09 : Poisson-Problem with low level structures</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>A09 : Poisson-Problem with low level structures</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="github.com/chmerdon/GradientRobustMultiPhysics.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="A09-:-Poisson-Problem-with-low-level-structures"><a class="docs-heading-anchor" href="#A09-:-Poisson-Problem-with-low-level-structures">A09 : Poisson-Problem with low level structures</a><a id="A09-:-Poisson-Problem-with-low-level-structures-1"></a><a class="docs-heading-anchor-permalink" href="#A09-:-Poisson-Problem-with-low-level-structures" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/ExampleA09_PoissonLowLevel.jl">source code</a>)</p><p>This example computes the solution <span>$u$</span> of the Poisson problem</p><p class="math-container">\[\begin{aligned}
+-\Delta u &amp; = f \quad \text{in } \Omega
+\end{aligned}\]</p><p>with some right-hand side <span>$f = 1$</span> on the unit square domain <span>$\Omega$</span> on a given grid.</p><p>Here, the whole problem is assembled with low level, mid level and high level structures and runtime and allocations in each step are compared.</p><pre><code class="language-julia hljs">module ExampleA09_PoissonLowLevel
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using ExtendableSparse
+using LinearAlgebra
+using GridVisualize
+
+const f = x -&gt; 1
+const fdata = DataFunction((result, x) -&gt; (result[1] = f(x);), [1,2]; dependencies = &quot;X&quot;)
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, order = 2, μ = 1, nrefinements = 3, Plotter = nothing)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # build/load any grid (here: a uniform-refined 2D unit square into triangles)
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), nrefinements)
+    @info &quot;preparing face nodes&quot;
+    @time xgrid[FaceNodes]
+    @info &quot;preparing cell volumes&quot;
+    @time cellvolumes = xgrid[CellVolumes]
+
+    # choose FE type
+    FEType = H1Pk{1,2,order}
+
+    # create FESpace and vector
+    FES = FESpace{FEType}(xgrid)
+    SolutionLow = FEVector(FES)
+    SolutionMid = FEVector(FES)
+    SolutionHigh = FEVector(FES)
+
+    # do this here once
+    @info &quot;preparing celldofs&quot;
+    @time CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
+    @info &quot;preparing bfacedofs&quot;
+    @time BFaceDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.BFaceDofs]
+
+    @info &quot;ndofs = $(length(SolutionLow.entries))&quot;
+    @time solve_poisson_lowlevel!(SolutionLow; μ = μ)
+    @time solve_poisson_midlevel!(SolutionMid; μ = μ)
+    @time solve_poisson_highlevel!(SolutionHigh; μ = μ)
+
+    @show norm(SolutionLow.entries - SolutionHigh.entries)
+    @show norm(SolutionLow.entries - SolutionMid.entries)
+
+    # plot solution (for e.g. Plotter = PyPlot)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(SolutionLow[1]),1,:), levels = 7, title = &quot;u_h&quot;)
+    scalarplot!(p[1,2], xgrid, view(nodevalues(SolutionLow[1], Gradient; abs = true),1,:), vscale = 0.8, levels = 0, colorbarticks = 9, title = &quot;∇u_h (abs + quiver)&quot;)
+    vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(SolutionLow[1], Gradient)), spacing = 0.1, clear = false)
+end
+
+
+function assemble_Laplacian!(A::ExtendableSparseMatrix, FES; μ = 1)
+
+    xgrid = FES.xgrid
+    EG = xgrid[UniqueCellGeometries][1]
+    FEType = eltype(FES)
+
+    # quadrature formula
+    qf = QuadratureRule{Float64, EG}(2*(get_polynomialorder(FEType, EG)-1))
+    weights::Vector{Float64} = qf.w
+    nweights::Int = length(weights)
+
+    # dofmap
+    CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
+    ndofs4cell::Int = get_ndofs(ON_CELLS, FEType, EG)
+    dof_j::Int, dof_k::Int = 0, 0
+
+    # FE basis evaluator
+    FEBasis_∇::FEEvaluator{Float64} = FEEvaluator(FES, Gradient, qf)
+    ∇vals::Array{Float64,3} = FEBasis_∇.cvals
+
+    # local matrix and vector structures
+    Aloc = zeros(Float64, ndofs4cell, ndofs4cell)
+
+    # ASSEMBLY LOOP
+    ncells::Int = num_cells(xgrid)
+    cellvolumes = xgrid[CellVolumes]
+
+    @time for cell = 1 : ncells
+
+        # update FE basis evaluators
+        FEBasis_∇.citem[] = cell
+        update_basis!(FEBasis_∇)
+
+        for j = 1 : ndofs4cell
+            for k = j : ndofs4cell
+                temp = 0
+                for qp = 1 : nweights
+                    temp += weights[qp] * μ * dot(view(∇vals,:,j,qp), view(∇vals,:,k,qp))
+                end
+                Aloc[j,k] = temp
+            end
+        end
+
+        Aloc .*= cellvolumes[cell]
+
+        for j = 1 : ndofs4cell
+            dof_j = CellDofs[j, cell]
+            for k = j : ndofs4cell
+                dof_k = CellDofs[k, cell]
+                if abs(Aloc[j,k]) &gt; 1e-14
+                    # write into matrix, may cause allocations
+                    rawupdateindex!(A, +, Aloc[j,k], dof_j, dof_k)
+                    if k &gt; j
+                        rawupdateindex!(A, +, Aloc[j,k], dof_k, dof_j)
+                    end
+                end
+            end
+        end
+
+        fill!(Aloc, 0)
+    end
+    flush!(A)
+end
+
+function assemble_rhs!(b::AbstractVector, FES::FESpace; f = nothing)
+
+    if f === nothing
+        fill!(b, 0)
+        return
+    end
+
+    xgrid = FES.xgrid
+    EG = xgrid[UniqueCellGeometries][1]
+    FEType = eltype(FES)
+
+    # quadrature formula
+    qf = QuadratureRule{Float64, EG}(2*(get_polynomialorder(FEType, EG)-1))
+    weights::Vector{Float64} = qf.w
+    xref = qf.xref
+    nweights::Int = length(weights)
+
+    # dofmap
+    CellDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.CellDofs]
+    ndofs4cell::Int = get_ndofs(ON_CELLS, FEType, EG)
+
+    # FE basis evaluator
+    FEBasis_id::FEEvaluator{Float64} = FEEvaluator(FES, Identity, qf)
+    idvals::Array{Float64,3} = FEBasis_id.cvals
+    L2G::L2GTransformer{Float64, Int32, EG} = L2GTransformer(EG, xgrid, ON_CELLS)
+
+    # ASSEMBLY LOOP
+    function barrier(L2G::L2GTransformer{Tv,Ti,Tg,Tc}) where {Tv,Ti,Tg,Tc}
+
+        bloc = zeros(Float64, ndofs4cell)
+        ncells::Int = num_cells(xgrid)
+        dof_j::Int = 0
+        x::Vector{Float64} = zeros(Float64, 2)
+        cellvolumes = xgrid[CellVolumes]
+
+        @time for cell = 1 : ncells
+            for j = 1 : ndofs4cell
+                # right-hand side
+                temp = 0
+                for qp = 1 : nweights
+                    # get global x for quadrature point
+                    update_trafo!(L2G, cell)
+                    eval_trafo!(x, L2G, xref[qp])
+                    # (f, v_j)
+                    temp += weights[qp] * idvals[1, j, qp] * fdata(x)[1]
+                end
+                bloc[j] = temp
+            end
+
+            for j = 1 : ndofs4cell
+                dof_j = CellDofs[j, cell]
+                b[dof_j] += bloc[j] * cellvolumes[cell]
+            end
+
+            fill!(bloc, 0)
+        end
+    end
+    barrier(L2G)
+end
+
+function solve_poisson_lowlevel!(Solution; μ = 1)
+    @info &quot;\nLOW - start\n==============&quot;
+
+    # init FEspace, matrix and right-hand side vector
+    @info &quot;LOW - assembly&quot;
+    @time begin
+        FES = Solution[1].FES
+        A = FEMatrix(FES, FES)
+        b = FEVector(FES)
+        assemble_Laplacian!(A.entries, FES; μ = μ)
+        assemble_rhs!(b.entries, FES; f = f)
+    end
+
+
+
+    # fix boundary dofs
+    @info &quot;LOW - boundary data&quot;
+    @time begin
+        BFaceDofs::Adjacency{Int32} = FES[GradientRobustMultiPhysics.BFaceDofs]
+        nbfaces::Int = num_sources(BFaceDofs)
+        AM::ExtendableSparseMatrix{Float64,Int64} = A.entries
+        for bface = 1 : nbfaces
+            for j = 1 : num_targets(BFaceDofs,bface)
+                dof_j = BFaceDofs[j, bface]
+                AM[dof_j,dof_j] = 1e60
+                b.entries[dof_j] = 0
+            end
+        end
+        ExtendableSparse.flush!(A.entries)
+    end
+
+    # solve
+    @info &quot;LOW - solve&quot;
+    @time Solution.entries .= A.entries \ b.entries
+
+    @info &quot;LOW - end&quot;
+end
+
+
+function solve_poisson_midlevel!(Solution; μ = 1)
+    @info &quot;\nMID - start\n==============&quot;
+    @info &quot;MID - assembly preparations&quot;
+    @time begin
+        FES = Solution[1].FES
+        A = FEMatrix(FES, FES)
+        b = FEVector(FES)
+        FEType = eltype(FES)
+    end
+
+    @info &quot;MID - assembly A&quot;
+    @time assemble_operator!(A[1,1], LaplaceOperator(μ))
+    @info &quot;MID - assembly b&quot;
+    @time assemble_operator!(b[1], LinearForm(Identity, fdata; regions = [1]))
+
+    # fix boundary dofs
+    @info &quot;MID - boundary data&quot;
+    @time begin
+        BO = Array{BoundaryData, 1}(undef, 0)
+        push!(BO, BoundaryData(HomogeneousDirichletBoundary; regions = [1,2,3,4]))
+        fixed_dofs = boundarydata!(Solution[1], BO)
+        @views b.entries[fixed_dofs] .= 1e60 * Solution.entries[fixed_dofs]
+        apply_penalties!(A.entries, fixed_dofs, 1e60)
+        ExtendableSparse.flush!(A.entries)
+    end
+
+    # solve
+    @info &quot;MID - solve&quot;
+    ExtendableSparse.flush!(A.entries)
+    @time Solution.entries .= A.entries \ b.entries
+    @info &quot;MID - end&quot;
+end
+
+function solve_poisson_highlevel!(Solution; μ = 1)
+    @info &quot;\nHIGH - start\n==============&quot;
+    # create PDE description
+    @info &quot;HIGH - problem description&quot;
+    @time begin
+        Problem = PDEDescription(&quot;Poisson problem&quot;)
+        add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;Poisson equation&quot;)
+        add_operator!(Problem, [1,1], LaplaceOperator(μ))
+        add_rhsdata!(Problem, 1, LinearForm(Identity, fdata; regions = [1]))
+        add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
+    end
+
+    # solve
+    solve!(Solution, Problem; show_statistics = true)
+    @info &quot;HIGH - end&quot;
+end
+
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/ExampleA09_PoissonLowLevel_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA08_BasisPlotter/">« A08 : Basis-Plotter</a><a class="docs-footer-nextpage" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.2 on <span class="colophon-date" title="Wednesday 15 November 2023 16:52">Wednesday 15 November 2023</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
