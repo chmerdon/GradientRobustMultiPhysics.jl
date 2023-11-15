@@ -1,7 +1,7 @@
 name = "GradientRobustMultiPhysics"
 uuid = "0802c0ca-1768-4022-988c-6dd5f9588a11"
 authors = ["Christian Merdon <christian.merdon@wias-berlin.de>"]
-version = "0.11.3"
+version = "0.12.0"
 
 [deps]
 CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
