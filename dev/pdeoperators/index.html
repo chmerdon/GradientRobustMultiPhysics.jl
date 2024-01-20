@@ -14,15 +14,17 @@
     name,
     kwargs...
 ) -&gt; GradientRobustMultiPhysics.PDEOperator{Float64, LinearForm, ON_CELLS}
-</code></pre><p>generates a LinearForm L(v) = (f,operator(v)) from a DataFunction</p><ul><li>operator : operator applied to test function</li><li>action   : DataFunction, evaluation is multiplied with test function operator</li></ul><p>Optional arguments:</p><ul><li>regions           : specifies in which regions the operator should assemble, default [0] means all regions</li><li>name              : name for this LinearForm that is used in print messages</li><li>AT                : specifies on which entities of the grid the LinearForm is assembled (default: ON_CELLS)</li><li>factor            : additional factor that is multiplied during assembly</li><li>store             : stores a vector of the discretised LinearForm with the latest assembly result</li></ul></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section><section><div><pre><code class="language-julia hljs">LinearForm(operator_test::Type{&lt;:??})
+</code></pre><p>generates a LinearForm L(v) = (f,operator(v)) from a DataFunction</p><ul><li>operator : operator applied to test function</li><li>action   : DataFunction, evaluation is multiplied with test function operator</li></ul><p>Optional arguments:</p><ul><li>regions           : specifies in which regions the operator should assemble, default [0] means all regions</li><li>name              : name for this LinearForm that is used in print messages</li><li>AT                : specifies on which entities of the grid the LinearForm is assembled (default: ON_CELLS)</li><li>factor            : additional factor that is multiplied during assembly</li><li>store             : stores a vector of the discretised LinearForm with the latest assembly result</li></ul></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section><section><div><pre><code class="language-julia hljs">LinearForm(operator_test::Type{&lt;:??}; ...)
 LinearForm(
     operator_test::Type{&lt;:??},
-    operators_current::Vector{DataType}
+    operators_current::Vector{DataType};
+    ...
 ) -&gt; GradientRobustMultiPhysics.PDEOperator{Float64, LinearForm, ON_CELLS}
 LinearForm(
     operator_test::Type{&lt;:??},
     operators_current::Vector{DataType},
-    coeff_from::Vector{Int64}
+    coeff_from::Vector{Int64};
+    ...
 ) -&gt; GradientRobustMultiPhysics.PDEOperator{Float64, LinearForm, ON_CELLS}
 LinearForm(
     operator_test::Type{&lt;:??},
@@ -52,7 +54,8 @@ LinearForm(
     store
 ) -&gt; GradientRobustMultiPhysics.PDEOperator{Float64, BilinearForm, ON_CELLS}
 </code></pre><p>generates a BilinearForm defined by the following arguments:</p><ul><li>operators_linear  : operator for the two linear arguments (usually ansatz and test function)</li><li>operators_current : additional operators for other unknowns</li><li>coeff<em>from        : either PDE unknown ids or block ids for CurrentSolution given to assembly</em>operator! that should be used for operators_current</li><li>action            : tells how to further combine the operators<em>current+operator</em>ansatz evaluations (=input of action) to a result that is multiplied with the test function operator                     (if no action is specified, the full input vector is dot-producted with the test function operator evaluation)</li></ul><p>Optional arguments:</p><ul><li>apply<em>action</em>to   : specifies which of the two linear arguments is part of the action input ([1] = ansatz, [2] = test)</li><li>regions           : specifies in which regions the operator should assemble, default [0] means all regions</li><li>name              : name for this BilinearForm that is used in print messages</li><li>AT                : specifies on which entities of the grid the BilinearForm is assembled (default: ON_CELLS)</li><li>APT               : specifies the subtype of the APT_BilinearForm AssemblyPattern used for assembly (e.g. for lumping (wip))</li><li>factor            : additional factor that is multiplied during assembly</li><li>transposed_assembly : transposes the resulting assembled matrix (consider true here for non-symmetric operators)</li><li>also<em>transposed</em>block : when true toggles assembly of transposed system matrix block</li><li>transpose_factor  : factor for transposed block (default = factor)</li><li>store             : stores a matrix of the BilinearForm with the latest assembly result                     (e.g. when the operators sits in a system block that has to be reassembled in an iterative scheme)</li></ul><p>Details on the action: The action is an Action consisting of a kernel function with interface (result, input, ...) and additional argument information. During assembly input will be filled with the operator evaluations of the other unknowns (i.e. operator<em>current, if specified) and appended to that the operator evaluation of one of the two linear argument (decided by apply</em>action_to). The result computed by the kernel function is multiplied (dot product) with the operator evaluation of the other linear argument. If no action is given, the assembly tries to multiply the operator evaluations (that would have been given as input) directly.</p></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section><section><div><pre><code class="language-julia hljs">BilinearForm(
-    operators_linear::Vector{DataType}
+    operators_linear::Vector{DataType};
+    ...
 ) -&gt; GradientRobustMultiPhysics.PDEOperator{Float64, BilinearForm, ON_CELLS}
 BilinearForm(
     operators_linear::Vector{DataType},
@@ -60,7 +63,8 @@ BilinearForm(
     kwargs...
 ) -&gt; GradientRobustMultiPhysics.PDEOperator{Float64, BilinearForm, ON_CELLS}
 </code></pre><p>same as other constructor but with operators_current = <a href="no other implicit dependencies"></a></p></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section></article><h2 id="Special-Linear-Operators"><a class="docs-heading-anchor" href="#Special-Linear-Operators">Special Linear Operators</a><a id="Special-Linear-Operators-1"></a><a class="docs-heading-anchor-permalink" href="#Special-Linear-Operators" title="Permalink"></a></h2><p>Below you find special constructors of available common linear and bilinear forms.</p><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="GradientRobustMultiPhysics.LaplaceOperator" href="#GradientRobustMultiPhysics.LaplaceOperator"><code>GradientRobustMultiPhysics.LaplaceOperator</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">LaplaceOperator(
-
+;
+    ...
 ) -&gt; GradientRobustMultiPhysics.PDEOperator{Float64, SymmetricBilinearForm, ON_CELLS}
 LaplaceOperator(
     κ;
@@ -71,10 +75,12 @@ LaplaceOperator(
     store
 ) -&gt; Union{Nothing, GradientRobustMultiPhysics.PDEOperator{Float64, SymmetricBilinearForm, ON_CELLS}}
 </code></pre><p>constructor for a bilinearform that describes a(u,v) = κ (∇u,∇v) where kappa is some constant (diffusion) coefficient.</p></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="GradientRobustMultiPhysics.ReactionOperator" href="#GradientRobustMultiPhysics.ReactionOperator"><code>GradientRobustMultiPhysics.ReactionOperator</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">ReactionOperator(
-
+;
+    ...
 ) -&gt; GradientRobustMultiPhysics.PDEOperator{Float64, SymmetricBilinearForm, ON_CELLS}
 ReactionOperator(
-    α
+    α;
+    ...
 ) -&gt; Union{Nothing, GradientRobustMultiPhysics.PDEOperator{Float64, BilinearForm, ON_CELLS}, GradientRobustMultiPhysics.PDEOperator{Float64, SymmetricBilinearForm, ON_CELLS}}
 ReactionOperator(
     α,
@@ -204,12 +210,12 @@ operator = BilinearForm([Jump(Gradient), Jump(Gradient)], action; AT = ON_IFACES
     beta_from::Int64;
     μ
 ) -&gt; FVConvectionDiffusionOperator{Float64}
-</code></pre><p>finite-volume convection diffusion operator (for cell-wise P0 rho)</p><ul><li>div(μ ∇ρ + β ρ)</li></ul><p>For μ = 0, the upwind divergence div_upw(β ρ) is generated  For μ &gt; 0, TODO</p></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="GradientRobustMultiPhysics.DiagonalOperator" href="#GradientRobustMultiPhysics.DiagonalOperator"><code>GradientRobustMultiPhysics.DiagonalOperator</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">DiagonalOperator() -&gt; DiagonalOperator{Float64}
+</code></pre><p>finite-volume convection diffusion operator (for cell-wise P0 rho)</p><ul><li>div(μ ∇ρ + β ρ)</li></ul><p>For μ = 0, the upwind divergence div_upw(β ρ) is generated  For μ &gt; 0, TODO</p></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="GradientRobustMultiPhysics.DiagonalOperator" href="#GradientRobustMultiPhysics.DiagonalOperator"><code>GradientRobustMultiPhysics.DiagonalOperator</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">DiagonalOperator(; ...) -&gt; DiagonalOperator{Float64}
 DiagonalOperator(
     value::Real;
     name,
     onlynz,
     regions
-) -&gt; DiagonalOperator
+) -&gt; DiagonalOperator{&lt;:Real}
 </code></pre><p>puts <em>value</em> on the diagonal entries of the cell dofs within given <em>regions</em></p><p>if <em>onlyz</em> == true only values that are zero are changed</p><p>can only be applied in PDE LHS</p></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="GradientRobustMultiPhysics.CopyOperator" href="#GradientRobustMultiPhysics.CopyOperator"><code>GradientRobustMultiPhysics.CopyOperator</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">CopyOperator(copy_from, factor) -&gt; CopyOperator
-</code></pre><p>copies entries from TargetVector to rhs block</p><p>can only be applied in PDE RHS</p></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../pdedescription/">« PDE Description</a><a class="docs-footer-nextpage" href="../functionoperators/">Function Operators »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.2 on <span class="colophon-date" title="Wednesday 15 November 2023 15:49">Wednesday 15 November 2023</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><p>copies entries from TargetVector to rhs block</p><p>can only be applied in PDE RHS</p></div><a class="docs-sourcelink" target="_blank" href="github.com/chmerdon/GradientRobustMultiPhysics.jl">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../pdedescription/">« PDE Description</a><a class="docs-footer-nextpage" href="../functionoperators/">Function Operators »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Saturday 20 January 2024 10:30">Saturday 20 January 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
