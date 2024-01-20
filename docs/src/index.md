@@ -13,7 +13,7 @@ Also note, that this package is part of the meta-package [PDELIB.jl](https://git
 
 !!! note
 
-    The focus is (at least currently) not on high-performance, high-order or parallel-computing. Also, this package is still in an early development stage and features and interfaces might change in future updates.
+    This package is not further developed. There is a new package in development called [ExtendableFEM.jl](https://github.com/chmerdon/ExtendableFEM.jl) that incorporates all functionality and offers a more flexible API and generally faster assembly times. Please inform the developers or open an issue there if some functionality is missing or in case you have problems to transition an old project to the new code. The low level finite element structures were outsourced to the new package [ExtendableFEMBase.jl](https://github.com/chmerdon/ExtendableFEMBase.jl).
     
 
 ## Installation
